@@ -2,7 +2,7 @@ const bcrypt = require('bcrypt');
 const db = require('./database'); // Utiliser la même connexion et initialisation que le serveur
 
 const email = 'Diassecke@gmail.com';
-const password = 'P@pepol123456789';
+const password = 'P@pepol123456';
 const role = 'admin';
 const fullName = 'Administrateur';
 
