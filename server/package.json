@@ -4,7 +4,8 @@
     "description": "Backend API for Samatechnicien",
     "main": "index.js",
     "scripts": {
-        "start": "node index.js"
+        "start": "node index.js",
+        "build": "echo 'No build necessary'"
     },
     "dependencies": {
         "bcrypt": "^5.1.1",
