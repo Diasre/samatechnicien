@@ -34,17 +34,23 @@ const app = express();
 const PORT = 8080;
 const HOST = '0.0.0.0'; // Listen on all network interfaces
 // Hardcode IP to match the one used in frontend config to ensure consistency
-const IP_ADDRESS = '10.28.236.131';
-const BASE_URL = `http://${IP_ADDRESS}:${PORT}`;
+// BUT prioritize Render's external URL if available
+const BASE_URL = process.env.RENDER_EXTERNAL_URL || `http://${getLocalIpAddress()}:${PORT}`;
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 app.use(cors());
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(uploadsDir));
 
 // Multer Configuration
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, path.join(__dirname, 'uploads'));
+        cb(null, uploadsDir);
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
