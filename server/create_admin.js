@@ -1,9 +1,5 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
 const bcrypt = require('bcrypt');
-
-const dbPath = path.resolve(__dirname, 'database.sqlite');
-const db = new sqlite3.Database(dbPath);
+const db = require('./database'); // Utiliser la même connexion et initialisation que le serveur
 
 const email = 'Diassecke@gmail.com';
 const password = 'P@pepol123456789';
