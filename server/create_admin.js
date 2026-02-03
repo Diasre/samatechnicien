@@ -8,6 +8,13 @@ const fullName = 'Administrateur';
 
 (async () => {
     try {
+        // Wait for database tables to be created (Postgres)
+        if (db.ready) {
+            console.log("WAITING for DB Init...");
+            await db.ready;
+            console.log("DB Init Complete. Proceeding with Admin check...");
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
 
         db.get(`SELECT * FROM users WHERE email = ?`, [email], (err, row) => {

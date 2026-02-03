@@ -103,10 +103,12 @@ if (isPostgres) {
         }
     };
 
-    initPostgres();
+    // Store the promise so we can wait for it
+    const connectionPromise = initPostgres();
 
     // Adapter for SQLite-style methods on top of Postgres
     db = {
+        ready: connectionPromise, // Expose the promise
         // Run: Used for INSERT, UPDATE, DELETE
         run: function (sql, params, callback) {
             // Convert SQLite '?' params to Postgres '$1, $2, $3' syntax
