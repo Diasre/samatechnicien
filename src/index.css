@@ -1,0 +1,337 @@
+:root {
+  /* Brand Colors */
+  --primary-color: #2ECC71;
+  --primary-hover: #27AE60;
+  --secondary-color: #3498DB;
+  --secondary-hover: #2980B9;
+
+  /* Neutral Colors */
+  --background-color: #F8F9FA;
+  --surface-color: #FFFFFF;
+  --text-primary: #2C3E50;
+  --text-secondary: #7F8C8D;
+  --border-color: #E0E0E0;
+
+  /* Status Colors */
+  --success-color: #2ECC71;
+  --warning-color: #F1C40F;
+  --error-color: #E74C3C;
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+  /* Circle */
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+  /* Typography */
+  --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--background-color);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Typography Utilities */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--text-primary);
+  font-weight: 700;
+  margin-bottom: var(--spacing-sm);
+}
+
+h1 {
+  font-size: 2.5rem;
+}
+
+h2 {
+  font-size: 2rem;
+}
+
+h3 {
+  font-size: 1.75rem;
+}
+
+h4 {
+  font-size: 1.5rem;
+}
+
+p {
+  margin-bottom: var(--spacing-md);
+  color: var(--text-secondary);
+}
+
+/* Utility Classes */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-md);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  font-size: 1rem;
+  gap: 0.5rem;
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background-color: var(--secondary-color);
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: var(--secondary-hover);
+}
+
+.btn-outline {
+  background-color: transparent;
+  border: 2px solid var(--primary-color);
+  color: var(--primary-color);
+}
+
+.btn-outline:hover {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.card {
+  background-color: var(--surface-color);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
+}
+
+/* Animations included in Design System */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Responsive Navigation */
+@media (max-width: 768px) {
+  .desktop-menu {
+    display: none !important;
+  }
+
+  .mobile-menu-btn {
+    display: flex !important;
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+
+  h2 {
+    font-size: 1.75rem;
+  }
+
+  .navbar .container {
+    height: 60px !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-menu-btn {
+    display: none !important;
+  }
+
+  .mobile-nav {
+    display: none !important;
+  }
+}
+
+.mobile-nav {
+  position: fixed;
+  top: 95px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: white;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  padding: 2rem;
+  gap: 1.5rem;
+  transform: translateX(100%);
+  transition: transform 0.3s ease-in-out;
+}
+
+.mobile-nav.open {
+  transform: translateX(0);
+}
+
+.nav-link {
+  transition: color 0.2s;
+}
+
+.nav-link:hover,
+.nav-link.active-link {
+  color: var(--primary-color) !important;
+}
+
+/* 3D Effects for Marketplace */
+.card-3d-wrapper {
+  perspective: 1000px;
+}
+
+.card-3d {
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+  transform-style: preserve-3d;
+}
+
+.card-3d:hover {
+  transform: translateY(-5px) rotateX(2deg) rotateY(2deg);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15), 0 5px 15px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+/* Make the image pop out a bit on hover */
+.card-3d:hover img {
+  transform: scale(1.03);
+  transition: transform 0.4s ease;
+}
+
+/* Responsive Navbar Styles */
+.navbar {
+  padding-top: 35px;
+  /* Mobile Status Bar spacing */
+}
+
+.navbar-container {
+  height: 120px;
+  /* Mobile Height */
+}
+
+.nav-logo {
+  height: 90px;
+  width: auto;
+}
+
+@media (min-width: 769px) {
+  .navbar {
+    padding-top: 0 !important;
+  }
+
+  .navbar-container {
+    height: 120px !important;
+    /* Larger on Desktop */
+  }
+
+  .nav-logo {
+    height: 90px !important;
+    /* Larger logo on Desktop */
+  }
+
+  .navbar .container {
+    height: 120px !important;
+    /* Ensure container override works */
+  }
+
+  /* Splash Screen Desktop Adjustments (Compact for Visibility) */
+  .splash-container {
+    padding: 1rem !important;
+    justify-content: center !important;
+    min-height: 100vh;
+    /* Ensure it takes full height but allows centering */
+  }
+
+  .splash-logo {
+    height: 200px !important;
+    margin-bottom: 1rem !important;
+    margin-top: 0 !important;
+  }
+
+  .splash-title {
+    font-size: 1.8rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .splash-subtitle {
+    font-size: 1rem !important;
+    margin-bottom: 1rem !important;
+  }
+
+  .splash-image-container {
+    max-width: 200px !important;
+    margin-top: 1rem !important;
+  }
+}
+
+/* Default Mobile Splash Styles (Enlarged) */
+.splash-logo {
+  height: 130px;
+  width: auto;
+  margin-bottom: 1.5rem;
+  margin-top: 1rem;
+}
+
+.splash-title {
+  font-size: 1.8rem;
+  line-height: 1.2;
+  margin-bottom: 0.75rem;
+  margin-top: 0;
+  color: var(--text-primary);
+}
+
+.splash-image-container {
+  position: relative;
+  width: 100%;
+  max-width: 220px;
+  margin-top: 1.5rem;
+}

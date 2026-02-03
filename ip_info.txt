@@ -1,0 +1,54 @@
+
+Configuration IP de Windows
+
+
+Carte Ethernet Ethernet :
+
+   Statut du m‚dia. . . . . . . . . . . . : M‚dia d‚connect‚
+   Suffixe DNS propre … la connexion. . . : 
+
+Carte inconnue Connexion au r‚seau localÿ:
+
+   Statut du m‚dia. . . . . . . . . . . . : M‚dia d‚connect‚
+   Suffixe DNS propre … la connexion. . . : 
+
+Carte Ethernet Ethernet 3 :
+
+   Suffixe DNS propre … la connexion. . . : 
+   Adresse IPv6 de liaison locale. . . . .: fe80::b768:b652:a3ec:1ada%7
+   Adresse IPv4. . . . . . . . . . . . . .: 192.168.56.1
+   Masque de sous-r‚seau. . . .ÿ. . . . . : 255.255.255.0
+   Passerelle par d‚faut. . . .ÿ. . . . . : 
+
+Carte r‚seau sans fil Connexion au r‚seau local* 9ÿ:
+
+   Statut du m‚dia. . . . . . . . . . . . : M‚dia d‚connect‚
+   Suffixe DNS propre … la connexion. . . : 
+
+Carte r‚seau sans fil Connexion au r‚seau local* 10ÿ:
+
+   Statut du m‚dia. . . . . . . . . . . . : M‚dia d‚connect‚
+   Suffixe DNS propre … la connexion. . . : 
+
+Carte r‚seau sans fil Wi-Fiÿ:
+
+   Suffixe DNS propre … la connexion. . . : home
+   Adresse IPv6. . . . . . . . . . .ÿ. . .: fdc2:5a60:ce35:a900:939f:aeb8:5046:b78f
+   Adresse IPv6 temporaire . . . . . . . .: fdc2:5a60:ce35:a900:15ae:9d98:4522:8dae
+   Adresse IPv6 de liaison locale. . . . .: fe80::6323:61a5:64:3ab9%5
+   Adresse IPv4. . . . . . . . . . . . . .: 192.168.1.119
+   Masque de sous-r‚seau. . . .ÿ. . . . . : 255.255.255.0
+   Passerelle par d‚faut. . . .ÿ. . . . . : 192.168.1.1
+
+Carte Ethernet Connexion r‚seau Bluetooth :
+
+   Statut du m‚dia. . . . . . . . . . . . : M‚dia d‚connect‚
+   Suffixe DNS propre … la connexion. . . : 
+
+Carte Ethernet vEthernet (Default Switch) :
+
+   Suffixe DNS propre … la connexion. . . : 
+   Adresse IPv6 de liaison locale. . . . .: fe80::2cbd:4ee1:edf5:b06a%27
+   Adresse IPv4. . . . . . . . . . . . . .: 172.23.144.1
+   Masque de sous-r‚seau. . . .ÿ. . . . . : 255.255.240.0
+   Passerelle par d‚faut. . . .ÿ. . . . . : 
