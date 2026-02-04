@@ -224,7 +224,24 @@ const ExpertDashboard = () => {
     };
 
     if (loading) return <div className="container" style={{ padding: '2rem' }}>Chargement de votre espace...</div>;
-    if (!techData) return <div className="container" style={{ padding: '2rem' }}>Erreur : Expert non trouvé.</div>;
+    if (!techData) return (
+        <div className="container" style={{ padding: '2rem', textAlign: 'center' }}>
+            <h3 style={{ color: 'var(--error-color)' }}>Erreur : Expert non trouvé.</h3>
+            <p style={{ margin: '1rem 0' }}>Impossible de charger les données pour l'utilisateur ID: <strong>{user?.id}</strong></p>
+            <p style={{ fontSize: '0.9rem', color: '#666' }}>Cela arrive souvent après une mise à jour. Veuillez cliquer ci-dessous.</p>
+
+            <button
+                onClick={() => {
+                    localStorage.removeItem('user');
+                    window.location.href = '/login';
+                }}
+                className="btn btn-primary"
+                style={{ marginTop: '1rem' }}
+            >
+                🔄 Réparer ma session (Déconnexion)
+            </button>
+        </div>
+    );
 
     const avatarUrl = techData.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(techData.fullName)}&background=random&color=fff&size=150`;
 
