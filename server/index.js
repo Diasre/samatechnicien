@@ -31,7 +31,7 @@ function getLocalIpAddress() {
 }
 
 const app = express();
-const PORT = 8080;
+const PORT = process.env.PORT || 8080;
 const HOST = '0.0.0.0'; // Listen on all network interfaces
 // Hardcode IP to match the one used in frontend config to ensure consistency
 // BUT prioritize Render's external URL if available

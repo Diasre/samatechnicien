@@ -23,6 +23,7 @@ const fullName = 'Administrateur';
                 db.run(`UPDATE users SET role = ?, password = ? WHERE email = ?`, [role, hashedPassword, email], (err) => {
                     if (err) console.error(err);
                     else console.log('User updated successfully.');
+                    process.exit(0); // Terminate script
                 });
             } else {
                 console.log('User does not exist. Creating...');
@@ -31,6 +32,7 @@ const fullName = 'Administrateur';
                     function (err) {
                         if (err) console.error(err);
                         else console.log('Admin user created successfully.');
+                        process.exit(0); // Terminate script
                     }
                 );
             }
