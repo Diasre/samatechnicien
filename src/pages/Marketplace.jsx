@@ -267,6 +267,7 @@ const Marketplace = () => {
 
         if (uploadError) {
             console.error('Upload error:', uploadError);
+            alert("Erreur lors de l'envoi de l'image : " + uploadError.message);
             return null;
         }
 
