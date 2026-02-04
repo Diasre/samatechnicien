@@ -437,6 +437,13 @@ const Marketplace = () => {
                             if (isFormVisible) {
                                 handleCancel();
                             } else {
+                                // Check limit
+                                const myProductsCount = products.filter(p => p.technicianId === user.id).length;
+                                if (myProductsCount >= 3) {
+                                    alert(`Limite atteinte (${myProductsCount}/3) !\n\nPour garantir la qualité de la boutique, chaque technicien est limité à 3 annonces simultanées.\n\nVeuillez supprimer ou vendre un article existant pour en ajouter un nouveau.`);
+                                    return;
+                                }
+
                                 setEditingProduct(null);
                                 setNewProduct({ title: '', price: '', category: 'Smartphone', condition: 'Occasion', description: '' });
                                 setIsFormVisible(true);
@@ -444,7 +451,7 @@ const Marketplace = () => {
                         }}
                         style={{ fontSize: '0.8rem', padding: '0.5rem 1rem' }}
                     >
-                        {isFormVisible ? 'Annuler' : '+ Ajouter un article'}
+                        {isFormVisible ? 'Annuler' : `+ Ajouter un article (${products.filter(p => p.technicianId === user.id).length}/3)`}
                     </button>
                 )}
             </div>
