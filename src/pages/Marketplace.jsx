@@ -245,7 +245,7 @@ const Marketplace = () => {
                     technicianName: p.users?.fullname || p.users?.fullName || 'Technicien Inconnu',
                     technicianPhone: p.users?.phone || '',
                     technicianSpecialty: p.users?.specialty || '', // Assuming you might want this
-                    technicianId: p.technicianId // Keep original link
+                    technicianId: p.technicianid || p.technicianId // Handle both cases just to be safe
                 }));
                 setProducts(mappedProducts);
             }
