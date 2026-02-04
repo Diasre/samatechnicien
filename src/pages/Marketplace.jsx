@@ -262,7 +262,7 @@ const Marketplace = () => {
         const filePath = `${fileName}`;
 
         const { error: uploadError } = await supabase.storage
-            .from('products')
+            .from('produits')
             .upload(filePath, file);
 
         if (uploadError) {
@@ -271,7 +271,7 @@ const Marketplace = () => {
             return null;
         }
 
-        const { data } = supabase.storage.from('products').getPublicUrl(filePath);
+        const { data } = supabase.storage.from('produits').getPublicUrl(filePath);
         return data.publicUrl;
     };
 

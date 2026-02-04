@@ -546,12 +546,12 @@ const Dashboard = () => {
                                                 const fileName = `avatars/${currentTech.id}_${Date.now()}.${fileExt}`;
 
                                                 const { error: uploadError } = await supabase.storage
-                                                    .from('products') // Reuse products bucket for simplicity
+                                                    .from('produits') // Use 'produits' (users bucket)
                                                     .upload(fileName, file);
 
                                                 if (uploadError) throw uploadError;
 
-                                                const { data } = supabase.storage.from('products').getPublicUrl(fileName);
+                                                const { data } = supabase.storage.from('produits').getPublicUrl(fileName);
 
                                                 if (data.publicUrl) {
                                                     setCurrentTech(prev => ({ ...prev, image: data.publicUrl }));

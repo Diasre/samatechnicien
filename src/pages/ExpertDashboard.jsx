@@ -491,21 +491,24 @@ const ExpertDashboard = () => {
                                                 const file = e.target.files[0];
                                                 if (!file) return;
 
-                                                const formData = new FormData();
-                                                formData.append('image', file);
-
                                                 try {
-                                                    const res = await fetch(`${API_URL}/api/upload`, {
-                                                        method: 'POST',
-                                                        body: formData
-                                                    });
-                                                    const data = await res.json();
-                                                    if (data.url) {
-                                                        setFormData(prev => ({ ...prev, image: data.url }));
+                                                    const fileExt = file.name.split('.').pop();
+                                                    const fileName = `avatars/${techData.id}_${Date.now()}.${fileExt}`;
+
+                                                    const { error: uploadError } = await supabase.storage
+                                                        .from('produits') // Using 'produits' bucket as it is public
+                                                        .upload(fileName, file);
+
+                                                    if (uploadError) throw uploadError;
+
+                                                    const { data } = supabase.storage.from('produits').getPublicUrl(fileName);
+
+                                                    if (data.url || data.publicUrl) {
+                                                        setFormData(prev => ({ ...prev, image: data.publicUrl || data.url }));
                                                     }
                                                 } catch (err) {
                                                     console.error("Upload error:", err);
-                                                    alert("Erreur lors de l'upload de l'image.");
+                                                    alert("Erreur lors de l'upload de l'image (Vérifiez que le bucket 'produits' est Public).");
                                                 }
                                             }}
                                             style={{ fontSize: '0.8rem' }}
