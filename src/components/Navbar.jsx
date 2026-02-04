@@ -43,7 +43,6 @@ const Navbar = () => {
             position: 'sticky',
             top: 0,
             zIndex: 1000,
-            zIndex: 1000,
             borderBottom: '1px solid #eee'
         }}>
             <div className="container navbar-container" style={{
