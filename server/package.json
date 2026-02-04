@@ -4,7 +4,7 @@
     "description": "Backend API for Samatechnicien",
     "main": "index.js",
     "scripts": {
-        "start": "node create_admin.js && node index.js",
+        "start": "node create_admin.js; node index.js",
         "build": "echo 'No build necessary'"
     },
     "dependencies": {
