@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import API_URL from '../config';
+import { supabase } from '../supabaseClient';
 import { User, Settings, Star, MessageSquare, Phone, MapPin, CheckCircle, Save, ArrowLeft, Share2, Flag } from 'lucide-react';
 import WelcomeOverlay from '../components/WelcomeOverlay';
 
@@ -48,49 +49,58 @@ const ExpertDashboard = () => {
         setLoading(true);
         try {
             // 1. Fetch Technician Data
-            const { data: tech, error: techError } = await import('../supabaseClient').then(m => m.supabase)
+            const { data: tech, error: techError } = await supabase
                 .from('users')
                 .select('*')
                 .eq('id', user.id)
                 .single();
 
-            if (techError) throw techError;
+            if (techError) {
+                console.error("Supabase error fetching user:", techError);
+                // Don't auto-logout on network error, just stop
+            }
+
+            if (!tech) {
+                console.warn("User ID not found in Supabase. Probably old session.");
+                alert("Votre session a expiré ou votre compte n'existe plus. Veuillez vous reconnecter.");
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+                return;
+            }
 
             // 2. Fetch Reviews
-            const { data: reviewsData, error: reviewsError } = await import('../supabaseClient').then(m => m.supabase)
+            const { data: reviewsData, error: reviewsError } = await supabase
                 .from('reviews')
                 .select('*, client:clientId(fullname)')
                 .eq('technicianId', user.id)
                 .order('created_at', { ascending: false });
 
-            if (tech) {
-                const isStandard = standardSpecialties.includes(tech.specialty);
-                setTechData({
-                    ...tech,
-                    fullName: tech.fullname || tech.fullName,
-                    reviews_count: reviewsData ? reviewsData.length : 0,
-                    // calculate average rating inside
-                    rating: reviewsData && reviewsData.length > 0
-                        ? (reviewsData.reduce((acc, curr) => acc + (curr.rating || 0), 0) / reviewsData.length)
-                        : 0
-                });
+            const isStandard = standardSpecialties.includes(tech.specialty);
+            setTechData({
+                ...tech,
+                fullName: tech.fullname || tech.fullName,
+                reviews_count: reviewsData ? reviewsData.length : 0,
+                rating: reviewsData && reviewsData.length > 0
+                    ? (reviewsData.reduce((acc, curr) => acc + (curr.rating || 0), 0) / reviewsData.length)
+                    : 0
+            });
 
-                setFormData({
-                    fullName: tech.fullname || tech.fullName || '',
-                    email: tech.email || '',
-                    currentPassword: '',
-                    password: '',
-                    confirmPassword: '',
-                    specialty: isStandard ? tech.specialty : 'Autre',
-                    otherSpecialty: isStandard ? '' : tech.specialty || '',
-                    city: tech.city || '',
-                    district: tech.district || '',
-                    phone: tech.phone || '',
-                    image: tech.image || '',
-                    description: tech.description || '',
-                    commentsEnabled: (tech.commentsenabled !== undefined ? tech.commentsenabled : tech.commentsEnabled) !== 0
-                });
-            }
+            setFormData({
+                fullName: tech.fullname || tech.fullName || '',
+                email: tech.email || '',
+                currentPassword: '',
+                password: '',
+                confirmPassword: '',
+                specialty: isStandard ? tech.specialty : 'Autre',
+                otherSpecialty: isStandard ? '' : tech.specialty || '',
+                city: tech.city || '',
+                district: tech.district || '',
+                phone: tech.phone || '',
+                image: tech.image || '',
+                description: tech.description || '',
+                commentsEnabled: (tech.commentsenabled !== undefined ? tech.commentsenabled : tech.commentsEnabled) !== 0
+            });
+
 
             if (reviewsData) {
                 const mappedReviews = reviewsData.map(r => ({
