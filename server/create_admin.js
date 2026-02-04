@@ -17,22 +17,29 @@ const fullName = 'Administrateur';
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        db.get(`SELECT * FROM users WHERE email = ?`, [email], (err, row) => {
+        // Check if admin exists using LOWER(email) for case-insensitivity
+        db.get(`SELECT * FROM users WHERE LOWER(email) = LOWER(?)`, [email], (err, row) => {
+            if (err) {
+                console.error("Error checking user:", err);
+                process.exit(1);
+            }
+
             if (row) {
-                console.log('User already exists. Updating...');
-                db.run(`UPDATE users SET role = ?, password = ? WHERE email = ?`, [role, hashedPassword, email], (err) => {
-                    if (err) console.error(err);
-                    else console.log('User updated successfully.');
-                    process.exit(0); // Terminate script
+                console.log('User already exists (ID: ' + row.id + '). Updating password & role...');
+                // PostgreSQL/SQLite compatible update
+                db.run(`UPDATE users SET role = ?, password = ? WHERE LOWER(email) = LOWER(?)`, [role, hashedPassword, email], (err) => {
+                    if (err) console.error("Update Error:", err);
+                    else console.log('✅ User updated successfully.');
+                    process.exit(0);
                 });
             } else {
                 console.log('User does not exist. Creating...');
                 db.run(`INSERT INTO users (fullName, email, password, role) VALUES (?, ?, ?, ?)`,
                     [fullName, email, hashedPassword, role],
                     function (err) {
-                        if (err) console.error(err);
-                        else console.log('Admin user created successfully.');
-                        process.exit(0); // Terminate script
+                        if (err) console.error("Insert Error:", err);
+                        else console.log('✅ Admin user created successfully.');
+                        process.exit(0);
                     }
                 );
             }
