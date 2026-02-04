@@ -12,16 +12,25 @@ const Login = () => {
     const performLogin = async (loginEmail, loginPin) => {
         try {
             // Recherche de l'utilisateur par email (insensible à la casse)
-            const { data: user, error } = await supabase
+            const { data: userData, error } = await supabase
                 .from('users')
                 .select('*')
-                .ilike('email', loginEmail) // ilike = insensible à la casse
+                .ilike('email', loginEmail)
                 .single();
 
-            if (error || !user) {
+            if (error || !userData) {
                 alert('Erreur: Identifiants incorrects');
                 return;
             }
+
+            // Map lowercase DB columns back to camelCase for the frontend
+            const user = {
+                ...userData,
+                fullName: userData.fullname || userData.fullName, // Handle both cases
+                isBlocked: userData.isblocked !== undefined ? userData.isblocked : userData.isBlocked,
+                commentsEnabled: userData.commentsenabled !== undefined ? userData.commentsenabled : userData.commentsEnabled,
+                otherSpecialty: userData.otherspecialty || userData.otherSpecialty
+            };
 
             // Vérification simple (Pour le moment sans hashage complexe pour faciliter la transition)
             // Dans le futur, nous utiliserons Supabase Auth pour une sécurité maximale.
