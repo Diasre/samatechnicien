@@ -241,7 +241,7 @@ const ExpertDashboard = () => {
 
     return (
         <div className="container animate-fade-in" style={{ padding: '1.5rem 1rem' }}>
-            <WelcomeOverlay userName={techData.fullName} />
+            <WelcomeOverlay userName={techData.fullName} duration={2000} />
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <div>

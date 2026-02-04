@@ -20,7 +20,7 @@ const Home = () => {
                 flexDirection: 'column',
                 justifyContent: 'center'
             }}>
-                <WelcomeOverlay userName={user.fullName} />
+                <WelcomeOverlay userName={user.fullName} duration={2000} />
                 <img src={logo} alt="SamaTechnicien Logo" style={{ maxWidth: '250px', height: 'auto', margin: '0 auto 1rem' }} />
                 <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', marginTop: '0' }}>
                     Bienvenue, <span style={{ color: 'var(--primary-color)' }}>{user.fullName}</span> !

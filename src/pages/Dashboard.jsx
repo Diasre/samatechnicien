@@ -265,7 +265,7 @@ const Dashboard = () => {
 
     return (
         <div className="container" style={{ padding: '1rem 1rem' }}>
-            <WelcomeOverlay userName={user?.fullName} />
+            <WelcomeOverlay userName={user?.fullName} duration={2000} />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                 <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Dashboard</h2>
                 <div style={{ display: 'flex', gap: '0.4rem' }}>
