@@ -299,7 +299,7 @@ const Marketplace = () => {
 
             // 2. Prepare payload
             const productData = {
-                technicianId: user.id,
+                technicianid: user.id, // Lowercase 'i' for Supabase
                 title: newProduct.title,
                 price: parseFloat(newProduct.price),
                 category: newProduct.category,
