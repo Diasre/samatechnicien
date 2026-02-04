@@ -304,7 +304,11 @@ const Marketplace = () => {
             for (let i = 0; i < 3; i++) {
                 if (imageFiles[i]) {
                     const url = await uploadImage(imageFiles[i]);
-                    if (url) imageUrls[i] = url;
+                    if (!url) {
+                        setSubmitting(false);
+                        return; // ARRET IMMEDIAT si l'image échoue
+                    }
+                    imageUrls[i] = url;
                 }
             }
 
