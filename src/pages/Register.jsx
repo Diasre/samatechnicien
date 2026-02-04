@@ -31,10 +31,16 @@ const Register = () => {
 
         try {
             const payload = {
-                ...formData,
-                specialty: formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty,
-                // Note: En production, on utiliserait Supabase Auth pour le mot de passe.
-                // Ici on insère directement pour garder votre fonctionnement actuel.
+                fullName: formData.fullName,
+                email: formData.email,
+                password: formData.password,
+                phone: formData.phone,
+                role: formData.role,
+                city: formData.city,
+                district: formData.district,
+                specialty: formData.role === 'technician'
+                    ? (formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty)
+                    : null
             };
 
             const { data, error } = await supabase
