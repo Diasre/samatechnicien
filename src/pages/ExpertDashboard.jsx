@@ -13,7 +13,12 @@ const ExpertDashboard = () => {
     const [editMode, setEditMode] = useState(false);
     const [feedbackMsg, setFeedbackMsg] = useState('');
     const [sendingFeedback, setSendingFeedback] = useState(false);
-    const apiUrl = API_URL;
+
+    // Import Supabase client if not already imported at top (I will add import in next step or assume it) 
+    // Wait, I need to check imports. 
+    // The previous file content shows API_URL import but NOT supabase. 
+    // I will fix imports in a separate call or try to merge if I can, but replace_file_content targets specific block.
+    // I'll stick to replacing the logic block first.
 
     // Form state
     const [formData, setFormData] = useState({
@@ -42,37 +47,59 @@ const ExpertDashboard = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [techRes, reviewsRes] = await Promise.all([
-                fetch(`${apiUrl}/api/technicians/${user.id}`),
-                fetch(`${apiUrl}/api/technicians/${user.id}/reviews`)
-            ]);
+            // 1. Fetch Technician Data
+            const { data: tech, error: techError } = await import('../supabaseClient').then(m => m.supabase)
+                .from('users')
+                .select('*')
+                .eq('id', user.id)
+                .single();
 
-            const techJson = await techRes.json();
-            const reviewsJson = await reviewsRes.json();
+            if (techError) throw techError;
 
-            if (techJson.message === 'success') {
-                const isStandard = standardSpecialties.includes(techJson.data.specialty);
-                setTechData(techJson.data);
+            // 2. Fetch Reviews
+            const { data: reviewsData, error: reviewsError } = await import('../supabaseClient').then(m => m.supabase)
+                .from('reviews')
+                .select('*, client:clientId(fullname)')
+                .eq('technicianId', user.id)
+                .order('created_at', { ascending: false });
+
+            if (tech) {
+                const isStandard = standardSpecialties.includes(tech.specialty);
+                setTechData({
+                    ...tech,
+                    fullName: tech.fullname || tech.fullName,
+                    reviews_count: reviewsData ? reviewsData.length : 0,
+                    // calculate average rating inside
+                    rating: reviewsData && reviewsData.length > 0
+                        ? (reviewsData.reduce((acc, curr) => acc + (curr.rating || 0), 0) / reviewsData.length)
+                        : 0
+                });
+
                 setFormData({
-                    fullName: techJson.data.fullName || '',
-                    email: techJson.data.email || '',
+                    fullName: tech.fullname || tech.fullName || '',
+                    email: tech.email || '',
                     currentPassword: '',
                     password: '',
                     confirmPassword: '',
-                    specialty: isStandard ? techJson.data.specialty : 'Autre',
-                    otherSpecialty: isStandard ? '' : techJson.data.specialty || '',
-                    city: techJson.data.city || '',
-                    district: techJson.data.district || '',
-                    phone: techJson.data.phone || '',
-                    image: techJson.data.image || '',
-                    description: techJson.data.description || '',
-                    commentsEnabled: !!techJson.data.commentsEnabled
+                    specialty: isStandard ? tech.specialty : 'Autre',
+                    otherSpecialty: isStandard ? '' : tech.specialty || '',
+                    city: tech.city || '',
+                    district: tech.district || '',
+                    phone: tech.phone || '',
+                    image: tech.image || '',
+                    description: tech.description || '',
+                    commentsEnabled: (tech.commentsenabled !== undefined ? tech.commentsenabled : tech.commentsEnabled) !== 0
                 });
             }
 
-            if (reviewsJson.message === 'success') {
-                setReviews(reviewsJson.data);
+            if (reviewsData) {
+                const mappedReviews = reviewsData.map(r => ({
+                    ...r,
+                    clientName: r.client?.fullname || 'Client Anonyme'
+                }));
+                setReviews(mappedReviews);
             }
+
         } catch (error) {
             console.error("Error fetching expert data:", error);
         }
@@ -114,17 +141,28 @@ const ExpertDashboard = () => {
 
         try {
             const payload = {
-                ...formData,
-                specialty: formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty
+                fullname: formData.fullName,
+                email: formData.email,
+                specialty: formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty,
+                city: formData.city,
+                district: formData.district,
+                phone: formData.phone,
+                image: formData.image,
+                description: formData.description,
+                commentsenabled: formData.commentsEnabled ? 1 : 0
             };
 
-            const response = await fetch(`${API_URL}/api/users/${user.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            // Only update password if provided
+            if (formData.password) {
+                payload.password = formData.password;
+            }
 
-            if (response.ok) {
+            const { error: updateError } = await import('../supabaseClient').then(m => m.supabase)
+                .from('users')
+                .update(payload)
+                .eq('id', user.id);
+
+            if (!updateError) {
                 alert("Profil mis à jour avec succès !");
                 setEditMode(false);
 
@@ -137,11 +175,11 @@ const ExpertDashboard = () => {
 
                 fetchData();
             } else {
-                alert("Erreur lors de la sauvegarde.");
+                alert("Erreur lors de la sauvegarde: " + updateError.message);
             }
         } catch (error) {
             console.error(error);
-            alert("Erreur réseau.");
+            alert("Erreur réseau: " + error.message);
         }
         setIsSaving(false);
     };
@@ -157,20 +195,16 @@ const ExpertDashboard = () => {
                 userName: techData?.fullName || 'Anonyme',
                 content: feedbackMsg
             };
-            console.log("Sending feedback:", payload);
 
-            const response = await fetch(`${apiUrl}/api/feedback`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            const { error: feedbackError } = await import('../supabaseClient').then(m => m.supabase)
+                .from('platform_feedback')
+                .insert([payload]);
 
-            if (response.ok) {
+            if (!feedbackError) {
                 alert("Votre message a été envoyé à l'administrateur.");
                 setFeedbackMsg('');
             } else {
-                const errorData = await response.json().catch(() => ({}));
-                alert(`Erreur serveur (${response.status}): ${errorData.message || response.statusText}`);
+                alert(`Erreur serveur: ${feedbackError.message}`);
             }
         } catch (error) {
             console.error("Feedback Error:", error);
