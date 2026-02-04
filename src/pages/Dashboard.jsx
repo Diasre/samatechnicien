@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import API_URL from '../config';
+import { supabase } from '../supabaseClient';
 import { Users, Wrench, ShoppingBag, BarChart2, Edit, X, Lock, Unlock, MessageCircle, Clock } from 'lucide-react';
 import WelcomeOverlay from '../components/WelcomeOverlay';
 
@@ -32,53 +33,83 @@ const Dashboard = () => {
 
     const fetchTechStats = async () => {
         try {
-            const response = await fetch(`${API_URL}/api/technicians/${user.id}`);
-            const data = await response.json();
-            if (data.message === 'success') {
-                setFullTechData(data.data);
+            // Get user data
+            const { data: userData, error: userError } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+
+            if (userError) throw userError;
+
+            // Get reviews to calculate stats accurately
+            const { data: reviews, error: reviewsError } = await supabase
+                .from('reviews')
+                .select('rating')
+                .eq('technicianId', user.id);
+
+            if (reviewsError) throw reviewsError;
+
+            let rating = 0;
+            let count = 0;
+
+            if (reviews && reviews.length > 0) {
+                count = reviews.length;
+                const total = reviews.reduce((acc, curr) => acc + (curr.rating || 0), 0);
+                rating = (total / count).toFixed(1);
+            }
+
+            if (userData) {
+                setFullTechData({ ...userData, rating: rating, reviews_count: count });
                 setTechStats({
-                    rating: Number(data.data.rating || 0).toFixed(1),
-                    reviews_count: data.data.reviews_count
+                    rating: rating,
+                    reviews_count: count
                 });
             }
         } catch (error) {
-            console.error("Error fetching tech stats:", error);
+            console.error("Error fetching tech stats:", error.message);
         }
     };
 
     const fetchTechnicians = async () => {
         try {
-            const response = await fetch(`${API_URL}/api/technicians`);
-            const data = await response.json();
-            if (data.message === 'success') {
-                setTechnicians(data.data);
-            }
+            const { data, error } = await supabase
+                .from('users')
+                .select('*')
+                .eq('role', 'technician');
+
+            if (error) throw error;
+            if (data) setTechnicians(data);
         } catch (error) {
-            console.error("Error fetching technicians:", error);
+            console.error("Error fetching technicians:", error.message);
         }
     };
 
     const fetchClients = async () => {
         try {
-            const response = await fetch(`${API_URL}/api/clients`);
-            const data = await response.json();
-            if (data.message === 'success') {
-                setClients(data.data);
-            }
+            const { data, error } = await supabase
+                .from('users')
+                .select('*')
+                .eq('role', 'client');
+
+            if (error) throw error;
+            if (data) setClients(data);
         } catch (error) {
-            console.error("Error fetching clients:", error);
+            console.error("Error fetching clients:", error.message);
         }
     };
 
     const fetchFeedback = async () => {
         try {
-            const response = await fetch(`${API_URL}/api/admin/feedback`);
-            const data = await response.json();
-            if (data.message === 'success') {
-                setFeedback(data.data);
-            }
+            const { data, error } = await supabase
+                .from('platform_feedback')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            if (data) setFeedback(data);
         } catch (error) {
-            console.error("Error fetching feedback:", error);
+            console.error("Error fetching feedback:", error.message);
         }
     };
 
@@ -100,22 +131,20 @@ const Dashboard = () => {
         if (!window.confirm(confirmMessage)) return;
 
         try {
-            const response = await fetch(`${API_URL}/api/users/${tech.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...tech, isBlocked: !tech.isBlocked })
-            });
+            const { error } = await supabase
+                .from('users')
+                .update({ isBlocked: tech.isBlocked ? 0 : 1 })
+                .eq('id', tech.id);
 
-            if (response.ok) {
-                alert(`Utilisateur ${tech.isBlocked ? 'débloqué' : 'bloqué'} avec succès`);
-                fetchTechnicians();
-                fetchClients();
-            } else {
-                alert('Erreur lors de la mise à jour du statut');
-            }
+            if (error) throw error;
+
+            alert(`Utilisateur ${tech.isBlocked ? 'débloqué' : 'bloqué'} avec succès`);
+            fetchTechnicians();
+            fetchClients();
+
         } catch (error) {
             console.error(error);
-            alert('Erreur technique');
+            alert('Erreur technique : ' + error.message);
         }
     };
 
@@ -133,21 +162,19 @@ const Dashboard = () => {
             }
 
             try {
-                const response = await fetch(`${API_URL}/api/admin/users/${userId}/password`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password: newPassword.trim() })
-                });
+                // In a real app we would hash this. For now storing as is or consistent with current logic.
+                const { error } = await supabase
+                    .from('users')
+                    .update({ password: newPassword.trim() })
+                    .eq('id', userId);
 
-                if (response.ok) {
-                    alert('Code PIN mis à jour avec succès');
-                } else {
-                    const data = await response.json();
-                    alert('Erreur: ' + (data.message || data.error));
-                }
+                if (error) throw error;
+
+                alert('Code PIN mis à jour avec succès');
+
             } catch (error) {
                 console.error(error);
-                alert('Erreur technique');
+                alert('Erreur technique : ' + error.message);
             }
         }
     };
@@ -174,33 +201,37 @@ const Dashboard = () => {
         e.preventDefault();
         try {
             const payload = {
-                ...currentTech,
+                fullName: currentTech.fullName,
+                email: currentTech.email,
+                description: currentTech.description,
+                image: currentTech.image,
+                city: currentTech.city,
+                phone: currentTech.phone,
+                commentsEnabled: currentTech.commentsEnabled ? 1 : 0,
                 specialty: currentTech.specialtyType === 'Autre' ? currentTech.otherSpecialty : currentTech.specialtyType
             };
 
-            const response = await fetch(`${API_URL}/api/users/${currentTech.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            const { error } = await supabase
+                .from('users')
+                .update(payload)
+                .eq('id', currentTech.id);
 
-            if (response.ok) {
-                alert('Informations mises à jour avec succès');
-                setIsEditing(false);
+            if (error) throw error;
 
-                if (currentTech.id === user.id) {
-                    const updatedUser = { ...user, ...currentTech };
-                    localStorage.setItem('user', JSON.stringify(updatedUser));
-                    fetchTechStats();
-                }
+            alert('Informations mises à jour avec succès');
+            setIsEditing(false);
 
-                if (activeTab === 'admin') fetchTechnicians();
-            } else {
-                alert('Erreur lors de la mise à jour');
+            if (currentTech.id === user.id) {
+                const updatedUser = { ...user, ...payload };
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+                fetchTechStats();
             }
+
+            if (activeTab === 'admin') fetchTechnicians();
+
         } catch (error) {
             console.error(error);
-            alert('Erreur technique');
+            alert('Erreur technique : ' + error.message);
         }
     };
 
@@ -486,21 +517,24 @@ const Dashboard = () => {
                                             const file = e.target.files[0];
                                             if (!file) return;
 
-                                            const formData = new FormData();
-                                            formData.append('image', file);
-
                                             try {
-                                                const res = await fetch(`${API_URL}/api/upload`, {
-                                                    method: 'POST',
-                                                    body: formData
-                                                });
-                                                const data = await res.json();
-                                                if (data.url) {
-                                                    setCurrentTech(prev => ({ ...prev, image: data.url }));
+                                                const fileExt = file.name.split('.').pop();
+                                                const fileName = `avatars/${currentTech.id}_${Date.now()}.${fileExt}`;
+
+                                                const { error: uploadError } = await supabase.storage
+                                                    .from('products') // Reuse products bucket for simplicity
+                                                    .upload(fileName, file);
+
+                                                if (uploadError) throw uploadError;
+
+                                                const { data } = supabase.storage.from('products').getPublicUrl(fileName);
+
+                                                if (data.publicUrl) {
+                                                    setCurrentTech(prev => ({ ...prev, image: data.publicUrl }));
                                                 }
                                             } catch (err) {
                                                 console.error("Upload error:", err);
-                                                alert("Erreur lors de l'upload de l'image.");
+                                                alert("Erreur lors de l'upload de l'image : " + err.message);
                                             }
                                         }}
                                         style={{ fontSize: '0.8rem' }}

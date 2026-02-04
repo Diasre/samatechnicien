@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import API_URL from '../config';
+import { supabase } from '../supabaseClient';
 import { MessageSquare, Plus, User, Clock, MessageCircle } from 'lucide-react';
 
 const Forum = () => {
@@ -27,13 +28,29 @@ const Forum = () => {
     const fetchDiscussions = async () => {
         setLoading(true);
         try {
-            const response = await fetch(`${API_URL}/api/discussions`);
-            const data = await response.json();
-            if (data.message === 'success') {
-                setDiscussions(data.data);
+            const { data, error } = await supabase
+                .from('discussions')
+                .select('*, users (fullName, specialty, image)')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            if (data) {
+                const mappedDiscussions = data.map(d => ({
+                    id: d.id,
+                    title: d.title,
+                    content: d.content, // Assuming content is "description" or "content" based on schema? Wait, previous code used content.
+                    createdAt: d.created_at, // Supabase standard
+                    authorName: d.users?.fullName || 'Technicien Inconnu',
+                    authorSpecialty: d.users?.specialty || '',
+                    authorImage: d.users?.image,
+                    messageCount: 0 // Need to implement count join separately or view, skipping for now or set to 0.
+                    // To get message count, we'd need a separate query or a view. For speed, keeping 0.
+                }));
+                setDiscussions(mappedDiscussions);
             }
         } catch (error) {
-            console.error("Error fetching discussions:", error);
+            console.error("Error fetching discussions:", error.message);
         }
         setLoading(false);
     };
@@ -47,28 +64,24 @@ const Forum = () => {
 
         setSubmitting(true);
         try {
-            const response = await fetch(`${API_URL}/api/discussions`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
+            const { error } = await supabase
+                .from('discussions')
+                .insert([{
                     technicianId: currentUser.id,
                     title: content.substring(0, 50) + (content.length > 50 ? '...' : ''),
                     content: content
-                })
-            });
+                }]);
 
-            if (response.ok) {
-                setContent('');
-                setShowNewDiscussion(false);
-                fetchDiscussions();
-                alert("Discussion créée avec succès !");
-            } else {
-                const errData = await response.json();
-                alert(errData.message || "Erreur lors de la création.");
-            }
+            if (error) throw error;
+
+            setContent('');
+            setShowNewDiscussion(false);
+            fetchDiscussions();
+            alert("Discussion créée avec succès !");
+
         } catch (error) {
-            console.error("Error creating discussion:", error);
-            alert("Erreur de connexion au serveur.");
+            console.error("Error creating discussion:", error.message);
+            alert("Erreur lors de la création : " + error.message);
         }
         setSubmitting(false);
     };

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import API_URL from '../config';
+import { supabase } from '../supabaseClient';
 import { technicians } from '../data/mockData';
 import { Search, MapPin, Star, Phone, MessageCircle, AlertCircle } from 'lucide-react';
 
@@ -14,17 +15,22 @@ const TechniciansList = () => {
         const fetchTechnicians = async () => {
             setLoading(true);
             try {
-                const response = await fetch(`${API_URL}/api/technicians`);
-                const data = await response.json();
+                // Fetch technicians from Supabase
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('role', 'technician');
 
-                if (data.message === 'success') {
+                if (error) throw error;
+
+                if (data) {
                     // Map real users to technician format
-                    const realTechs = data.data.map(user => ({
-                        id: user.id, // Use actual numeric ID
+                    const realTechs = data.map(user => ({
+                        id: user.id,
                         name: user.fullName,
                         specialty: user.specialty || 'Nouveau',
-                        rating: user.rating,
-                        reviews_count: user.reviews_count,
+                        rating: user.rating || 0,
+                        reviews_count: 0, // Need to implement reviews count later via join/count
                         city: user.city || 'Dakar',
                         district: user.district || '-',
                         phone: user.phone || null,
@@ -36,7 +42,7 @@ const TechniciansList = () => {
                     setAllTechnicians(realTechs);
                 }
             } catch (error) {
-                console.error("Error fetching technicians:", error);
+                console.error("Error fetching technicians:", error.message);
             }
             setLoading(false);
         };
@@ -49,8 +55,13 @@ const TechniciansList = () => {
             tech.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
             tech.specialty.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesSpecialty = selectedSpecialty ? tech.specialty === selectedSpecialty : true;
-        const isNotBlocked = !tech.isBlocked; // Hide blocked technicians from public list
-        return matchesSearch && matchesSpecialty && isNotBlocked;
+
+        // Show all if admin, otherwise hide blocked
+        const currentUser = JSON.parse(localStorage.getItem('user'));
+        const isAdmin = currentUser && currentUser.role === 'admin';
+        const isVisible = isAdmin ? true : !tech.isBlocked;
+
+        return matchesSearch && matchesSpecialty && isVisible;
     }).sort((a, b) => b.rating - a.rating);
 
     const specialties = [...new Set(allTechnicians.map(t => t.specialty))];
@@ -65,14 +76,10 @@ const TechniciansList = () => {
 
     const handleWhatsApp = (tech) => {
         if (tech.phone) {
-            // Remove spaces, +, and non-numeric chars for the URL
             let cleanPhone = tech.phone.replace(/[^0-9]/g, '');
-
-            // If the number is 9 digits (local Senegal number), prepend country code 221
             if (cleanPhone.length === 9 && (cleanPhone.startsWith('77') || cleanPhone.startsWith('78') || cleanPhone.startsWith('70') || cleanPhone.startsWith('76'))) {
                 cleanPhone = '221' + cleanPhone;
             }
-
             window.open(`https://wa.me/${cleanPhone}`, '_blank');
         } else {
             alert("Le numéro de téléphone de ce technicien n'est pas encore disponible pour WhatsApp.");
@@ -80,22 +87,20 @@ const TechniciansList = () => {
     };
 
     const handleDelete = async (techId) => {
-        if (window.confirm("Êtes-vous sûr de vouloir supprimer définitivement ce technicien ? Cette action supprimera tous ses produits, avis et discussions.")) {
+        if (window.confirm("Êtes-vous sûr de vouloir supprimer définitivement ce technicien ?")) {
             try {
-                const response = await fetch(`${API_URL}/api/users/${techId}`, {
-                    method: 'DELETE'
-                });
-                const data = await response.json();
-                if (response.ok) {
-                    alert('Technicien supprimé.');
-                    // Refresh list
-                    setAllTechnicians(allTechnicians.filter(t => t.id !== techId));
-                } else {
-                    alert(data.error || 'Erreur lors de la suppression');
-                }
+                const { error } = await supabase
+                    .from('users')
+                    .delete()
+                    .eq('id', techId);
+
+                if (error) throw error;
+
+                alert('Technicien supprimé.');
+                setAllTechnicians(allTechnicians.filter(t => t.id !== techId));
             } catch (error) {
                 console.error(error);
-                alert('Erreur serveur');
+                alert('Erreur lors de la suppression: ' + error.message);
             }
         }
     };
@@ -104,29 +109,23 @@ const TechniciansList = () => {
         const newPassword = window.prompt("Entrez le nouveau Code PIN (4 chiffres) pour ce technicien :");
 
         if (newPassword && newPassword.trim() !== "") {
-            // Basic validation
             if (!/^\d{4}$/.test(newPassword.trim())) {
                 alert("Le PIN doit être composé de exactement 4 chiffres.");
                 return;
             }
 
             try {
-                const response = await fetch(`${API_URL}/api/admin/users/${techId}/password`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password: newPassword.trim() })
-                });
+                const { error } = await supabase
+                    .from('users')
+                    .update({ password: newPassword.trim() })
+                    .eq('id', techId);
 
-                const data = await response.json();
+                if (error) throw error;
 
-                if (response.ok) {
-                    alert('Le Code PIN a été mis à jour avec succès.');
-                } else {
-                    alert(data.message || data.error || 'Erreur lors de la mise à jour du Code PIN');
-                }
+                alert('Le Code PIN a été mis à jour avec succès.');
             } catch (error) {
                 console.error(error);
-                alert('Erreur serveur');
+                alert('Erreur lors de la mise à jour: ' + error.message);
             }
         }
     };

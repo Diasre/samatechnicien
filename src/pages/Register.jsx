@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import API_URL from '../config';
+import { supabase } from '../supabaseClient';
 import { User, Mail, Lock, Shield, Phone } from 'lucide-react';
 
 const Register = () => {
@@ -31,27 +32,26 @@ const Register = () => {
         try {
             const payload = {
                 ...formData,
-                specialty: formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty
+                specialty: formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty,
+                // Note: En production, on utiliserait Supabase Auth pour le mot de passe.
+                // Ici on insère directement pour garder votre fonctionnement actuel.
             };
 
-            const response = await fetch(`${API_URL}/api/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            const { data, error } = await supabase
+                .from('users')
+                .insert([payload])
+                .select();
 
-            const data = await response.json();
-
-            if (response.ok) {
+            if (error) {
+                alert('Erreur: ' + error.message);
+            } else {
                 alert('Inscription réussie ! Vous pouvez maintenant vous connecter.');
                 // Optional: navigate to login
                 location.href = '/login';
-            } else {
-                alert('Erreur: ' + data.message || data.error);
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Erreur de connexion au serveur.');
+            alert('Erreur lors de l\'inscription.');
         }
     };
 

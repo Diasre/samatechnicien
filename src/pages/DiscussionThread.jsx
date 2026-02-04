@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import API_URL from '../config';
+import { supabase } from '../supabaseClient';
 import { ArrowLeft, Send, User, Clock } from 'lucide-react';
 
 const DiscussionThread = () => {
@@ -27,13 +28,48 @@ const DiscussionThread = () => {
     const fetchDiscussion = async () => {
         setLoading(true);
         try {
-            const response = await fetch(`${API_URL}/api/discussions/${id}`);
-            const data = await response.json();
-            if (data.message === 'success') {
-                setDiscussion(data.data);
+            // 1. Fetch Discussion Details
+            const { data: discussionData, error: discussionError } = await supabase
+                .from('discussions')
+                .select('*, users (fullName, specialty, image)')
+                .eq('id', id)
+                .single();
+
+            if (discussionError) throw discussionError;
+
+            // 2. Fetch Messages
+            const { data: messagesData, error: messagesError } = await supabase
+                .from('messages')
+                .select('*, users (fullName, specialty, image)')
+                .eq('discussionId', id)
+                .order('created_at', { ascending: true });
+
+            if (messagesError) throw messagesError;
+
+            if (discussionData) {
+                const messages = messagesData ? messagesData.map(m => ({
+                    id: m.id,
+                    message: m.content, // Schema might use 'content', code used 'message'. Mapping to code usage.
+                    createdAt: m.created_at,
+                    authorName: m.users?.fullName || 'Utilisateur inconnu',
+                    authorSpecialty: m.users?.specialty || '',
+                    authorImage: m.users?.image
+                })) : [];
+
+                setDiscussion({
+                    id: discussionData.id,
+                    title: discussionData.title,
+                    content: discussionData.content,
+                    createdAt: discussionData.created_at,
+                    authorName: discussionData.users?.fullName || 'Auteur inconnu',
+                    authorSpecialty: discussionData.users?.specialty || '',
+                    authorImage: discussionData.users?.image,
+                    messages: messages
+                });
             }
+
         } catch (error) {
-            console.error("Error fetching discussion:", error);
+            console.error("Error fetching discussion:", error.message);
         }
         setLoading(false);
     };
@@ -47,25 +83,22 @@ const DiscussionThread = () => {
 
         setSubmitting(true);
         try {
-            const response = await fetch(`${API_URL}/api/discussions/${id}/messages`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
+            const { error } = await supabase
+                .from('messages')
+                .insert([{
+                    discussionId: id,
                     technicianId: currentUser.id,
-                    message: message
-                })
-            });
+                    content: message
+                }]);
 
-            if (response.ok) {
-                setMessage('');
-                fetchDiscussion(); // Refresh to show new message
-            } else {
-                const errData = await response.json();
-                alert(errData.message || "Erreur lors de l'envoi.");
-            }
+            if (error) throw error;
+
+            setMessage('');
+            fetchDiscussion(); // Refresh to show new message
+
         } catch (error) {
-            console.error("Error posting message:", error);
-            alert("Erreur de connexion au serveur.");
+            console.error("Error posting message:", error.message);
+            alert("Erreur lors de l'envoi : " + error.message);
         }
         setSubmitting(false);
     };

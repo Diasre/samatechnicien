@@ -1,5 +1,6 @@
 import React from 'react';
 import API_URL from '../config';
+import { supabase } from '../supabaseClient';
 import { products } from '../data/mockData';
 import { ShoppingCart, Phone, MessageCircle, Trash2, Search } from 'lucide-react';
 
@@ -217,20 +218,31 @@ const Marketplace = () => {
         );
     });
 
-    const fetchProducts = () => {
+    const fetchProducts = async () => {
         setLoading(true);
-        fetch(`${API_URL}/api/products`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.message === 'success') {
-                    setProducts(data.data);
-                }
-                setLoading(false);
-            })
-            .catch(err => {
-                console.error(err);
-                setLoading(false);
-            });
+        try {
+            // Join with users table to get technician details
+            const { data, error } = await supabase
+                .from('products')
+                .select('*, users (fullName, phone, city, district)')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            if (data) {
+                const mappedProducts = data.map(p => ({
+                    ...p,
+                    technicianName: p.users?.fullName || 'Technicien Inconnu',
+                    technicianPhone: p.users?.phone || '',
+                    technicianSpecialty: p.users?.specialty || '', // Assuming you might want this
+                    technicianId: p.technicianId // Keep original link
+                }));
+                setProducts(mappedProducts);
+            }
+        } catch (err) {
+            console.error("Erreur chargement produits:", err.message);
+        }
+        setLoading(false);
     };
 
     React.useEffect(() => {
@@ -242,64 +254,89 @@ const Marketplace = () => {
         setNewProduct(prev => ({ ...prev, [name]: value }));
     };
 
+    // Helper to upload a single file
+    const uploadImage = async (file) => {
+        if (!file) return null;
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}/${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+        const filePath = `${fileName}`;
 
+        const { error: uploadError } = await supabase.storage
+            .from('products')
+            .upload(filePath, file);
+
+        if (uploadError) {
+            console.error('Upload error:', uploadError);
+            return null;
+        }
+
+        const { data } = supabase.storage.from('products').getPublicUrl(filePath);
+        return data.publicUrl;
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSubmitting(true);
 
-        const activeFiles = imageFiles.filter(f => f !== null);
-        const hasNewFiles = activeFiles.length > 0;
-
-        const formData = new FormData();
-        formData.append('technicianId', user.id);
-        formData.append('title', newProduct.title);
-        formData.append('price', newProduct.price);
-        formData.append('category', newProduct.category);
-        formData.append('condition', newProduct.condition);
-        formData.append('description', newProduct.description);
-
-        if (hasNewFiles) {
-            const uploads = [];
-            imageFiles.forEach((file, index) => {
-                if (file) {
-                    uploads.push({ file, label: newProduct[`label${index + 1}`] });
-                }
-            });
-
-            uploads.forEach((u, i) => {
-                formData.append('images', u.file);
-                formData.append(`image${i + 1}_label`, u.label);
-            });
-        } else {
-            formData.append('image1_label', newProduct.label1);
-            formData.append('image2_label', newProduct.label2);
-            formData.append('image3_label', newProduct.label3);
-        }
-
         try {
-            const url = editingProduct
-                ? `${API_URL}/api/products/${editingProduct.id}`
-                : `${API_URL}/api/products`;
+            // 1. Upload images if present
+            let imageUrls = [null, null, null];
 
-            const method = editingProduct ? 'PUT' : 'POST';
-
-            const res = await fetch(url, {
-                method: method,
-                body: formData
-            });
-            const data = await res.json();
-
-            if (res.ok) {
-                alert(editingProduct ? 'Produit mis à jour !' : 'Produit ajouté !');
-                handleCancel();
-                fetchProducts();
-            } else {
-                alert(data.message || 'Erreur.');
+            // If editing, keep old images by default
+            if (editingProduct) {
+                imageUrls[0] = editingProduct.image;
+                imageUrls[1] = editingProduct.image2;
+                imageUrls[2] = editingProduct.image3;
             }
+
+            // Upload new files
+            for (let i = 0; i < 3; i++) {
+                if (imageFiles[i]) {
+                    const url = await uploadImage(imageFiles[i]);
+                    if (url) imageUrls[i] = url;
+                }
+            }
+
+            // 2. Prepare payload
+            const productData = {
+                technicianId: user.id,
+                title: newProduct.title,
+                price: parseFloat(newProduct.price),
+                category: newProduct.category,
+                condition: newProduct.condition,
+                description: newProduct.description,
+                image1_label: newProduct.label1,
+                image2_label: newProduct.label2,
+                image3_label: newProduct.label3,
+                // Assign images
+                image: imageUrls[0],
+                image2: imageUrls[1],
+                image3: imageUrls[2],
+            };
+
+            let error;
+            if (editingProduct) {
+                const { error: updateError } = await supabase
+                    .from('products')
+                    .update(productData)
+                    .eq('id', editingProduct.id);
+                error = updateError;
+            } else {
+                const { error: insertError } = await supabase
+                    .from('products')
+                    .insert([productData]);
+                error = insertError;
+            }
+
+            if (error) throw error;
+
+            alert(editingProduct ? 'Produit mis à jour !' : 'Produit ajouté !');
+            handleCancel();
+            fetchProducts();
+
         } catch (error) {
-            console.error(error);
-            alert('Erreur serveur.');
+            console.error('Erreur sauvegarde:', error.message);
+            alert('Erreur: ' + error.message);
         }
         setSubmitting(false);
     };
@@ -334,43 +371,37 @@ const Marketplace = () => {
     const handleStatusToggle = async (product) => {
         const newStatus = product.status === 'sold' ? 'available' : 'sold';
         try {
-            const res = await fetch(`${API_URL}/api/products/${product.id}/status`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: newStatus, technicianId: user.id })
-            });
+            const { error } = await supabase
+                .from('products')
+                .update({ status: newStatus })
+                .eq('id', product.id);
 
-            if (res.ok) {
-                // Update local list
-                setProducts(products.map(p =>
-                    p.id === product.id ? { ...p, status: newStatus } : p
-                ));
-            } else {
-                alert("Erreur lors de la mise à jour du statut.");
-            }
+            if (error) throw error;
+
+            // Update local list
+            setProducts(products.map(p =>
+                p.id === product.id ? { ...p, status: newStatus } : p
+            ));
         } catch (error) {
             console.error(error);
+            alert("Erreur maj statut");
         }
     };
 
     const handleDeleteProduct = async (product) => {
         if (window.confirm("Êtes-vous sûr de vouloir supprimer cet article ?")) {
             try {
-                const res = await fetch(`${API_URL}/api/products/${product.id}`, {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ technicianId: user.id })
-                });
+                const { error } = await supabase
+                    .from('products')
+                    .delete()
+                    .eq('id', product.id);
 
-                if (res.ok) {
-                    setProducts(products.filter(p => p.id !== product.id));
-                } else {
-                    const data = await res.json();
-                    alert(data.message || "Erreur lors de la suppression.");
-                }
+                if (error) throw error;
+
+                setProducts(products.filter(p => p.id !== product.id));
             } catch (error) {
                 console.error(error);
-                alert("Erreur serveur.");
+                alert("Erreur suppression: " + error.message);
             }
         }
     };

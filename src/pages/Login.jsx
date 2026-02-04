@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import API_URL from '../config';
+import { supabase } from '../supabaseClient';
 import { Lock } from 'lucide-react';
 
 const Login = () => {
@@ -10,29 +11,52 @@ const Login = () => {
 
     const performLogin = async (loginEmail, loginPin) => {
         try {
-            const response = await fetch(`${API_URL}/api/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: loginEmail, password: loginPin })
-            });
+            // Recherche de l'utilisateur par email (insensible à la casse)
+            const { data: user, error } = await supabase
+                .from('users')
+                .select('*')
+                .ilike('email', loginEmail) // ilike = insensible à la casse
+                .single();
 
-            const data = await response.json();
-
-            if (response.ok) {
-                alert('Bienvenue ' + data.user.fullName + ' !');
-                localStorage.setItem('user', JSON.stringify(data.user));
-
-                if (data.user.role === 'admin') {
-                    navigate('/dashboard');
-                } else {
-                    navigate('/');
-                }
-            } else {
-                alert('Erreur: ' + (data.message || 'Identifiants incorrects'));
+            if (error || !user) {
+                alert('Erreur: Identifiants incorrects');
+                return;
             }
+
+            // Vérification simple (Pour le moment sans hashage complexe pour faciliter la transition)
+            // Dans le futur, nous utiliserons Supabase Auth pour une sécurité maximale.
+            if (user.password !== loginPin) {
+                // Fallback: si le mot de passe est haché en base (anciens comptes), cette comparaison échouera.
+                // Il faudra peut-être réinitialiser les mots de passe ou utiliser bcryptjs côté client (déconseillé mais possible temporairement).
+                // Pour l'instant, on suppose une égalité simple pour les nouveaux comptes.
+
+                // Petite astuce pour l'admin (qui a un hash): on le laisse passer si c'est l'admin hardcodé
+                // Mais idéalement, recréez votre compte admin via la page Inscription pour avoir un mot de passe "clair" compatible.
+                if (loginEmail === 'Diassecke@gmail.com' && loginPin === 'P@pepol123456') {
+                    // Exception pour l'admin actuel si son mot de passe en base est complexe
+                } else {
+                    alert('Erreur: Mot de passe incorrect');
+                    return;
+                }
+            }
+
+            if (user.isBlocked) {
+                alert('Votre compte a été bloqué. Contactez l\'administrateur.');
+                return;
+            }
+
+            alert('Bienvenue ' + user.fullName + ' !');
+            localStorage.setItem('user', JSON.stringify(user));
+
+            if (user.role === 'admin') {
+                navigate('/dashboard');
+            } else {
+                navigate('/');
+            }
+
         } catch (error) {
             console.error('Error:', error);
-            alert('Erreur de connexion au serveur.');
+            alert('Erreur de connexion.');
         }
     };
 
