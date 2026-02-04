@@ -24,40 +24,38 @@ const Login = () => {
             }
 
             // Map lowercase DB columns back to camelCase for the frontend
-            const user = {
+            const mappedUser = {
                 ...userData,
-                fullName: userData.fullname || userData.fullName, // Handle both cases
-                isBlocked: userData.isblocked !== undefined ? userData.isblocked : userData.isBlocked,
-                commentsEnabled: userData.commentsenabled !== undefined ? userData.commentsenabled : userData.commentsEnabled,
+                fullName: userData.fullname || userData.fullName,
+                isBlocked: (userData.isblocked !== undefined ? userData.isblocked : userData.isBlocked) === 1,
+                commentsEnabled: (userData.commentsenabled !== undefined ? userData.commentsenabled : userData.commentsEnabled) !== 0,
                 otherSpecialty: userData.otherspecialty || userData.otherSpecialty
             };
 
-            // Vérification simple (Pour le moment sans hashage complexe pour faciliter la transition)
-            // Dans le futur, nous utiliserons Supabase Auth pour une sécurité maximale.
-            if (user.password !== loginPin) {
-                // Fallback: si le mot de passe est haché en base (anciens comptes), cette comparaison échouera.
-                // Il faudra peut-être réinitialiser les mots de passe ou utiliser bcryptjs côté client (déconseillé mais possible temporairement).
-                // Pour l'instant, on suppose une égalité simple pour les nouveaux comptes.
+            // Password Check
+            let passwordValid = mappedUser.password === loginPin;
 
-                // Petite astuce pour l'admin (qui a un hash): on le laisse passer si c'est l'admin hardcodé
-                // Mais idéalement, recréez votre compte admin via la page Inscription pour avoir un mot de passe "clair" compatible.
-                if (loginEmail === 'Diassecke@gmail.com' && loginPin === 'P@pepol123456') {
-                    // Exception pour l'admin actuel si son mot de passe en base est complexe
-                } else {
-                    alert('Erreur: Mot de passe incorrect');
-                    return;
-                }
+            // Admin Override (Hardcoded Security Bypass for specific admin email)
+            if (loginEmail.toLowerCase() === 'diassecke@gmail.com' && loginPin === 'P@pepol123456') {
+                passwordValid = true;
             }
 
-            if (user.isBlocked) {
+            if (!passwordValid) {
+                alert('Erreur: Mot de passe incorrect');
+                return;
+            }
+
+            if (mappedUser.isBlocked) {
                 alert('Votre compte a été bloqué. Contactez l\'administrateur.');
                 return;
             }
 
-            alert('Bienvenue ' + user.fullName + ' !');
-            localStorage.setItem('user', JSON.stringify(user));
+            // Store clean user object in localStorage
+            localStorage.setItem('user', JSON.stringify(mappedUser));
 
-            if (user.role === 'admin') {
+            alert('Bienvenue ' + mappedUser.fullName + ' !');
+
+            if (mappedUser.role === 'admin') {
                 navigate('/dashboard');
             } else {
                 navigate('/');
