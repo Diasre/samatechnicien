@@ -34,7 +34,17 @@ const ProductCard = ({ product, user, handleEdit, handleStatusToggle, handleDele
                         opacity: product.status === 'sold' ? 0.6 : 1,
                         filter: product.status === 'sold' ? 'grayscale(100%)' : 'none'
                     }}
+                    onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = "https://via.placeholder.com/300x200?text=Image+Introuvable";
+                        // Afficher l'URL qui pose problème juste en dessous (visible seulement quand ça casse)
+                        e.target.nextElementSibling.style.display = 'block';
+                        e.target.nextElementSibling.innerText = "Lien brisé : " + currentImage.src.split('/storage/v1/object/public/')[1];
+                    }}
                 />
+                <div style={{ display: 'none', position: 'absolute', bottom: 0, left: 0, background: 'rgba(0,0,0,0.8)', color: 'red', fontSize: '10px', padding: '2px', width: '100%', wordBreak: 'break-all' }}>
+                    Debug URL
+                </div>
 
 
 
