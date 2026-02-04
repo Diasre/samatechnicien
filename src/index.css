@@ -249,17 +249,18 @@ p {
 
 /* Responsive Navbar Styles */
 .navbar {
-  padding-top: 35px;
-  /* Mobile Status Bar spacing */
+  padding-top: 0px;
+  /* Reduced from 35px */
 }
 
 .navbar-container {
-  height: 120px;
-  /* Mobile Height */
+  height: 60px;
+  /* Reduced from 120px */
 }
 
 .nav-logo {
-  height: 90px;
+  height: 40px;
+  /* Reduced from 90px */
   width: auto;
 }
 
@@ -269,18 +270,18 @@ p {
   }
 
   .navbar-container {
-    height: 120px !important;
-    /* Larger on Desktop */
+    height: 64px !important;
+    /* Reduced from 120px */
   }
 
   .nav-logo {
-    height: 90px !important;
-    /* Larger logo on Desktop */
+    height: 45px !important;
+    /* Reduced from 90px */
   }
 
   .navbar .container {
-    height: 120px !important;
-    /* Ensure container override works */
+    height: 64px !important;
+    /* Ensure match */
   }
 
   /* Splash Screen Desktop Adjustments (Compact for Visibility) */
