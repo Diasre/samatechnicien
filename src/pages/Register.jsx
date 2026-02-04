@@ -31,7 +31,9 @@ const Register = () => {
 
         try {
             const payload = {
-                fullName: formData.fullName,
+                // Supabase (Postgres) columns are often lowercase by default unless quoted during creation.
+                // Trying 'fullname' instead of 'fullName'.
+                fullname: formData.fullName,
                 email: formData.email,
                 password: formData.password,
                 phone: formData.phone,
