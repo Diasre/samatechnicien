@@ -24,19 +24,20 @@ const TechniciansList = () => {
                 if (error) throw error;
 
                 if (data) {
-                    // Map real users to technician format
+                    // Map real users to technician format (handling case-insensitivity of Supabase columns)
                     const realTechs = data.map(user => ({
                         id: user.id,
-                        name: user.fullName,
+                        name: user.fullname || user.fullName || 'Technicien',
                         specialty: user.specialty || 'Nouveau',
+                        // Handle potential otherSpecialty if specialty is Autre (though listing usually shows main)
                         rating: user.rating || 0,
-                        reviews_count: 0, // Need to implement reviews count later via join/count
+                        reviews_count: 0,
                         city: user.city || 'Dakar',
                         district: user.district || '-',
                         phone: user.phone || null,
-                        image: user.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName)}&background=random&color=fff&size=150`,
+                        image: user.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullname || user.fullName || 'Tech')}&background=random&color=fff&size=150`,
                         description: user.description || 'Technicien professionnel référencé.',
-                        isBlocked: user.isBlocked
+                        isBlocked: user.isblocked !== undefined ? user.isblocked : user.isBlocked
                     }));
 
                     setAllTechnicians(realTechs);
