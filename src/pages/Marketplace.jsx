@@ -224,7 +224,7 @@ const Marketplace = () => {
             // Join with users table to get technician details
             const { data, error } = await supabase
                 .from('products')
-                .select('*, users (fullName, phone, city, district)')
+                .select('*, users (fullname, phone, city, district, specialty)')
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
@@ -232,7 +232,7 @@ const Marketplace = () => {
             if (data) {
                 const mappedProducts = data.map(p => ({
                     ...p,
-                    technicianName: p.users?.fullName || 'Technicien Inconnu',
+                    technicianName: p.users?.fullname || p.users?.fullName || 'Technicien Inconnu',
                     technicianPhone: p.users?.phone || '',
                     technicianSpecialty: p.users?.specialty || '', // Assuming you might want this
                     technicianId: p.technicianId // Keep original link

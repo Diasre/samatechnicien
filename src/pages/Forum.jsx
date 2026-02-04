@@ -30,7 +30,7 @@ const Forum = () => {
         try {
             const { data, error } = await supabase
                 .from('discussions')
-                .select('*, users (fullName, specialty, image)')
+                .select('*, users (fullname, specialty, image)')
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
@@ -39,9 +39,9 @@ const Forum = () => {
                 const mappedDiscussions = data.map(d => ({
                     id: d.id,
                     title: d.title,
-                    content: d.content, // Assuming content is "description" or "content" based on schema? Wait, previous code used content.
-                    createdAt: d.created_at, // Supabase standard
-                    authorName: d.users?.fullName || 'Technicien Inconnu',
+                    content: d.content,
+                    createdAt: d.created_at,
+                    authorName: d.users?.fullname || d.users?.fullName || 'Technicien Inconnu',
                     authorSpecialty: d.users?.specialty || '',
                     authorImage: d.users?.image,
                     messageCount: 0 // Need to implement count join separately or view, skipping for now or set to 0.

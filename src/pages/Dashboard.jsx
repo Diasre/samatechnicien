@@ -60,7 +60,15 @@ const Dashboard = () => {
             }
 
             if (userData) {
-                setFullTechData({ ...userData, rating: rating, reviews_count: count });
+                const mappedUser = {
+                    ...userData,
+                    fullName: userData.fullname || userData.fullName,
+                    specialty: userData.specialty, // typically lowercase in db too if text, but key is correct
+                    city: userData.city,
+                    isBlocked: userData.isblocked !== undefined ? userData.isblocked : userData.isBlocked,
+                    commentsEnabled: userData.commentsenabled !== undefined ? userData.commentsenabled : userData.commentsEnabled
+                };
+                setFullTechData({ ...mappedUser, rating: rating, reviews_count: count });
                 setTechStats({
                     rating: rating,
                     reviews_count: count
@@ -79,7 +87,16 @@ const Dashboard = () => {
                 .eq('role', 'technician');
 
             if (error) throw error;
-            if (data) setTechnicians(data);
+            if (data) {
+                const mappedTechs = data.map(t => ({
+                    ...t,
+                    fullName: t.fullname || t.fullName,
+                    isBlocked: t.isblocked !== undefined ? t.isblocked : t.isBlocked,
+                    commentsEnabled: t.commentsenabled !== undefined ? t.commentsenabled : t.commentsEnabled,
+                    // Ensure other fields are present if needed
+                }));
+                setTechnicians(mappedTechs);
+            }
         } catch (error) {
             console.error("Error fetching technicians:", error.message);
         }
@@ -93,7 +110,14 @@ const Dashboard = () => {
                 .eq('role', 'client');
 
             if (error) throw error;
-            if (data) setClients(data);
+            if (data) {
+                const mappedClients = data.map(c => ({
+                    ...c,
+                    fullName: c.fullname || c.fullName,
+                    isBlocked: c.isblocked !== undefined ? c.isblocked : c.isBlocked
+                }));
+                setClients(mappedClients);
+            }
         } catch (error) {
             console.error("Error fetching clients:", error.message);
         }
@@ -133,7 +157,7 @@ const Dashboard = () => {
         try {
             const { error } = await supabase
                 .from('users')
-                .update({ isBlocked: tech.isBlocked ? 0 : 1 })
+                .update({ isblocked: tech.isBlocked ? 0 : 1 }) // Use lowercase 'isblocked' for update
                 .eq('id', tech.id);
 
             if (error) throw error;
@@ -201,13 +225,13 @@ const Dashboard = () => {
         e.preventDefault();
         try {
             const payload = {
-                fullName: currentTech.fullName,
+                fullname: currentTech.fullName, // Lowercase for DB Update
                 email: currentTech.email,
                 description: currentTech.description,
                 image: currentTech.image,
                 city: currentTech.city,
                 phone: currentTech.phone,
-                commentsEnabled: currentTech.commentsEnabled ? 1 : 0,
+                commentsenabled: currentTech.commentsEnabled ? 1 : 0, // Lowercase for DB Update
                 specialty: currentTech.specialtyType === 'Autre' ? currentTech.otherSpecialty : currentTech.specialtyType
             };
 
