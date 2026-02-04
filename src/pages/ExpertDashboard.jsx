@@ -48,16 +48,17 @@ const ExpertDashboard = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            // 1. Fetch Technician Data
-            const { data: tech, error: techError } = await supabase
-                .from('users')
-                .select('*')
-                .eq('id', user.id)
-                .single();
+            // Lancer les deux requêtes en PARALLÈLE pour gagner du temps
+            const [techResponse, reviewsResponse] = await Promise.all([
+                supabase.from('users').select('*').eq('id', user.id).single(),
+                supabase.from('reviews').select('*, client:clientId(fullname)').eq('technicianId', user.id).order('created_at', { ascending: false })
+            ]);
+
+            const { data: tech, error: techError } = techResponse;
+            const { data: reviewsData, error: reviewsError } = reviewsResponse;
 
             if (techError) {
                 console.error("Supabase error fetching user:", techError);
-                // Don't auto-logout on network error, just stop
             }
 
             if (!tech) {
@@ -67,13 +68,6 @@ const ExpertDashboard = () => {
                 window.location.href = '/login';
                 return;
             }
-
-            // 2. Fetch Reviews
-            const { data: reviewsData, error: reviewsError } = await supabase
-                .from('reviews')
-                .select('*, client:clientId(fullname)')
-                .eq('technicianId', user.id)
-                .order('created_at', { ascending: false });
 
             const isStandard = standardSpecialties.includes(tech.specialty);
             setTechData({
