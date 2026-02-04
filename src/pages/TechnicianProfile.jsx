@@ -49,25 +49,25 @@ const TechnicianProfile = () => {
                 if (techData) {
                     setTech({
                         ...techData,
-                        name: techData.fullName,
-                        image: techData.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(techData.fullName)}&background=random&color=fff&size=200`,
+                        name: techData.fullname || techData.fullName,
+                        image: techData.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(techData.fullname || techData.fullName)}&background=random&color=fff&size=200`,
                         description: techData.description || 'Technicien professionnel référencé.',
                         is_verified: true,
-                        commentsEnabled: techData.commentsEnabled !== 0 // 0 means false
+                        commentsEnabled: (techData.commentsenabled !== undefined ? techData.commentsenabled : techData.commentsEnabled) !== 0
                     });
                 }
 
                 // 2. Fetch Reviews (with client name)
                 const { data: reviewsData, error: reviewsError } = await supabase
                     .from('reviews')
-                    .select('*, client:clientId(fullName)')
+                    .select('*, client:clientId(fullname)')
                     .eq('technicianId', id)
                     .order('created_at', { ascending: false });
 
                 if (reviewsData) {
                     const mappedReviews = reviewsData.map(r => ({
                         ...r,
-                        clientName: r.client?.fullName || 'Client Anonyme'
+                        clientName: r.client?.fullname || r.client?.fullName || 'Client Anonyme'
                     }));
                     setReviews(mappedReviews);
                 }
