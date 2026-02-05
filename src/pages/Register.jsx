@@ -87,7 +87,7 @@ const Register = () => {
 
                 if (error) throw error;
 
-                const { error: authError } = await supabase.auth.signUp({
+                const { data: authData, error: authError } = await supabase.auth.signUp({
                     email: formData.email,
                     password: formData.password,
                     options: {
@@ -101,15 +101,23 @@ const Register = () => {
 
                 if (authError) {
                     console.error("Erreur Auth:", authError);
+                    alert("Attention : L'inscription publique a réussi, mais l'envoi de l'email de validation a échoué.\n\nRaison : " + authError.message);
+                } else if (authData.user && authData.user.identities && authData.user.identities.length === 0) {
+                    alert("Ce compte existe déjà dans le système d'authentification. Veuillez vous connecter.");
+                    location.href = '/login';
+                } else if (authData.user && !authData.user.email_confirmed_at) {
+                    // Cas normal : Email envoyé et non confirmé
+                    alert(`Inscription réussie !\n\n✉️ UN EMAIL A ÉTÉ ENVOYÉ À : ${formData.email}\n\n⚠️ IMPORTANT : Cliquez sur le lien reçu pour activer votre compte. Si vous ne recevez rien, vérifiez vos SPAM ou la limite d'envoi de 3 mails/heure de Supabase.`);
+                    location.href = '/login';
+                } else {
+                    // Cas où "Confirm Email" est désactivé dans Supabase (Auto-confirmé)
+                    alert("Inscription réussie ! Votre compte est actif. (Note : L'envoi d'email semble désactivé dans votre Supabase, donc le compte a été validé automatiquement).");
+                    location.href = '/login';
                 }
-
-                alert(`Inscription réussie !\n\nIMPORTANT : Un email de confirmation a été envoyé à ${formData.email}.\n\nVeuillez cliquer sur le LIEN dans l'email pour activer votre compte.`);
-                // Redirection vers login pour qu'ils se connectent après validation
-                location.href = '/login';
 
             } catch (err) {
                 console.error("Erreur technique Auth:", err);
-                alert('Erreur: ' + err.message);
+                alert('Erreur technique : ' + err.message);
             }
 
         } catch (error) {
