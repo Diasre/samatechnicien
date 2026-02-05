@@ -17,6 +17,7 @@
         "@capacitor/cli": "^8.0.2",
         "@capacitor/core": "^8.0.2",
         "@capacitor/ios": "^8.0.2",
+        "@emailjs/browser": "^4.4.1",
         "@supabase/supabase-js": "^2.94.0",
         "html5-qrcode": "^2.3.8",
         "lucide-react": "^0.344.0",

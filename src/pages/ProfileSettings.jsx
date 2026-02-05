@@ -92,6 +92,13 @@ const ProfileSettings = () => {
             return;
         }
 
+        // Validation Email (Gmail/Outlook/Yahoo/Hotmail/iCloud)
+        const emailRegex = /^[a-zA-Z0-9._-]+@(gmail\.com|outlook\.com|yahoo\.com|yahoo\.fr|hotmail\.com|hotmail\.fr|icloud\.com)$/i;
+        if (formData.email && !emailRegex.test(formData.email)) {
+            alert("Donner une email valide (Gmail, Outlook, Yahoo, Hotmail, iCloud)");
+            return;
+        }
+
         // Politique de sécurité du mot de passe
         if (formData.password) {
             const passwordRegex = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/;

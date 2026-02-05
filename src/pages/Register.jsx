@@ -22,10 +22,6 @@ const Register = () => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const [step, setStep] = useState('register'); // 'register' | 'verify'
-    const [userId, setUserId] = useState(null);
-    const [verificationCode, setVerificationCode] = useState('');
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (formData.password !== formData.confirmPassword) {
@@ -34,9 +30,10 @@ const Register = () => {
         }
 
         // Validation de l'email
-        const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+        // Validation de l'email (Gmail/Outlook/Yahoo/Hotmail/iCloud)
+        const emailRegex = /^[a-zA-Z0-9._-]+@(gmail\.com|outlook\.com|yahoo\.com|yahoo\.fr|hotmail\.com|hotmail\.fr|icloud\.com)$/i;
         if (!emailRegex.test(formData.email)) {
-            alert("Veuillez entrer une adresse email valide.");
+            alert("Donner une email valide (Gmail, Outlook, Yahoo, Hotmail, iCloud)");
             return;
         }
 
@@ -63,9 +60,6 @@ const Register = () => {
             return;
         }
 
-        // Générer le code de vérification (6 chiffres)
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
-
         try {
             const payload = {
                 fullname: formData.fullName,
@@ -78,26 +72,46 @@ const Register = () => {
                 specialty: formData.role === 'technician'
                     ? (formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty)
                     : null,
-                verification_code: code,
+                verification_code: null,
                 email_verified: false
             };
 
-            const { data, error } = await supabase
-                .from('users')
-                .insert([payload])
-                .select()
-                .single();
+            // 🚀 NOUVELLE SOLUTION : Supabase Auth (Native)
+            try {
+                // Créer d'abord l'entrée dans public users pour compatibilité
+                const { data, error } = await supabase
+                    .from('users')
+                    .insert([payload])
+                    .select()
+                    .single();
 
-            if (error) {
-                alert('Erreur: ' + error.message);
-            } else {
-                setUserId(data.id);
-                setStep('verify');
+                if (error) throw error;
 
-                // SIMULATION EMAIL (En production, ceci serait envoyé par une API backend)
-                console.log(`CODE DE VÉRIFICATION POUR ${formData.email}: ${code}`);
-                alert(`(Simulation Email) Votre code de vérification est : ${code}\n\nConsultez la console ou notez-le ici.`);
+                const { error: authError } = await supabase.auth.signUp({
+                    email: formData.email,
+                    password: formData.password,
+                    options: {
+                        data: {
+                            full_name: formData.fullName,
+                            phone: formData.phone,
+                            role: formData.role
+                        }
+                    }
+                });
+
+                if (authError) {
+                    console.error("Erreur Auth:", authError);
+                }
+
+                alert(`Inscription réussie !\n\nIMPORTANT : Un email de confirmation a été envoyé à ${formData.email}.\n\nVeuillez cliquer sur le LIEN dans l'email pour activer votre compte.`);
+                // Redirection vers login pour qu'ils se connectent après validation
+                location.href = '/login';
+
+            } catch (err) {
+                console.error("Erreur technique Auth:", err);
+                alert('Erreur: ' + err.message);
             }
+
         } catch (error) {
             console.error('Error:', error);
             alert('Erreur lors de l\'inscription.');
@@ -109,7 +123,7 @@ const Register = () => {
         try {
             const { data, error } = await supabase
                 .from('users')
-                .select('verification_code')
+                .select('verification_code, verification_expires_at, verification_attempts')
                 .eq('id', userId)
                 .single();
 
@@ -118,11 +132,30 @@ const Register = () => {
                 return;
             }
 
+            // 1. Vérifier le nombre de tentatives
+            if (data.verification_attempts >= 3) {
+                alert("Trop de tentatives incorrectes. Veuillez recommencer l'inscription ou contacter le support.");
+                // Optionnel : Supprimer le compte temporaire ou le bloquer
+                return;
+            }
+
+            // 2. Vérifier l'expiration
+            if (new Date() > new Date(data.verification_expires_at)) {
+                alert("Le code a expiré (validité 5 minutes). Veuillez recommencer.");
+                return;
+            }
+
+            // 3. Vérifier le code
             if (data.verification_code === verificationCode) {
                 // Code Valid! Activate account
                 const { error: updateError } = await supabase
                     .from('users')
-                    .update({ email_verified: true, verification_code: null })
+                    .update({
+                        email_verified: true,
+                        verification_code: null,
+                        verification_expires_at: null,
+                        verification_attempts: 0
+                    })
                     .eq('id', userId);
 
                 if (updateError) {
@@ -132,7 +165,13 @@ const Register = () => {
                     location.href = '/login';
                 }
             } else {
-                alert("Code incorrect. Veuillez réessayer.");
+                // Incrémenter les tentatives échouées
+                await supabase
+                    .from('users')
+                    .update({ verification_attempts: (data.verification_attempts || 0) + 1 })
+                    .eq('id', userId);
+
+                alert(`Code incorrect. Tentative ${(data.verification_attempts || 0) + 1}/3.`);
             }
         } catch (err) {
             console.error(err);
@@ -151,260 +190,226 @@ const Register = () => {
             </Link>
 
             <div className="card" style={{ width: '100%', maxWidth: '380px', padding: '1rem' }}>
-                <h3 style={{ textAlign: 'center', marginBottom: '0.75rem', fontSize: '1.1rem' }}>
-                    {step === 'register' ? 'Créer un compte V2' : 'Vérification Email'}
-                </h3>
+                <h3 style={{ textAlign: 'center', marginBottom: '0.75rem', fontSize: '1.1rem' }}>Créer un compte V2</h3>
 
-                {step === 'verify' ? (
-                    <form onSubmit={handleVerifyParams}>
-                        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-                            <p style={{ fontSize: '0.9rem', color: '#666' }}>
-                                Un code à 6 chiffres a été envoyé à <strong>{formData.email}</strong>.
-                            </p>
-                            <p style={{ fontSize: '0.8rem', color: '#888', fontStyle: 'italic' }}>
-                                (Vérifiez la console ou l'alerte pour cette démo)
-                            </p>
-                        </div>
+                <form onSubmit={handleSubmit}>
+                    {/* Nom complet */}
+                    <div style={{ marginBottom: '0.5rem' }}>
+                        <label style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.1rem', fontWeight: '500', fontSize: '0.75rem' }}>
+                            <User size={14} /> Nom Complet
+                        </label>
+                        <input
+                            type="text"
+                            name="fullName"
+                            required
+                            value={formData.fullName}
+                            onChange={handleChange}
+                            style={{
+                                width: '100%', padding: '0.35rem', borderRadius: '4px',
+                                border: '1px solid #ddd', fontSize: '0.8rem'
+                            }}
+                            placeholder="Ex: Moussa Diop"
+                        />
+                    </div>
 
-                        <div style={{ marginBottom: '1.5rem' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Code de vérification</label>
+                    {/* Email */}
+                    <div style={{ marginBottom: '0.5rem' }}>
+                        <label style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.1rem', fontWeight: '500', fontSize: '0.75rem' }}>
+                            <Mail size={14} /> Email
+                        </label>
+                        <input
+                            type="email"
+                            name="email"
+                            required
+                            value={formData.email}
+                            onChange={handleChange}
+                            style={{
+                                width: '100%', padding: '0.35rem', borderRadius: '4px',
+                                border: '1px solid #ddd', fontSize: '0.8rem'
+                            }}
+                            placeholder="moussa@exemple.com"
+                        />
+                    </div>
+
+                    {/* Téléphone */}
+                    <div style={{ marginBottom: '0.5rem' }}>
+                        <label style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.1rem', fontWeight: '500', fontSize: '0.75rem' }}>
+                            <Phone size={14} /> Téléphone
+                        </label>
+                        <input
+                            type="tel"
+                            name="phone"
+                            required
+                            value={formData.phone}
+                            onChange={handleChange}
+                            style={{
+                                width: '100%', padding: '0.35rem', borderRadius: '4px',
+                                border: '1px solid #ddd', fontSize: '0.8rem'
+                            }}
+                            placeholder="+221 77 000 00 00"
+                        />
+                    </div>
+
+                    {/* Password */}
+                    <div style={{ marginBottom: '0.5rem' }}>
+                        <label style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.1rem', fontWeight: '500', fontSize: '0.75rem' }}>
+                            <Lock size={14} /> Mot de passe
+                        </label>
+                        <input
+                            type="password"
+                            name="password"
+                            required
+                            value={formData.password}
+                            onChange={handleChange}
+                            style={{
+                                width: '100%', padding: '0.35rem', borderRadius: '4px',
+                                border: '1px solid #ddd', fontSize: '0.8rem'
+                            }}
+                            placeholder="Mots de passe (8 caractères min)"
+                        />
+                        <p style={{ fontSize: '0.7rem', color: '#666', marginTop: '2px', fontStyle: 'italic' }}>
+                            Au moins 8 caractères, 1 majuscule et 1 chiffre.
+                        </p>
+                    </div>
+
+                    <div style={{ marginBottom: '0.5rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.1rem', fontWeight: '500', fontSize: '0.75rem' }}>
+                            Confirmer Mot de passe
+                        </label>
+                        <input
+                            type="password"
+                            name="confirmPassword"
+                            required
+                            value={formData.confirmPassword}
+                            onChange={handleChange}
+                            style={{
+                                width: '100%', padding: '0.35rem', borderRadius: '4px',
+                                border: '1px solid #ddd', fontSize: '0.8rem'
+                            }}
+                            placeholder="Confirmer le mot de passe"
+                        />
+                    </div>
+
+                    {/* Location */}
+                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        <div style={{ flex: 1 }}>
+                            <label style={{ display: 'block', marginBottom: '0.1rem', fontWeight: '500', fontSize: '0.75rem' }}>Ville</label>
                             <input
                                 type="text"
-                                value={verificationCode}
-                                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').substring(0, 6))}
-                                placeholder="123456"
+                                name="city"
+                                value={formData.city}
+                                onChange={handleChange}
+                                placeholder="Dakar"
                                 style={{
-                                    width: '100%', padding: '0.8rem', borderRadius: '8px',
-                                    border: '1px solid #ddd', fontSize: '1.2rem', textAlign: 'center', letterSpacing: '8px', fontWeight: 'bold'
+                                    width: '100%', padding: '0.35rem', borderRadius: '4px',
+                                    border: '1px solid #ddd', fontSize: '0.8rem'
                                 }}
-                                required
                             />
                         </div>
-
-                        <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '0.8rem' }}>
-                            Vérifier et Activer
-                        </button>
-                    </form>
-                ) : (
-                    <form onSubmit={handleSubmit}>
-                        {/* Nom complet */}
-                        <div style={{ marginBottom: '0.5rem' }}>
-                            <label style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.1rem', fontWeight: '500', fontSize: '0.75rem' }}>
-                                <User size={14} /> Nom Complet
-                            </label>
+                        <div style={{ flex: 1 }}>
+                            <label style={{ display: 'block', marginBottom: '0.1rem', fontWeight: '500', fontSize: '0.75rem' }}>Quartier</label>
                             <input
                                 type="text"
-                                name="fullName"
-                                required
-                                value={formData.fullName}
+                                name="district"
+                                value={formData.district}
                                 onChange={handleChange}
+                                placeholder="Plateau"
                                 style={{
                                     width: '100%', padding: '0.35rem', borderRadius: '4px',
                                     border: '1px solid #ddd', fontSize: '0.8rem'
                                 }}
-                                placeholder="Ex: Moussa Diop"
                             />
                         </div>
+                    </div>
 
-                        {/* Email */}
-                        <div style={{ marginBottom: '0.5rem' }}>
-                            <label style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.1rem', fontWeight: '500', fontSize: '0.75rem' }}>
-                                <Mail size={14} /> Email
-                            </label>
-                            <input
-                                type="email"
-                                name="email"
-                                required
-                                value={formData.email}
-                                onChange={handleChange}
-                                style={{
-                                    width: '100%', padding: '0.35rem', borderRadius: '4px',
-                                    border: '1px solid #ddd', fontSize: '0.8rem'
-                                }}
-                                placeholder="moussa@exemple.com"
-                            />
-                        </div>
-
-                        {/* Téléphone */}
-                        <div style={{ marginBottom: '0.5rem' }}>
-                            <label style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.1rem', fontWeight: '500', fontSize: '0.75rem' }}>
-                                <Phone size={14} /> Téléphone
-                            </label>
-                            <input
-                                type="tel"
-                                name="phone"
-                                required
-                                value={formData.phone}
-                                onChange={handleChange}
-                                style={{
-                                    width: '100%', padding: '0.35rem', borderRadius: '4px',
-                                    border: '1px solid #ddd', fontSize: '0.8rem'
-                                }}
-                                placeholder="+221 77 000 00 00"
-                            />
-                        </div>
-
-                        {/* Password */}
-                        <div style={{ marginBottom: '0.5rem' }}>
-                            <label style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.1rem', fontWeight: '500', fontSize: '0.75rem' }}>
-                                <Lock size={14} /> Mot de passe
-                            </label>
-                            <input
-                                type="password"
-                                name="password"
-                                required
-                                value={formData.password}
-                                onChange={handleChange}
-                                style={{
-                                    width: '100%', padding: '0.35rem', borderRadius: '4px',
-                                    border: '1px solid #ddd', fontSize: '0.8rem'
-                                }}
-                                placeholder="Mots de passe (8 caractères min)"
-                            />
-                            <p style={{ fontSize: '0.7rem', color: '#666', marginTop: '2px', fontStyle: 'italic' }}>
-                                Au moins 8 caractères, 1 majuscule et 1 chiffre.
-                            </p>
-                        </div>
-
-                        <div style={{ marginBottom: '0.5rem' }}>
-                            <label style={{ display: 'block', marginBottom: '0.1rem', fontWeight: '500', fontSize: '0.75rem' }}>
-                                Confirmer Mot de passe
-                            </label>
-                            <input
-                                type="password"
-                                name="confirmPassword"
-                                required
-                                value={formData.confirmPassword}
-                                onChange={handleChange}
-                                style={{
-                                    width: '100%', padding: '0.35rem', borderRadius: '4px',
-                                    border: '1px solid #ddd', fontSize: '0.8rem'
-                                }}
-                                placeholder="Confirmer le mot de passe"
-                            />
-                        </div>
-
-                        {/* Location */}
-                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                            <div style={{ flex: 1 }}>
-                                <label style={{ display: 'block', marginBottom: '0.1rem', fontWeight: '500', fontSize: '0.75rem' }}>Ville</label>
+                    {/* Role Selection */}
+                    <div style={{ marginBottom: '1rem' }}>
+                        <label style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.75rem' }}>
+                            <Shield size={14} /> Je suis :
+                        </label>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <label style={{
+                                flex: 1, cursor: 'pointer', padding: '0.35rem',
+                                border: `2px solid ${formData.role === 'client' ? 'var(--primary-color)' : '#ddd'}`,
+                                borderRadius: '4px', textAlign: 'center',
+                                backgroundColor: formData.role === 'client' ? '#f0fdf4' : 'transparent',
+                                fontSize: '0.75rem'
+                            }}>
                                 <input
-                                    type="text"
-                                    name="city"
-                                    value={formData.city}
+                                    type="radio"
+                                    name="role"
+                                    value="client"
+                                    checked={formData.role === 'client'}
                                     onChange={handleChange}
-                                    placeholder="Dakar"
-                                    style={{
-                                        width: '100%', padding: '0.35rem', borderRadius: '4px',
-                                        border: '1px solid #ddd', fontSize: '0.8rem'
-                                    }}
+                                    style={{ display: 'none' }}
                                 />
-                            </div>
-                            <div style={{ flex: 1 }}>
-                                <label style={{ display: 'block', marginBottom: '0.1rem', fontWeight: '500', fontSize: '0.75rem' }}>Quartier</label>
-                                <input
-                                    type="text"
-                                    name="district"
-                                    value={formData.district}
-                                    onChange={handleChange}
-                                    placeholder="Plateau"
-                                    style={{
-                                        width: '100%', padding: '0.35rem', borderRadius: '4px',
-                                        border: '1px solid #ddd', fontSize: '0.8rem'
-                                    }}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Role Selection */}
-                        <div style={{ marginBottom: '1rem' }}>
-                            <label style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.75rem' }}>
-                                <Shield size={14} /> Je suis :
+                                <span style={{ fontWeight: '600' }}>Client</span>
                             </label>
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <label style={{
-                                    flex: 1, cursor: 'pointer', padding: '0.35rem',
-                                    border: `2px solid ${formData.role === 'client' ? 'var(--primary-color)' : '#ddd'}`,
-                                    borderRadius: '4px', textAlign: 'center',
-                                    backgroundColor: formData.role === 'client' ? '#f0fdf4' : 'transparent',
-                                    fontSize: '0.75rem'
-                                }}>
-                                    <input
-                                        type="radio"
-                                        name="role"
-                                        value="client"
-                                        checked={formData.role === 'client'}
-                                        onChange={handleChange}
-                                        style={{ display: 'none' }}
-                                    />
-                                    <span style={{ fontWeight: '600' }}>Client</span>
-                                </label>
 
-                                <label style={{
-                                    flex: 1, cursor: 'pointer', padding: '0.35rem',
-                                    border: `2px solid ${formData.role === 'technician' ? 'var(--primary-color)' : '#ddd'}`,
-                                    borderRadius: '4px', textAlign: 'center',
-                                    backgroundColor: formData.role === 'technician' ? '#f0fdf4' : 'transparent',
-                                    fontSize: '0.75rem'
-                                }}>
-                                    <input
-                                        type="radio"
-                                        name="role"
-                                        value="technician"
-                                        checked={formData.role === 'technician'}
-                                        onChange={handleChange}
-                                        style={{ display: 'none' }}
-                                    />
-                                    <span style={{ fontWeight: '600' }}>Technicien</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        {/* Specialty Select - Only for Technicians */}
-                        {formData.role === 'technician' && (
-                            <div style={{ marginBottom: '0.5rem' }}>
-                                <select
-                                    name="specialty"
-                                    value={formData.specialty}
-                                    onChange={handleChange}
-                                    style={{
-                                        width: '100%', padding: '0.35rem', borderRadius: '4px',
-                                        border: '1px solid #ddd', fontSize: '0.8rem', backgroundColor: 'white'
-                                    }}
-                                >
-                                    <option value="Informatique">Informatique</option>
-                                    <option value="Téléphonie">Téléphonie</option>
-                                    <option value="Imprimantes">Imprimantes</option>
-                                    <option value="Réseaux">Réseaux</option>
-                                    <option value="Autre">Autre</option>
-                                </select>
-                            </div>
-                        )}
-
-                        {/* Custom Specialty Input */}
-                        {formData.role === 'technician' && formData.specialty === 'Autre' && (
-                            <div style={{ marginBottom: '0.5rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.1rem', fontWeight: '500', fontSize: '0.75rem' }}>Précisez votre métier</label>
+                            <label style={{
+                                flex: 1, cursor: 'pointer', padding: '0.35rem',
+                                border: `2px solid ${formData.role === 'technician' ? 'var(--primary-color)' : '#ddd'}`,
+                                borderRadius: '4px', textAlign: 'center',
+                                backgroundColor: formData.role === 'technician' ? '#f0fdf4' : 'transparent',
+                                fontSize: '0.75rem'
+                            }}>
                                 <input
-                                    type="text"
-                                    name="otherSpecialty"
-                                    required
-                                    value={formData.otherSpecialty}
+                                    type="radio"
+                                    name="role"
+                                    value="technician"
+                                    checked={formData.role === 'technician'}
                                     onChange={handleChange}
-                                    placeholder="Ex: Plombier, Menuisier..."
-                                    style={{
-                                        width: '100%', padding: '0.35rem', borderRadius: '4px',
-                                        border: '1px solid #ddd', fontSize: '0.8rem'
-                                    }}
+                                    style={{ display: 'none' }}
                                 />
-                            </div>
-                        )}
+                                <span style={{ fontWeight: '600' }}>Technicien</span>
+                            </label>
+                        </div>
+                    </div>
 
-                        <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '0.6rem', fontSize: '0.85rem' }}>
-                            S'inscrire
-                        </button>
-                    </form>
-                )}
+                    {/* Specialty Select - Only for Technicians */}
+                    {formData.role === 'technician' && (
+                        <div style={{ marginBottom: '0.5rem' }}>
+                            <select
+                                name="specialty"
+                                value={formData.specialty}
+                                onChange={handleChange}
+                                style={{
+                                    width: '100%', padding: '0.35rem', borderRadius: '4px',
+                                    border: '1px solid #ddd', fontSize: '0.8rem', backgroundColor: 'white'
+                                }}
+                            >
+                                <option value="Informatique">Informatique</option>
+                                <option value="Téléphonie">Téléphonie</option>
+                                <option value="Imprimantes">Imprimantes</option>
+                                <option value="Réseaux">Réseaux</option>
+                                <option value="Autre">Autre</option>
+                            </select>
+                        </div>
+                    )}
+
+                    {/* Custom Specialty Input */}
+                    {formData.role === 'technician' && formData.specialty === 'Autre' && (
+                        <div style={{ marginBottom: '0.5rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.1rem', fontWeight: '500', fontSize: '0.75rem' }}>Précisez votre métier</label>
+                            <input
+                                type="text"
+                                name="otherSpecialty"
+                                required
+                                value={formData.otherSpecialty}
+                                onChange={handleChange}
+                                placeholder="Ex: Plombier, Menuisier..."
+                                style={{
+                                    width: '100%', padding: '0.35rem', borderRadius: '4px',
+                                    border: '1px solid #ddd', fontSize: '0.8rem'
+                                }}
+                            />
+                        </div>
+                    )}
+
+                    <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '0.6rem', fontSize: '0.85rem' }}>
+                        S'inscrire
+                    </button>
+                </form>
 
                 <p style={{ textAlign: 'center', marginTop: '0.75rem', fontSize: '0.85rem' }}>
                     Compte existant ? <Link to="/login" style={{ color: 'var(--primary-color)', fontWeight: '600' }}>Se connecter</Link>

@@ -143,10 +143,10 @@ const ExpertDashboard = () => {
             return;
         }
 
-        // Validation Email
-        const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+        // Validation Email (Gmail/Outlook/Yahoo/Hotmail/iCloud)
+        const emailRegex = /^[a-zA-Z0-9._-]+@(gmail\.com|outlook\.com|yahoo\.com|yahoo\.fr|hotmail\.com|hotmail\.fr|icloud\.com)$/i;
         if (formData.email && !emailRegex.test(formData.email)) {
-            alert("Veuillez entrer une adresse email valide.");
+            alert("Donner une email valide (Gmail, Outlook, Yahoo, Hotmail, iCloud)");
             setIsSaving(false);
             return;
         }

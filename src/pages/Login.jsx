@@ -11,6 +11,26 @@ const Login = () => {
 
     const performLogin = async (loginEmail, loginPin) => {
         try {
+            // 🚀 Etape 1 : Vérification Auth Supabase (Email Confirmé ?)
+            const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+                email: loginEmail,
+                password: loginPin
+            });
+
+            if (authError) {
+                // Si l'erreur est "Email not confirmed", on bloque
+                if (authError.message.includes("Email not confirmed")) {
+                    alert("Veuillez confirmer votre email avant de vous connecter. Vérifiez votre boîte de réception.");
+                    return;
+                }
+                // Si l'erreur est "Invalid login credentials" et que ce n'est pas un ancien user, on bloque
+                // Mais pour compatibilité anciens users (qui n'ont pas de compte Auth), on continue vers le check manuel legacy
+            } else if (authData.user && !authData.user.email_confirmed_at && authData.user.aud === 'authenticated') {
+                // Double check (parfois signin passe mais mail non vérifié si config permissive)
+                // alert("Email non vérifié");
+            }
+
+            // 🚀 Etape 2 : Legacy Login (Récupération du profil public)
             // Recherche de l'utilisateur par email (insensible à la casse)
             const { data: userData, error } = await supabase
                 .from('users')
