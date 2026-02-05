@@ -11,22 +11,30 @@ const Login = () => {
     const navigate = useNavigate();
 
     // 🔄 Auto-detection de la session (Si l'utilisateur vient de cliquer sur le lien email)
-    // 🔄 Auto-detection de la session (Si l'utilisateur vient de cliquer sur le lien email)
+    // 🔄 Auto-detection ROBUSTE avec écouteur d'événement
     React.useEffect(() => {
-        const checkSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user?.email_confirmed_at) {
-                // L'utilisateur a cliqué sur le lien et est vérifié.
-                console.log("Email vérifié, connexion auto...");
+        // On écoute les changements d'état (Connexion, Redirection depuis email, etc.)
+        const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log("Auth Event:", event);
 
-                // On met à jour la DB publique immédiatement pour être sûr
-                await supabase.from('users').update({ email_verified: true }).eq('email', session.user.email);
+            if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+                if (session?.user?.email_confirmed_at) {
+                    console.log("✅ Email confirmé détecté via événement !");
 
-                // On lance la connexion automatique pour TOUT LE MONDE
-                performLoginLogic(session.user.email, null, true);
+                    // 1. Mise à jour DB publique
+                    await supabase.from('users').update({ email_verified: true }).eq('email', session.user.email);
+
+                    // 2. Connexion Auto
+                    // Note: On évite de rappeler performLoginLogic si on est déjà en train de le faire
+                    // Mais ici c'est safe car performLoginLogic gère la navigation
+                    performLoginLogic(session.user.email, null, true);
+                }
             }
+        });
+
+        return () => {
+            authListener?.subscription.unsubscribe();
         };
-        checkSession();
     }, []);
 
     const handleResend = async () => {
