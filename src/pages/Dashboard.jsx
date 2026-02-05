@@ -188,6 +188,26 @@ const Dashboard = () => {
         }
     };
 
+    const handleToggleVerify = async (user) => {
+        const action = user.email_verified ? "invalider" : "valider manuellement";
+        if (!window.confirm(`Voulez-vous vraiment ${action} l'email de ${user.fullName} ?`)) return;
+
+        try {
+            const { error } = await supabase
+                .from('users')
+                .update({ email_verified: !user.email_verified })
+                .eq('id', user.id);
+
+            if (error) throw error;
+            alert(`Email ${user.email_verified ? 'invalidé' : 'validé'} avec succès !`);
+            fetchTechnicians();
+            fetchClients();
+        } catch (error) {
+            console.error(error);
+            alert('Erreur: ' + error.message);
+        }
+    };
+
     const handlePasswordChange = async (userId, userName, isClient = true) => {
         const promptMsg = isClient
             ? `Entrez le nouveau mot de passe pour le client ${userName} (Min 8 car, 1 Maj, 1 Chiffre) :`
@@ -424,6 +444,14 @@ const Dashboard = () => {
                                                         >
                                                             {tech.isBlocked ? <Unlock size={14} /> : <X size={14} />}
                                                         </button>
+                                                        <button
+                                                            className="btn btn-outline"
+                                                            style={{ padding: '0.3rem', borderRadius: '4px', color: tech.email_verified ? '#38a169' : '#e53e3e' }}
+                                                            onClick={() => handleToggleVerify(tech)}
+                                                            title={tech.email_verified ? "Invalider Email" : "Valider Email (Force)"}
+                                                        >
+                                                            {tech.email_verified ? '✅' : '⚠️'}
+                                                        </button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -472,10 +500,19 @@ const Dashboard = () => {
                                                             </button>
                                                             <button
                                                                 className="btn btn-outline"
-                                                                style={{ padding: '0.4rem 0.6rem', fontSize: '0.7rem', color: client.isBlocked ? '#38a169' : '#e53e3e' }}
+                                                                style={{ padding: '0.3rem', borderRadius: '4px', color: client.isBlocked ? '#38a169' : '#e53e3e' }}
                                                                 onClick={() => handleToggleBlock(client)}
+                                                                title={client.isBlocked ? 'Débloquer' : 'Bloquer'}
                                                             >
-                                                                {client.isBlocked ? 'Débloquer' : 'Bloquer'}
+                                                                {client.isBlocked ? 'Déloquer' : 'Bloquer'}
+                                                            </button>
+                                                            <button
+                                                                className="btn btn-outline"
+                                                                style={{ padding: '0.3rem', borderRadius: '4px', color: client.email_verified ? '#38a169' : '#e53e3e' }}
+                                                                onClick={() => handleToggleVerify(client)}
+                                                                title={client.email_verified ? "Invalider Email" : "Valider Email (Force)"}
+                                                            >
+                                                                {client.email_verified ? '✅' : '⚠️'}
                                                             </button>
                                                         </div>
                                                     </td>
