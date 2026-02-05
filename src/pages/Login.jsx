@@ -18,10 +18,20 @@ const Login = () => {
             });
 
             if (authError) {
-                // Si l'erreur est "Email not confirmed", on bloque
+                // Si l'erreur est "Email not confirmed", on bloque SAUF si c'est un admin
                 if (authError.message.includes("Email not confirmed")) {
-                    alert("Veuillez confirmer votre email avant de vous connecter. Vérifiez votre boîte de réception.");
-                    return;
+                    // Vérification rapide si c'est un admin dans la DB publique
+                    const { data: adminCheck } = await supabase
+                        .from('users')
+                        .select('role')
+                        .ilike('email', loginEmail)
+                        .single();
+
+                    if (adminCheck?.role !== 'admin') {
+                        alert("Veuillez confirmer votre email avant de vous connecter. Vérifiez votre boîte de réception.");
+                        return;
+                    }
+                    // Si c'est un admin, on ignore l'erreur Auth et on continue vers le Login Legacy
                 }
                 // Si l'erreur est "Invalid login credentials" et que ce n'est pas un ancien user, on bloque
                 // Mais pour compatibilité anciens users (qui n'ont pas de compte Auth), on continue vers le check manuel legacy
