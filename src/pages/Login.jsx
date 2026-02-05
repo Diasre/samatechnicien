@@ -43,6 +43,14 @@ const Login = () => {
                 return;
             }
 
+            // ⚠️ Blocage des comptes non vérifiés (Sécurité supplémentaire)
+            // Les nouveaux inscrits ont email_verified = false tant qu'ils n'ont pas cliqué sur le lien.
+            // Les anciens comptes ont NULL (on laisse passer) ou TRUE.
+            if (userData.email_verified === false) {
+                alert("Veuillez confirmer votre email avant de vous connecter. Vérifiez votre boîte de réception.");
+                return;
+            }
+
             // Map lowercase DB columns back to camelCase for the frontend
             const mappedUser = {
                 ...userData,
