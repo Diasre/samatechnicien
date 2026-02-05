@@ -64,12 +64,31 @@ const TechnicianProfile = () => {
                     .eq('technicianId', id)
                     .order('created_at', { ascending: false });
 
+                let calculatedRating = 0;
+                let calculatedCount = 0;
+
                 if (reviewsData) {
                     const mappedReviews = reviewsData.map(r => ({
                         ...r,
                         clientName: r.client?.fullname || r.client?.fullName || 'Client Anonyme'
                     }));
                     setReviews(mappedReviews);
+
+                    // Calculate stats dynamically
+                    calculatedCount = mappedReviews.length;
+                    if (calculatedCount > 0) {
+                        const total = mappedReviews.reduce((sum, r) => sum + r.rating, 0);
+                        calculatedRating = total / calculatedCount;
+                    }
+                }
+
+                // Update tech with calculated stats
+                if (techData) {
+                    setTech(prev => ({
+                        ...prev,
+                        rating: calculatedRating,
+                        reviews_count: calculatedCount
+                    }));
                 }
 
                 // 3. Fetch Products

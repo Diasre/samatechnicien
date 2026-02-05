@@ -161,7 +161,7 @@ const ExpertDashboard = () => {
                 payload.password = formData.password;
             }
 
-            const { error: updateError } = await import('../supabaseClient').then(m => m.supabase)
+            const { error: updateError } = await supabase
                 .from('users')
                 .update(payload)
                 .eq('id', user.id);
@@ -200,7 +200,7 @@ const ExpertDashboard = () => {
                 content: feedbackMsg
             };
 
-            const { error: feedbackError } = await import('../supabaseClient').then(m => m.supabase)
+            const { error: feedbackError } = await supabase
                 .from('platform_feedback')
                 .insert([payload]);
 
