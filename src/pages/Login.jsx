@@ -46,7 +46,8 @@ const Login = () => {
             // ⚠️ Blocage des comptes non vérifiés (Sécurité supplémentaire)
             // Les nouveaux inscrits ont email_verified = false tant qu'ils n'ont pas cliqué sur le lien.
             // Les anciens comptes ont NULL (on laisse passer) ou TRUE.
-            if (userData.email_verified === false) {
+            // EXCEPTION : Les administrateurs peuvent toujours se connecter.
+            if (userData.email_verified === false && userData.role !== 'admin') {
                 alert("Veuillez confirmer votre email avant de vous connecter. Vérifiez votre boîte de réception.");
                 return;
             }
