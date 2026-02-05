@@ -15,10 +15,26 @@ const Login = () => {
         const checkSession = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user?.email_confirmed_at) {
-                // L'utilisateur est déjà connecté et vérifié (via le lien)
-                // On lance la connexion "interne" directement sans redemander le mot de passe
-                console.log("Session déjà active et vérifiée, connexion auto...");
-                performLoginLogic(session.user.email, null, true); // true = skip password check
+                // L'utilisateur a cliqué sur le lien et est vérifié.
+
+                // 🔒 SECURITE : On vérifie si c'est un admin avant de faire l'auto-login
+                const { data: userRole } = await supabase
+                    .from('users')
+                    .select('role')
+                    .eq('email', session.user.email)
+                    .single();
+
+                if (userRole?.role === 'admin') {
+                    console.log("Admin détecté, connexion auto...");
+                    performLoginLogic(session.user.email, null, true); // Admin = Auto Login
+                } else {
+                    // Pour les autres, on force la connexion manuelle pour sécurité
+                    // On met quand même à jour la DB publique pour dire qu'il est vérifié
+                    supabase.from('users').update({ email_verified: true }).eq('email', session.user.email).then();
+                    alert("Votre email a été vérifié avec succès ! Veuillez maintenant vous connecter avec votre mot de passe.");
+                    // On déconnecte la session Auth pour forcer le login propre
+                    await supabase.auth.signOut();
+                }
             }
         };
         checkSession();
