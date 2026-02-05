@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { supabase } from './supabaseClient'; // Import supabase
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import TechniciansList from './pages/TechniciansList';
@@ -48,6 +49,55 @@ const ProtectedRoute = ({ children }) => {
 };
 
 function App() {
+    // 🌍 GESTIONNAIRE D'AUTHENTIFICATION GLOBAL
+    // Écoute les connexions Supabase (ex: après clic email) sur TOUTES les pages
+    useEffect(() => {
+        const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log("🔔 Global Auth Event:", event);
+
+            if (event === 'SIGNED_IN' && session) {
+                // L'utilisateur vient d'être connecté via Supabase (Magic Link ou autre)
+                // On vérifie si on a déjà la session locale "Legacy"
+                const localUser = localStorage.getItem('user');
+
+                if (!localUser) {
+                    console.log("🔄 Session Supabase détectée, synchronisation du profil...");
+
+                    // 1. On synchronise le statut vérifié
+                    if (session.user.email_confirmed_at) {
+                        await supabase.from('users').update({ email_verified: true }).eq('email', session.user.email);
+                    }
+
+                    // 2. On récupère le profil complet
+                    const { data: userData } = await supabase
+                        .from('users')
+                        .select('*')
+                        .eq('email', session.user.email)
+                        .single();
+
+                    if (userData) {
+                        // 3. On crée la session locale
+                        const mappedUser = {
+                            ...userData,
+                            fullName: userData.fullname || userData.fullName,
+                            isBlocked: (userData.isblocked !== undefined ? userData.isblocked : userData.isBlocked) === 1,
+                            commentsEnabled: (userData.commentsenabled !== undefined ? userData.commentsenabled : userData.commentsEnabled) !== 0,
+                        };
+
+                        localStorage.setItem('user', JSON.stringify(mappedUser));
+                        alert("Connexion automatique réussie ! Bienvenue " + mappedUser.fullName);
+                        // On recharge pour mettre à jour l'interface (Header, etc.)
+                        window.location.reload();
+                    }
+                }
+            }
+        });
+
+        return () => {
+            authListener?.subscription.unsubscribe();
+        };
+    }, []);
+
     return (
         <Router>
             <Layout>
