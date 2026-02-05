@@ -137,6 +137,22 @@ const Dashboard = () => {
         }
     };
 
+    const handleDeleteFeedback = async (id) => {
+        try {
+            const { error } = await supabase
+                .from('platform_feedback')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+
+            setFeedback(prev => prev.filter(item => item.id !== id));
+        } catch (error) {
+            console.error("Error deleting feedback:", error.message);
+            alert("Erreur lors de la suppression : " + error.message);
+        }
+    };
+
     useEffect(() => {
         if (activeTab === 'admin') {
             fetchTechnicians();
@@ -469,23 +485,66 @@ const Dashboard = () => {
                             </div>
                         ) : (
                             <div>
-                                <h4 style={{ fontSize: '0.9rem', marginBottom: '1rem', color: '#666' }}>Revendications et Suggestions</h4>
+                                <h4 style={{ fontSize: '0.9rem', marginBottom: '1rem', color: '#666' }}>Signalisations et Messages</h4>
                                 {feedback.length === 0 ? (
-                                    <div style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>Aucune revendication reçue.</div>
+                                    <div style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>Aucun signalement reçu.</div>
                                 ) : (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                        {feedback.map(item => (
-                                            <div key={item.id} className="card" style={{ padding: '1rem', borderLeft: '4px solid var(--primary-color)' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                                    <strong style={{ fontSize: '0.9rem' }}>{item.userName || 'Anonyme'}</strong>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#999', fontSize: '0.7rem' }}>
-                                                        <Clock size={12} />
-                                                        {new Date(item.createdAt).toLocaleString()}
+                                        {feedback.map(item => {
+                                            // Simple parsing for "[Signalement ...]" format
+                                            const match = item.content && item.content.match(/^\[Signalement Profil (.+?) \(ID: (.+?)\)\] (.*)$/s);
+                                            const isReport = !!match;
+                                            const reportedName = match ? match[1] : null;
+                                            const reportedId = match ? match[2] : null;
+                                            const messageContent = match ? match[3] : item.content;
+
+                                            return (
+                                                <div key={item.id} className="card" style={{ padding: '1rem', borderLeft: '4px solid #dc2626', position: 'relative' }}>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (window.confirm('Supprimer ce signalement ?')) {
+                                                                handleDeleteFeedback(item.id);
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            position: 'absolute', top: '10px', right: '10px',
+                                                            background: 'none', border: 'none', cursor: 'pointer', color: '#999'
+                                                        }}
+                                                        title="Supprimer"
+                                                    >
+                                                        <X size={16} />
+                                                    </button>
+
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', paddingRight: '20px' }}>
+                                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                            <strong style={{ fontSize: '0.9rem' }}>
+                                                                {item.userName || 'Anonyme'}
+                                                            </strong>
+                                                            <span style={{ fontSize: '0.7rem', color: '#666' }}>Auteur du signalement</span>
+                                                        </div>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#999', fontSize: '0.7rem' }}>
+                                                            <Clock size={12} />
+                                                            {new Date(item.createdAt).toLocaleString()}
+                                                        </div>
                                                     </div>
+
+                                                    {isReport && (
+                                                        <div style={{
+                                                            backgroundColor: '#fff5f5', padding: '0.5rem', borderRadius: '4px',
+                                                            marginBottom: '0.5rem', fontSize: '0.8rem', border: '1px solid #fed7d7'
+                                                        }}>
+                                                            <strong>⚠️ Profil Signalé : </strong> {reportedName}
+                                                            <div style={{ fontSize: '0.7rem', color: '#666' }}>ID: {reportedId}</div>
+                                                        </div>
+                                                    )}
+
+                                                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#333', lineHeight: '1.4', whiteSpace: 'pre-wrap' }}>
+                                                        {messageContent}
+                                                    </p>
                                                 </div>
-                                                <p style={{ margin: 0, fontSize: '0.85rem', color: '#444', lineHeight: '1.4' }}>{item.content}</p>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>

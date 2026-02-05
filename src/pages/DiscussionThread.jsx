@@ -9,6 +9,7 @@ const DiscussionThread = () => {
     const navigate = useNavigate();
     const [discussion, setDiscussion] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [message, setMessage] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
@@ -31,7 +32,7 @@ const DiscussionThread = () => {
             // 1. Fetch Discussion Details
             const { data: discussionData, error: discussionError } = await supabase
                 .from('discussions')
-                .select('*, users (fullName, specialty, image)')
+                .select('*, users (fullname, specialty, image)')
                 .eq('id', id)
                 .single();
 
@@ -40,7 +41,7 @@ const DiscussionThread = () => {
             // 2. Fetch Messages
             const { data: messagesData, error: messagesError } = await supabase
                 .from('messages')
-                .select('*, users (fullName, specialty, image)')
+                .select('*, users (fullname, specialty, image)')
                 .eq('discussionId', id)
                 .order('created_at', { ascending: true });
 
@@ -49,9 +50,9 @@ const DiscussionThread = () => {
             if (discussionData) {
                 const messages = messagesData ? messagesData.map(m => ({
                     id: m.id,
-                    message: m.content, // Schema might use 'content', code used 'message'. Mapping to code usage.
+                    message: m.content,
                     createdAt: m.created_at,
-                    authorName: m.users?.fullName || 'Utilisateur inconnu',
+                    authorName: m.users?.fullname || m.users?.fullName || 'Utilisateur inconnu',
                     authorSpecialty: m.users?.specialty || '',
                     authorImage: m.users?.image
                 })) : [];
@@ -61,7 +62,7 @@ const DiscussionThread = () => {
                     title: discussionData.title,
                     content: discussionData.content,
                     createdAt: discussionData.created_at,
-                    authorName: discussionData.users?.fullName || 'Auteur inconnu',
+                    authorName: discussionData.users?.fullname || discussionData.users?.fullName || 'Auteur inconnu',
                     authorSpecialty: discussionData.users?.specialty || '',
                     authorImage: discussionData.users?.image,
                     messages: messages
@@ -70,6 +71,7 @@ const DiscussionThread = () => {
 
         } catch (error) {
             console.error("Error fetching discussion:", error.message);
+            setError(error.message);
         }
         setLoading(false);
     };
@@ -133,7 +135,13 @@ const DiscussionThread = () => {
     if (!discussion) {
         return (
             <div className="container" style={{ padding: '2rem', textAlign: 'center' }}>
-                Discussion non trouvée
+                <h3>Discussion non trouvée</h3>
+                <p style={{ color: 'red', fontSize: '0.9rem' }}>
+                    {error ? `Erreur: ${error}` : "La discussion demandée n'existe pas ou a été supprimée."}
+                </p>
+                <Link to="/forum" className="btn btn-primary" style={{ marginTop: '1rem', display: 'inline-block', textDecoration: 'none' }}>
+                    Retour au forum
+                </Link>
             </div>
         );
     }
