@@ -92,6 +92,15 @@ const ProfileSettings = () => {
             return;
         }
 
+        // Politique de sécurité du mot de passe
+        if (formData.password) {
+            const passwordRegex = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/;
+            if (!passwordRegex.test(formData.password)) {
+                alert('Le nouveau mot de passe doit contenir au moins 8 caractères, une majuscule et un chiffre.');
+                return;
+            }
+        }
+
         setIsSaving(true);
         try {
             // 1. Verify credentials (optional security step)
@@ -245,56 +254,40 @@ const ProfileSettings = () => {
 
                     <div style={{ marginTop: '2rem', borderTop: '1px solid #eee', paddingTop: '1.5rem' }}>
                         <h3 style={{ fontSize: '1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Lock size={18} /> {user.email === 'Diassecke@gmail.com' ? 'Sécurité' : 'Sécurité et Mot de passe'}
+                            <Lock size={18} /> Sécurité et Mot de passe
                         </h3>
 
                         <div style={{ borderTop: '1px dashed #eee', paddingTop: '1rem' }}>
                             <p style={{ fontSize: '0.8rem', color: '#888', marginBottom: '1rem' }}>
-                                {user.email === 'Diassecke@gmail.com' ? 'Laissez vide pour ne pas modifier le mot de passe.' : 'Laissez les champs suivants vides si vous ne souhaitez pas changer votre Code PIN.'}
+                                Laissez ces champs vides si vous ne souhaitez pas changer votre mot de passe.
                             </p>
                         </div>
 
                         <div style={{ marginBottom: '1.25rem' }}>
                             <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
-                                {user.email === 'Diassecke@gmail.com' ? 'Nouveau mot de passe' : 'Nouveau Code PIN (4 chiffres)'}
+                                Nouveau mot de passe (8 car. min, 1 maj, 1 chiffre)
                             </label>
                             <input
                                 type="password"
                                 name="password"
-                                inputMode={user.email === 'Diassecke@gmail.com' ? 'text' : 'numeric'}
-                                maxLength={user.email === 'Diassecke@gmail.com' ? undefined : 4}
                                 value={formData.password}
-                                onChange={(e) => {
-                                    if (user.email === 'Diassecke@gmail.com') {
-                                        setFormData({ ...formData, password: e.target.value });
-                                    } else {
-                                        const val = e.target.value.replace(/\D/g, '');
-                                        if (val.length <= 4) setFormData({ ...formData, password: val });
-                                    }
-                                }}
-                                placeholder={user.email === 'Diassecke@gmail.com' ? '********' : '****'}
-                                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ddd', textAlign: 'center', letterSpacing: user.email === 'Diassecke@gmail.com' ? '2px' : '4px' }}
+                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                placeholder="Votre nouveau mot de passe"
+                                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ddd' }}
                             />
                         </div>
 
                         <div style={{ marginBottom: '1.25rem' }}>
-                            <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem' }}>Confirmer {user.email === 'Diassecke@gmail.com' ? 'le nouveau mot de passe' : 'le nouveau PIN'}</label>
+                            <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+                                Confirmer le nouveau mot de passe
+                            </label>
                             <input
                                 type="password"
                                 name="confirmPassword"
-                                inputMode={user.email === 'Diassecke@gmail.com' ? 'text' : 'numeric'}
-                                maxLength={user.email === 'Diassecke@gmail.com' ? undefined : 4}
                                 value={formData.confirmPassword}
-                                onChange={(e) => {
-                                    if (user.email === 'Diassecke@gmail.com') {
-                                        setFormData({ ...formData, confirmPassword: e.target.value });
-                                    } else {
-                                        const val = e.target.value.replace(/\D/g, '');
-                                        if (val.length <= 4) setFormData({ ...formData, confirmPassword: val });
-                                    }
-                                }}
-                                placeholder={user.email === 'Diassecke@gmail.com' ? '********' : '****'}
-                                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ddd', textAlign: 'center', letterSpacing: user.email === 'Diassecke@gmail.com' ? '2px' : '4px' }}
+                                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                                placeholder="Confirmer le mot de passe"
+                                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ddd' }}
                             />
                         </div>
                     </div>

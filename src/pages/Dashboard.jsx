@@ -190,14 +190,16 @@ const Dashboard = () => {
 
     const handlePasswordChange = async (userId, userName, isClient = true) => {
         const promptMsg = isClient
-            ? `Entrez le nouveau Code PIN (4 chiffres) pour le client ${userName} :`
-            : `Entrez le nouveau Code PIN (4 chiffres) pour le technicien ${userName} :`;
+            ? `Entrez le nouveau mot de passe pour le client ${userName} (Min 8 car, 1 Maj, 1 Chiffre) :`
+            : `Entrez le nouveau mot de passe pour le technicien ${userName} (Min 8 car, 1 Maj, 1 Chiffre) :`;
 
         const newPassword = window.prompt(promptMsg);
 
         if (newPassword && newPassword.trim() !== "") {
-            if (!/^\d{4}$/.test(newPassword.trim())) {
-                alert("Le PIN doit être composé de exactement 4 chiffres.");
+            // Politique de sécurité du mot de passe
+            const passwordRegex = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/;
+            if (!passwordRegex.test(newPassword)) {
+                alert("Le mot de passe doit contenir au moins 8 caractères, une majuscule et un chiffre.");
                 return;
             }
 
@@ -210,7 +212,7 @@ const Dashboard = () => {
 
                 if (error) throw error;
 
-                alert('Code PIN mis à jour avec succès');
+                alert('Mot de passe mis à jour avec succès');
 
             } catch (error) {
                 console.error(error);

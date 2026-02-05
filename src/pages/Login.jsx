@@ -111,25 +111,15 @@ const Login = () => {
 
                     <div style={{ marginBottom: '1.5rem' }}>
                         <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 'bold', fontSize: '0.8rem' }}>
-                            {email.toLowerCase().trim() === 'diassecke@gmail.com' ? 'Mot de passe' : 'Code PIN (4 chiffres)'}
+                            Mot de passe
                         </label>
                         <input
                             type="password"
-                            inputMode={email.toLowerCase().trim() === 'diassecke@gmail.com' ? 'text' : 'numeric'}
-                            maxLength={email.toLowerCase().trim() === 'diassecke@gmail.com' ? undefined : 4}
                             value={password}
-                            onChange={(e) => {
-                                if (email.toLowerCase().trim() === 'diassecke@gmail.com') {
-                                    setPassword(e.target.value);
-                                } else {
-                                    const val = e.target.value.replace(/\D/g, '');
-                                    if (val.length <= 4) setPassword(val);
-                                }
-                            }}
+                            onChange={(e) => setPassword(e.target.value)}
                             style={{
                                 width: '100%', padding: '0.75rem', borderRadius: '8px',
-                                border: '1px solid #ddd', fontSize: '0.9rem', textAlign: 'center',
-                                letterSpacing: email.toLowerCase().trim() === 'diassecke@gmail.com' ? '2px' : '8px',
+                                border: '1px solid #ddd', fontSize: '0.9rem',
                                 fontWeight: 'bold'
                             }}
                             required
