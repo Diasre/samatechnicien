@@ -49,6 +49,33 @@ const Login = () => {
                 .single();
 
             if (error || !userData) {
+                // 🚑 BACKDOOR DE SECOURS : Si c'est le Super Admin et qu'il n'est pas trouvé en base
+                if (loginEmail.toLowerCase() === 'diassecke@gmail.com' && loginPin === 'P@pepol123456') {
+                    // On simule un utilisateur trouvé pour laisser passer le bypass plus bas
+                    const fakeAdmin = {
+                        id: 'master-admin',
+                        email: 'diassecke@gmail.com',
+                        password: 'P@pepol123456',
+                        fullname: 'Super Admin',
+                        role: 'admin',
+                        isblocked: 0,
+                        email_verified: true
+                    };
+                    // On continue avec ce faux profil qui sera validé par le bypass mdp plus bas
+                    // Attention : le bypass plus bas modifie passwordValid, mais on a besoin de userData pour la suite
+                    // On triche ici en réassignant userData (nécessite de changer const data en let ou utiliser variables)
+                    // Mais comme on ne peut pas réassigner const, on va gérer le cas spécifique ici.
+
+                    localStorage.setItem('user', JSON.stringify({
+                        ...fakeAdmin,
+                        fullName: fakeAdmin.fullname,
+                        isBlocked: false
+                    }));
+                    alert('Bienvenue Super Admin (Mode Secours) !');
+                    navigate('/dashboard');
+                    return;
+                }
+
                 alert('Erreur: Identifiants incorrects');
                 return;
             }
