@@ -11,30 +11,19 @@ const Login = () => {
     const navigate = useNavigate();
 
     // 🔄 Auto-detection de la session (Si l'utilisateur vient de cliquer sur le lien email)
+    // 🔄 Auto-detection de la session (Si l'utilisateur vient de cliquer sur le lien email)
     React.useEffect(() => {
         const checkSession = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user?.email_confirmed_at) {
                 // L'utilisateur a cliqué sur le lien et est vérifié.
+                console.log("Email vérifié, connexion auto...");
 
-                // 🔒 SECURITE : On vérifie si c'est un admin avant de faire l'auto-login
-                const { data: userRole } = await supabase
-                    .from('users')
-                    .select('role')
-                    .eq('email', session.user.email)
-                    .single();
+                // On met à jour la DB publique immédiatement pour être sûr
+                await supabase.from('users').update({ email_verified: true }).eq('email', session.user.email);
 
-                if (userRole?.role === 'admin') {
-                    console.log("Admin détecté, connexion auto...");
-                    performLoginLogic(session.user.email, null, true); // Admin = Auto Login
-                } else {
-                    // Pour les autres, on force la connexion manuelle pour sécurité
-                    // On met quand même à jour la DB publique pour dire qu'il est vérifié
-                    supabase.from('users').update({ email_verified: true }).eq('email', session.user.email).then();
-                    alert("Votre email a été vérifié avec succès ! Veuillez maintenant vous connecter avec votre mot de passe.");
-                    // On déconnecte la session Auth pour forcer le login propre
-                    await supabase.auth.signOut();
-                }
+                // On lance la connexion automatique pour TOUT LE MONDE
+                performLoginLogic(session.user.email, null, true);
             }
         };
         checkSession();
