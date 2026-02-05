@@ -80,11 +80,22 @@ const Login = () => {
                 return;
             }
 
-            // ⚠️ Blocage des comptes non vérifiés (Sécurité supplémentaire)
-            // Les nouveaux inscrits ont email_verified = false tant qu'ils n'ont pas cliqué sur le lien.
-            // Les anciens comptes ont NULL (on laisse passer) ou TRUE.
-            // EXCEPTION : Les administrateurs peuvent toujours se connecter.
-            if (userData.email_verified === false && userData.role !== 'admin') {
+            // ⚠️ Blocage des comptes non vérifiés (Sécurité)
+            // On vérifie d'abord si Supabase Auth a validé l'email (Source de vérité principale)
+            const isAuthVerified = authData?.user?.email_confirmed_at;
+
+            // Si Supabase Auth dit "Vérifié", on fait confiance et on met à jour la DB publique si nécessaire
+            if (isAuthVerified && userData.email_verified === false) {
+                // Mise à jour silencieuse pour la prochaine fois
+                supabase.from('users').update({ email_verified: true }).eq('id', userData.id).then();
+                userData.email_verified = true; // On met à jour l'objet local pour ne pas bloquer
+            }
+
+            // Blocage SEULEMENT si :
+            // 1. Supabase Auth ne confirme pas (ou pas de session Auth)
+            // 2. ET que la DB publique dit "Faux"
+            // 3. Et que ce n'est pas un admin
+            if (!isAuthVerified && userData.email_verified === false && userData.role !== 'admin') {
                 alert("Veuillez confirmer votre email avant de vous connecter. Vérifiez votre boîte de réception.");
                 return;
             }
