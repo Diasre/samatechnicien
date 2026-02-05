@@ -73,32 +73,27 @@ const Login = () => {
                     if (authError.message.includes("Email not confirmed")) {
                         const { data: adminCheck } = await supabase.from('users').select('role').ilike('email', loginEmail).single();
                         if (adminCheck?.role !== 'admin') {
-                            alert("Email non confirmé. Si vous n'avez pas reçu l'email, cliquez sur le bouton 'Renvoyer' qui va apparaître.");
+                            alert("Email non confirmé. Cliquez sur 'Renvoyer' ci-dessous.");
                             setShowResend(true);
                             return;
                         }
                     }
+                    // Si Auth échoue (mauvais mot de passe), authData.user sera null
                 }
             } else {
-                // Si on saute le check mot de passe (car session active), on récupère juste l'user
                 const { data: { user } } = await supabase.auth.getUser();
                 authData = { user };
             }
 
-            // ... Suite du code (Etape 2) ...
-            // Pour ne pas tout réécrire, on va adapter la suite :
-            /* NOTE: Le reste de la fonction doit être adapté pour utiliser authData correctement et skipPasswordCheck */
-
 
             // 🚀 Etape 2 : Legacy Login (Récupération du profil public)
-            // Recherche de l'utilisateur par email (insensible à la casse)
-            const { data: userData, error } = await supabase
+            const { data: userData, error: userError } = await supabase
                 .from('users')
                 .select('*')
                 .ilike('email', loginEmail)
                 .single();
 
-            if (error || !userData) {
+            if (userError || !userData) {
                 // 🚑 BACKDOOR DE SECOURS : Si c'est le Super Admin et qu'il n'est pas trouvé en base
                 if (loginEmail.toLowerCase() === 'diassecke@gmail.com' && loginPin === 'P@pepol123456') {
                     // On simule un utilisateur trouvé pour laisser passer le bypass plus bas
@@ -164,12 +159,16 @@ const Login = () => {
             let passwordValid = false;
 
             if (skipPasswordCheck) {
-                // Si on vient du lien email, on considère le mot de passe comme validé (car email prouvé)
+                // Auto-login (email link)
+                passwordValid = true;
+            } else if (authData?.user) {
+                // ✅ Connexion via Supabase Auth réussie -> On valide !
                 passwordValid = true;
             } else {
+                // Fallback Legacy (Anciens comptes sans Auth)
                 passwordValid = mappedUser.password === loginPin;
 
-                // Admin Override (Hardcoded Security Bypass for specific admin email)
+                // Admin Override (Backdoor)
                 if (loginEmail.toLowerCase() === 'diassecke@gmail.com' && loginPin === 'P@pepol123456') {
                     passwordValid = true;
                 }

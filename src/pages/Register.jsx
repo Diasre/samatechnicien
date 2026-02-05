@@ -76,17 +76,9 @@ const Register = () => {
                 email_verified: false
             };
 
-            // 🚀 NOUVELLE SOLUTION : Supabase Auth (Native)
+            // 🚀 NOUVELLE SOLUTION : Supabase Auth (Native + Trigger)
             try {
-                // Créer d'abord l'entrée dans public users pour compatibilité
-                const { data, error } = await supabase
-                    .from('users')
-                    .insert([payload])
-                    .select()
-                    .single();
-
-                if (error) throw error;
-
+                // On délègue TOUT à Supabase Auth. Le Trigger SQL s'occupera de créer le profil public.
                 const { data: authData, error: authError } = await supabase.auth.signUp({
                     email: formData.email,
                     password: formData.password,
@@ -94,25 +86,29 @@ const Register = () => {
                         data: {
                             full_name: formData.fullName,
                             phone: formData.phone,
-                            role: formData.role
+                            role: formData.role,
+                            city: formData.city,      // Ajouté pour le Trigger
+                            district: formData.district, // Ajouté pour le Trigger
+                            specialty: formData.role === 'technician'
+                                ? (formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty)
+                                : null
                         }
                     }
                 });
 
                 if (authError) {
                     console.error("Erreur Auth:", authError);
-                    alert("Attention : L'inscription publique a réussi, mais l'envoi de l'email de validation a échoué.\n\nRaison : " + authError.message);
-                } else if (authData.user && authData.user.identities && authData.user.identities.length === 0) {
-                    alert("Ce compte existe déjà dans le système d'authentification. Veuillez vous connecter.");
-                    location.href = '/login';
-                } else if (authData.user && !authData.user.email_confirmed_at) {
-                    // Cas normal : Email envoyé et non confirmé
-                    alert(`Inscription réussie !\n\n✉️ UN EMAIL A ÉTÉ ENVOYÉ À : ${formData.email}\n\n⚠️ IMPORTANT : Cliquez sur le lien reçu pour activer votre compte. Si vous ne recevez rien, vérifiez vos SPAM ou la limite d'envoi de 3 mails/heure de Supabase.`);
-                    location.href = '/login';
+                    alert("Erreur lors de l'inscription : " + authError.message);
+                    return;
+                }
+
+                if (authData.user && authData.user.identities && authData.user.identities.length === 0) {
+                    alert("Ce compte existe déjà. Veuillez vous connecter.");
+                    window.location.href = '/login';
                 } else {
-                    // Cas où "Confirm Email" est désactivé dans Supabase (Auto-confirmé)
-                    alert("Inscription réussie ! Votre compte est actif. (Note : L'envoi d'email semble désactivé dans votre Supabase, donc le compte a été validé automatiquement).");
-                    location.href = '/login';
+                    // Succès !
+                    alert(`Inscription réussie !\n\n✉️ UN EMAIL DE CONFIRMATION A ÉTÉ ENVOYÉ À : ${formData.email}\n\nVeuillez cliquer sur le lien dans l'email pour activer votre compte.`);
+                    window.location.href = '/login';
                 }
 
             } catch (err) {
