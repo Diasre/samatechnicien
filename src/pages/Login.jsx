@@ -7,7 +7,26 @@ import { Lock } from 'lucide-react';
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showResend, setShowResend] = useState(false);
     const navigate = useNavigate();
+
+    const handleResend = async () => {
+        if (!email) return alert("Veuillez entrer votre email.");
+        try {
+            const { error } = await supabase.auth.resend({
+                type: 'signup',
+                email: email,
+                options: {
+                    emailRedirectTo: 'https://samatechnicien.vercel.app/login'
+                }
+            });
+            if (error) throw error;
+            alert("Nouvel email de confirmation envoyé ! Vérifiez votre boîte de réception.");
+            setShowResend(false);
+        } catch (err) {
+            alert("Erreur lors de l'envoi : " + err.message);
+        }
+    };
 
     const performLogin = async (loginEmail, loginPin) => {
         try {
@@ -28,7 +47,8 @@ const Login = () => {
                         .single();
 
                     if (adminCheck?.role !== 'admin') {
-                        alert("Veuillez confirmer votre email avant de vous connecter. Vérifiez votre boîte de réception.");
+                        alert("Email non confirmé. Si vous n'avez pas reçu l'email, cliquez sur le bouton 'Renvoyer' qui va apparaître.");
+                        setShowResend(true);
                         return;
                     }
                     // Si c'est un admin, on ignore l'erreur Auth et on continue vers le Login Legacy
@@ -36,8 +56,7 @@ const Login = () => {
                 // Si l'erreur est "Invalid login credentials" et que ce n'est pas un ancien user, on bloque
                 // Mais pour compatibilité anciens users (qui n'ont pas de compte Auth), on continue vers le check manuel legacy
             } else if (authData.user && !authData.user.email_confirmed_at && authData.user.aud === 'authenticated') {
-                // Double check (parfois signin passe mais mail non vérifié si config permissive)
-                // alert("Email non vérifié");
+                // Cas rare
             }
 
             // 🚀 Etape 2 : Legacy Login (Récupération du profil public)
@@ -85,19 +104,20 @@ const Login = () => {
             const isAuthVerified = authData?.user?.email_confirmed_at;
 
             // Si Supabase Auth dit "Vérifié", on fait confiance et on met à jour la DB publique si nécessaire
-            if (isAuthVerified && userData.email_verified === false) {
-                // Mise à jour silencieuse pour la prochaine fois
-                supabase.from('users').update({ email_verified: true }).eq('id', userData.id).then();
-                userData.email_verified = true; // On met à jour l'objet local pour ne pas bloquer
-            }
-
-            // Blocage SEULEMENT si :
-            // 1. Supabase Auth ne confirme pas (ou pas de session Auth)
-            // 2. ET que la DB publique dit "Faux"
-            // 3. Et que ce n'est pas un admin
-            if (!isAuthVerified && userData.email_verified === false && userData.role !== 'admin') {
-                alert("Veuillez confirmer votre email avant de vous connecter. Vérifiez votre boîte de réception.");
-                return;
+            if (isAuthVerified) {
+                if (userData.email_verified !== true) {
+                    // Mise à jour silencieuse si la DB publique est en retard
+                    supabase.from('users').update({ email_verified: true }).eq('id', userData.id).then();
+                    userData.email_verified = true; // On force l'objet local à true pour la suite
+                }
+            } else {
+                // Si Auth ne confirme pas, on regarde si la DB publique confirme (Cas legacy) ou si c'est un admin
+                // On bloque seulement si TOUT le monde dit "Non vérifié"
+                if (userData.email_verified !== true && userData.role !== 'admin') {
+                    alert("Email non confirmé. Si vous n'avez pas reçu l'email, cliquez sur le bouton 'Renvoyer' qui va apparaître.");
+                    setShowResend(true);
+                    return;
+                }
             }
 
             // Map lowercase DB columns back to camelCase for the frontend
@@ -206,6 +226,20 @@ const Login = () => {
                     <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '0.8rem', fontSize: '1rem', fontWeight: 'bold' }}>
                         Se connecter
                     </button>
+
+                    {showResend && (
+                        <button
+                            type="button"
+                            onClick={handleResend}
+                            style={{
+                                width: '100%', padding: '0.75rem', backgroundColor: '#f39c12',
+                                color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.9rem',
+                                fontWeight: '600', cursor: 'pointer', marginTop: '1rem'
+                            }}
+                        >
+                            📧 Renvoyer l'email de confirmation
+                        </button>
+                    )}
                 </form>
 
                 <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.9rem' }}>
