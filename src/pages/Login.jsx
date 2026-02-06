@@ -263,6 +263,12 @@ const Login = () => {
                         />
                     </div>
 
+                    <div style={{ textAlign: 'right', marginBottom: '1rem' }}>
+                        <Link to="/forgot-password" style={{ color: 'var(--primary-color)', fontSize: '0.85rem', textDecoration: 'none' }}>
+                            Mot de passe oublié ?
+                        </Link>
+                    </div>
+
                     <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '0.8rem', fontSize: '1rem', fontWeight: 'bold' }}>
                         Se connecter
                     </button>

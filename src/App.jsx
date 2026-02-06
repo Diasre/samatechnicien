@@ -15,6 +15,8 @@ import Forum from './pages/Forum';
 import DiscussionThread from './pages/DiscussionThread';
 import ProfileSettings from './pages/ProfileSettings';
 import Invite from './pages/Invite';
+import ForgotPassword from './pages/ForgotPassword';
+import UpdatePassword from './pages/UpdatePassword';
 
 const AdminRoute = ({ children }) => {
     const user = JSON.parse(localStorage.getItem('user'));
@@ -109,6 +111,8 @@ function App() {
                     <Route path="/cart" element={<Cart />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/update-password" element={<UpdatePassword />} />
                     <Route path="/dashboard" element={
                         <AdminRoute>
                             <Dashboard />
