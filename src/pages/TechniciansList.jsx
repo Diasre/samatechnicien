@@ -24,21 +24,41 @@ const TechniciansList = () => {
                 if (error) throw error;
 
                 if (data) {
+                    // Fetch reviews to calculate ratings
+                    const { data: reviewsData } = await supabase
+                        .from('reviews')
+                        .select('technicianId, rating');
+
+                    // Aggregate stats
+                    const stats = {};
+                    if (reviewsData) {
+                        reviewsData.forEach(r => {
+                            if (!stats[r.technicianId]) stats[r.technicianId] = { count: 0, sum: 0 };
+                            stats[r.technicianId].count++;
+                            stats[r.technicianId].sum += r.rating;
+                        });
+                    }
+
                     // Map real users to technician format (handling case-insensitivity of Supabase columns)
-                    const realTechs = data.map(user => ({
-                        id: user.id,
-                        name: user.fullname || user.fullName || 'Technicien',
-                        specialty: user.specialty || 'Nouveau',
-                        // Handle potential otherSpecialty if specialty is Autre (though listing usually shows main)
-                        rating: user.rating || 0,
-                        reviews_count: 0,
-                        city: user.city || 'Dakar',
-                        district: user.district || '-',
-                        phone: user.phone || null,
-                        image: user.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullname || user.fullName || 'Tech')}&background=random&color=fff&size=150`,
-                        description: user.description || 'Technicien professionnel référencé.',
-                        isBlocked: user.isblocked !== undefined ? user.isblocked : user.isBlocked
-                    }));
+                    const realTechs = data.map(user => {
+                        const userStats = stats[user.id] || { count: 0, sum: 0 };
+                        const avgRating = userStats.count > 0 ? (userStats.sum / userStats.count) : (user.rating || 0);
+
+                        return {
+                            id: user.id,
+                            name: user.fullname || user.fullName || 'Technicien',
+                            specialty: user.specialty || 'Nouveau',
+                            // Handle potential otherSpecialty if specialty is Autre (though listing usually shows main)
+                            rating: avgRating,
+                            reviews_count: userStats.count,
+                            city: user.city || 'Dakar',
+                            district: user.district || '-',
+                            phone: user.phone || null,
+                            image: user.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullname || user.fullName || 'Tech')}&background=random&color=fff&size=150`,
+                            description: user.description || 'Technicien professionnel référencé.',
+                            isBlocked: user.isblocked !== undefined ? user.isblocked : user.isBlocked
+                        };
+                    });
 
                     setAllTechnicians(realTechs);
                 }
@@ -219,7 +239,9 @@ const TechniciansList = () => {
                                     <p style={{ margin: 0, color: 'var(--primary-color)', fontWeight: '500', fontSize: '0.75rem' }}>{tech.specialty}</p>
                                     {Number(tech.rating || 0) > 0 && (
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.7rem', color: '#f1c40f' }}>
-                                            <Star size={10} fill="#f1c40f" /> <span>{Number(tech.rating || 0).toFixed(1)}</span>
+                                            <Star size={10} fill="#f1c40f" />
+                                            <span style={{ fontWeight: 'bold' }}>{Number(tech.rating || 0).toFixed(1)}</span>
+                                            <span style={{ color: '#999', fontSize: '0.65rem', marginLeft: '2px' }}>({tech.reviews_count} votes)</span>
                                         </div>
                                     )}
                                 </div>
