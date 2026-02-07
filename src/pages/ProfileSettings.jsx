@@ -37,7 +37,7 @@ const ProfileSettings = () => {
                     setUser(data);
                     setFormData(prev => ({
                         ...prev,
-                        fullName: data.fullName,
+                        fullName: data.fullname || data.full_name || data.fullName || '',
                         email: data.email,
                         phone: data.phone || ''
                     }));
@@ -110,10 +110,11 @@ const ProfileSettings = () => {
 
         setIsSaving(true);
         try {
-            // 1. Verify credentials (optional security step)
-            // Ideally we should verify old password, but since we store plain text/simple hash differently,
-            // let's just proceed with update if the user is logged in (client-side authorized).
-            // A clearer security model would re-authenticate.
+            // 1. Verify availability of update data
+            // Detect correct column name for generic 'fullName'
+            // We check the 'user' object keys to find if it uses 'fullname', 'full_name' or 'fullName'
+            // Default to 'fullname' as it's the most common Postgres convention if not found
+            const nameColumn = Object.keys(user).find(k => ['fullname', 'full_name', 'fullName'].includes(k)) || 'fullname';
 
             // 2. Upload Image
             let imageUrl = user.image;
@@ -124,7 +125,7 @@ const ProfileSettings = () => {
 
             // 3. Update User
             const updates = {
-                fullName: formData.fullName,
+                [nameColumn]: formData.fullName,
                 email: formData.email,
                 phone: formData.phone,
                 image: imageUrl
