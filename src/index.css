@@ -241,9 +241,10 @@ p {
   z-index: 10;
 }
 
-/* Make the image pop out a bit on hover */
-.card-3d:hover img {
-  transform: scale(1.03);
+/* Make the image pop out a bit on hover and active click */
+.card-3d:hover img,
+.card-3d:active img {
+  transform: scale(1.1);
   transition: transform 0.4s ease;
 }
 
