@@ -4,6 +4,7 @@ import { ShieldCheck, Users } from 'lucide-react';
 import logo from '../assets/logo.png';
 
 import WelcomeOverlay from '../components/WelcomeOverlay';
+import LandingPage from './LandingPage';
 
 const Home = () => {
     const user = JSON.parse(localStorage.getItem('user'));
@@ -56,35 +57,7 @@ const Home = () => {
     }
 
     // Splash Screen for guest users
-    return (
-        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#ffffff' }}>
-            <div className="container splash-container" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1rem', textAlign: 'center' }}>
-                <img src={logo} alt="SamaTechnicien Logo" className="animate-fade-in splash-logo" />
-
-                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', maxWidth: '500px', width: '100%', marginTop: '0' }}>
-                    <h1 className="splash-title">
-                        Sama<span style={{ color: 'var(--primary-color)' }}>Technicien</span>
-                    </h1>
-                    <p className="splash-subtitle" style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-                        Réparations Expertes au Sénégal.
-                    </p>
-
-                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '1.5rem' }}>
-                        <Link to="/login" className="btn btn-primary" style={{ padding: '0.75rem 1.75rem', fontSize: '1rem', borderRadius: '8px' }}>
-                            Connexion
-                        </Link>
-                        <Link to="/register" className="btn btn-outline" style={{ padding: '0.75rem 1.75rem', fontSize: '1rem', borderRadius: '8px' }}>
-                            S'inscrire
-                        </Link>
-                    </div>
-
-                    <div className="splash-image-container">
-                        <img src="https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?auto=format&fit=crop&q=80&w=2070" alt="Repair Service" style={{ width: '100%', borderRadius: '8px', boxShadow: '0 3px 6px rgba(0,0,0,0.1)' }} />
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
+    return <LandingPage />;
 };
 
 export default Home;
