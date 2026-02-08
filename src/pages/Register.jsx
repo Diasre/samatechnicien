@@ -383,9 +383,14 @@ const Register = () => {
                                 }}
                             >
                                 <option value="Informatique">Informatique</option>
-                                <option value="Téléphonie">Téléphonie</option>
-                                <option value="Imprimantes">Imprimantes</option>
+                                <option value="Reparateur telephone">Reparateur telephone</option>
+                                <option value="Reparateur imprimante">Reparateur imprimante</option>
                                 <option value="Réseaux">Réseaux</option>
+                                <option value="Maintenancier">Maintenancier</option>
+                                <option value="Mécanicien">Mécanicien</option>
+                                <option value="Maçon">Maçon</option>
+                                <option value="Plombier">Plombier</option>
+                                <option value="Menuisier">Menuisier</option>
                                 <option value="Autre">Autre</option>
                             </select>
                         </div>
