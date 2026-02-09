@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import API_URL from '../config';
 import { supabase } from '../supabaseClient';
-import { User, Mail, Lock, Shield, Phone } from 'lucide-react';
+import { User, Mail, Lock, Shield, Phone, Eye, EyeOff } from 'lucide-react';
 
 const Register = () => {
     const navigate = useNavigate();
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
@@ -302,18 +304,37 @@ const Register = () => {
                         <label style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.1rem', fontWeight: '500', fontSize: '0.75rem' }}>
                             <Lock size={14} /> Mot de passe
                         </label>
-                        <input
-                            type="password"
-                            name="password"
-                            required
-                            value={formData.password}
-                            onChange={handleChange}
-                            style={{
-                                width: '100%', padding: '0.35rem', borderRadius: '4px',
-                                border: '1px solid #ddd', fontSize: '0.8rem'
-                            }}
-                            placeholder="Mots de passe (8 caractères min)"
-                        />
+                        <div style={{ position: 'relative' }}>
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                name="password"
+                                required
+                                value={formData.password}
+                                onChange={handleChange}
+                                style={{
+                                    width: '100%', padding: '0.35rem', borderRadius: '4px',
+                                    border: '1px solid #ddd', fontSize: '0.8rem', paddingRight: '2rem'
+                                }}
+                                placeholder="Mots de passe (8 caractères min)"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                style={{
+                                    position: 'absolute',
+                                    right: '0.5rem',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: 0,
+                                    color: '#666'
+                                }}
+                            >
+                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                        </div>
                         <p style={{ fontSize: '0.7rem', color: '#666', marginTop: '2px', fontStyle: 'italic' }}>
                             Au moins 8 caractères, 1 majuscule et 1 chiffre.
                         </p>
@@ -323,18 +344,37 @@ const Register = () => {
                         <label style={{ display: 'block', marginBottom: '0.1rem', fontWeight: '500', fontSize: '0.75rem' }}>
                             Confirmer Mot de passe
                         </label>
-                        <input
-                            type="password"
-                            name="confirmPassword"
-                            required
-                            value={formData.confirmPassword}
-                            onChange={handleChange}
-                            style={{
-                                width: '100%', padding: '0.35rem', borderRadius: '4px',
-                                border: '1px solid #ddd', fontSize: '0.8rem'
-                            }}
-                            placeholder="Confirmer le mot de passe"
-                        />
+                        <div style={{ position: 'relative' }}>
+                            <input
+                                type={showConfirmPassword ? "text" : "password"}
+                                name="confirmPassword"
+                                required
+                                value={formData.confirmPassword}
+                                onChange={handleChange}
+                                style={{
+                                    width: '100%', padding: '0.35rem', borderRadius: '4px',
+                                    border: '1px solid #ddd', fontSize: '0.8rem', paddingRight: '2rem'
+                                }}
+                                placeholder="Confirmer le mot de passe"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                style={{
+                                    position: 'absolute',
+                                    right: '0.5rem',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: 0,
+                                    color: '#666'
+                                }}
+                            >
+                                {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                        </div>
                     </div>
 
                     {/* Location */}
