@@ -5,6 +5,39 @@ import { ShieldCheck, Calendar, Star, Users, Briefcase, Search, ArrowRight, Chec
 const LandingPage = () => {
     return (
         <div className="landing-page" style={{ overflowX: 'hidden' }}>
+            <style>
+                {`
+                    @keyframes fadeInUp {
+                        from {
+                            opacity: 0;
+                            transform: translateY(30px);
+                        }
+                        to {
+                            opacity: 1;
+                            transform: translateY(0);
+                        }
+                    }
+                    @keyframes pulse-green {
+                        0% {
+                            transform: scale(1);
+                            box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+                        }
+                        70% {
+                            transform: scale(1.05);
+                            box-shadow: 0 0 0 15px rgba(255, 255, 255, 0);
+                        }
+                        100% {
+                            transform: scale(1);
+                            box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+                        }
+                    }
+                    @keyframes float {
+                        0% { transform: translateY(0px); }
+                        50% { transform: translateY(-10px); }
+                        100% { transform: translateY(0px); }
+                    }
+                `}
+            </style>
             {/* Hero Section */}
             <section style={{
                 background: 'linear-gradient(135deg, var(--primary-color) 0%, #2ecc71 100%)',
@@ -13,23 +46,45 @@ const LandingPage = () => {
                 textAlign: 'center',
                 borderBottomLeftRadius: '50% 20px',
                 borderBottomRightRadius: '50% 20px',
-                marginBottom: '3rem'
+                marginBottom: '3rem',
+                position: 'relative',
+                overflow: 'hidden'
             }}>
-                <div className="container" style={{ maxWidth: '800px', margin: '0 auto' }}>
-                    <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem', color: 'white' }}>
+                <div className="container" style={{ maxWidth: '800px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
+                    <h1 style={{
+                        fontSize: '2.5rem',
+                        marginBottom: '1rem',
+                        color: 'white',
+                        animation: 'fadeInUp 0.8s ease-out forwards'
+                    }}>
                         La Solution Expert pour vos Réparations
                     </h1>
-                    <p style={{ fontSize: '1.2rem', marginBottom: '2rem', opacity: '0.9' }}>
+                    <p style={{
+                        fontSize: '1.2rem',
+                        marginBottom: '2rem',
+                        opacity: '0',
+                        animation: 'fadeInUp 0.8s ease-out 0.3s forwards'
+                    }}>
                         Connectez-vous avec les meilleurs techniciens certifiés du Sénégal ou développez votre activité en toute simplicité.
                     </p>
-                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <div style={{
+                        display: 'flex',
+                        gap: '1rem',
+                        justifyContent: 'center',
+                        flexWrap: 'wrap',
+                        opacity: '0',
+                        animation: 'fadeInUp 0.8s ease-out 0.6s forwards'
+                    }}>
                         <Link to="/register" className="btn" style={{
                             backgroundColor: 'white',
                             color: 'var(--primary-color)',
                             fontWeight: 'bold',
                             padding: '1rem 2rem',
                             borderRadius: '30px',
-                            boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
+                            boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+                            animation: 'pulse-green 2s infinite',
+                            display: 'flex',
+                            alignItems: 'center'
                         }}>
                             Commencer maintenant <ArrowRight size={20} style={{ marginLeft: '8px' }} />
                         </Link>
