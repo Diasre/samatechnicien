@@ -2,16 +2,28 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import API_URL from '../config';
 import { supabase } from '../supabaseClient';
-import { Lock } from 'lucide-react';
+import { Lock, Eye, EyeOff } from 'lucide-react';
 
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [showResend, setShowResend] = useState(false);
     const navigate = useNavigate();
 
     // 🔄 Auto-detection de la session (Si l'utilisateur vient de cliquer sur le lien email)
     // 🔄 Auto-detection ROBUSTE avec écouteur d'événement
+    React.useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            const parsedUser = JSON.parse(storedUser);
+            if (parsedUser.role === 'admin') {
+                navigate('/dashboard');
+            } else {
+                navigate('/');
+            }
+        }
+    }, [navigate]);
     React.useEffect(() => {
         // On écoute les changements d'état (Connexion, Redirection depuis email, etc.)
         const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -250,17 +262,40 @@ const Login = () => {
                         <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 'bold', fontSize: '0.8rem' }}>
                             Mot de passe
                         </label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            style={{
-                                width: '100%', padding: '0.75rem', borderRadius: '8px',
-                                border: '1px solid #ddd', fontSize: '0.9rem',
-                                fontWeight: 'bold'
-                            }}
-                            required
-                        />
+                        <div style={{ position: 'relative' }}>
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                style={{
+                                    width: '100%', padding: '0.75rem', paddingRight: '40px', borderRadius: '8px',
+                                    border: '1px solid #ddd', fontSize: '0.9rem',
+                                    fontWeight: 'bold'
+                                }}
+                                required
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                style={{
+                                    position: 'absolute',
+                                    right: '10px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    color: '#666',
+                                    padding: '5px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                                aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                            >
+                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
+                        </div>
                     </div>
 
                     <div style={{ textAlign: 'right', marginBottom: '1rem' }}>

@@ -1,10 +1,24 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import API_URL from '../config';
 import { supabase } from '../supabaseClient';
 import { User, Mail, Lock, Shield, Phone } from 'lucide-react';
 
 const Register = () => {
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            const parsedUser = JSON.parse(storedUser);
+            if (parsedUser.role === 'admin') {
+                navigate('/dashboard');
+            } else {
+                navigate('/');
+            }
+        }
+    }, [navigate]);
+
     const [formData, setFormData] = useState({
         fullName: '',
         email: '',
@@ -104,11 +118,11 @@ const Register = () => {
 
                 if (authData.user && authData.user.identities && authData.user.identities.length === 0) {
                     alert("Ce compte existe déjà. Veuillez vous connecter.");
-                    window.location.href = '/login';
+                    navigate('/login');
                 } else {
                     // Succès !
                     alert(`Inscription réussie !\n\n✉️ UN EMAIL DE CONFIRMATION A ÉTÉ ENVOYÉ À : ${formData.email}\n\nVeuillez cliquer sur le lien dans l'email pour activer votre compte.`);
-                    window.location.href = '/login';
+                    navigate('/login');
                 }
 
             } catch (err) {
@@ -166,7 +180,7 @@ const Register = () => {
                     alert("Erreur lors de l'activation.");
                 } else {
                     alert("Compte vérifié avec succès ! Vous pouvez maintenant vous connecter.");
-                    location.href = '/login';
+                    navigate('/login');
                 }
             } else {
                 // Incrémenter les tentatives échouées
