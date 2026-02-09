@@ -135,6 +135,11 @@ const TechnicianProfile = () => {
             return;
         }
 
+        if (String(currentUser.id) === String(tech.id)) {
+            alert("Vous ne pouvez pas voter ni commenter votre propre profil.");
+            return;
+        }
+
         setSubmitting(true);
         try {
             const { data, error } = await supabase
