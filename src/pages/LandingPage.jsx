@@ -71,6 +71,7 @@ const LandingPage = () => {
                     <p style={{
                         fontSize: '1.2rem',
                         marginBottom: '2rem',
+                        color: 'black',
                         opacity: '0',
                         animation: 'fadeInUp 0.8s ease-out 0.3s forwards'
                     }}>
