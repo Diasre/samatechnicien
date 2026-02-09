@@ -36,6 +36,15 @@ const LandingPage = () => {
                         50% { transform: translateY(-10px); }
                         100% { transform: translateY(0px); }
                     }
+                    .feature-card {
+                        transition: all 0.3s ease;
+                        opacity: 0;
+                        animation: fadeInUp 0.8s ease-out forwards;
+                    }
+                    .feature-card:hover {
+                        transform: translateY(-10px);
+                        box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+                    }
                 `}
             </style>
             {/* Hero Section */}
@@ -104,21 +113,21 @@ const LandingPage = () => {
             <section className="container" style={{ marginBottom: '4rem' }}>
                 <h2 style={{ textAlign: 'center', marginBottom: '3rem', color: 'var(--text-primary)' }}>Pourquoi choisir SamaTechnicien ?</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
-                    <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
+                    <div className="card feature-card" style={{ textAlign: 'center', padding: '2rem', animationDelay: '0.2s' }}>
                         <div style={{ background: '#e8f5e9', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
                             <ShieldCheck size={30} color="var(--primary-color)" />
                         </div>
                         <h3>Fiabilité</h3>
                         <p>Tous nos techniciens sont vérifiés pour vous garantir un service de qualité et en toute sécurité.</p>
                     </div>
-                    <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
+                    <div className="card feature-card" style={{ textAlign: 'center', padding: '2rem', animationDelay: '0.4s' }}>
                         <div style={{ background: '#e3f2fd', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
                             <Search size={30} color="#2196f3" />
                         </div>
                         <h3>Simplicité</h3>
                         <p>Trouvez le bon expert en quelques clics grâce à notre système de recherche intuitif et géolocalisé.</p>
                     </div>
-                    <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
+                    <div className="card feature-card" style={{ textAlign: 'center', padding: '2rem', animationDelay: '0.6s' }}>
                         <div style={{ background: '#fff3e0', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
                             <Star size={30} color="#ff9800" />
                         </div>
@@ -162,7 +171,8 @@ const LandingPage = () => {
                                 borderRadius: '20px',
                                 padding: '2rem',
                                 boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-                                display: 'inline-block'
+                                display: 'inline-block',
+                                animation: 'float 6s ease-in-out infinite'
                             }}>
                                 <Users size={120} color="var(--secondary-color)" style={{ opacity: 0.8 }} />
                             </div>
@@ -180,7 +190,8 @@ const LandingPage = () => {
                             borderRadius: '20px',
                             padding: '2rem',
                             boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-                            display: 'inline-block'
+                            display: 'inline-block',
+                            animation: 'float 6s ease-in-out infinite 3s'
                         }}>
                             <Briefcase size={120} color="var(--primary-color)" style={{ opacity: 0.8 }} />
                         </div>
@@ -221,11 +232,29 @@ const LandingPage = () => {
                 marginTop: '2rem'
             }}>
                 <div className="container">
-                    <h2 style={{ color: 'white', marginBottom: '1rem' }}>Prêt à commencer ?</h2>
-                    <p style={{ fontSize: '1.2rem', marginBottom: '2rem', color: '#bdc3c7' }}>
+                    <h2 style={{
+                        color: 'white',
+                        marginBottom: '1rem',
+                        animation: 'fadeInUp 0.8s ease-out forwards'
+                    }}>
+                        Prêt à commencer ?
+                    </h2>
+                    <p style={{
+                        fontSize: '1.2rem',
+                        marginBottom: '2rem',
+                        color: '#bdc3c7',
+                        opacity: 0,
+                        animation: 'fadeInUp 0.8s ease-out 0.2s forwards'
+                    }}>
                         Rejoignez dès aujourd'hui la première plateforme de réparation au Sénégal.
                     </p>
-                    <Link to="/register" className="btn btn-primary" style={{ padding: '1rem 3rem', fontSize: '1.2rem', borderRadius: '30px' }}>
+                    <Link to="/register" className="btn btn-primary" style={{
+                        padding: '1rem 3rem',
+                        fontSize: '1.2rem',
+                        borderRadius: '30px',
+                        animation: 'pulse-green 2s infinite',
+                        display: 'inline-block'
+                    }}>
                         Créer un compte gratuitement
                     </Link>
                 </div>
