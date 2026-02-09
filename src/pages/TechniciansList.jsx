@@ -228,33 +228,33 @@ const TechniciansList = () => {
                             )}
 
                             {/* Header Info */}
-                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '0.75rem' }}>
                                 <img
                                     src={tech.image}
                                     alt={tech.name}
-                                    style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                                    style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', marginBottom: '0.5rem', border: '2px solid #eee' }}
                                 />
-                                <div style={{ overflow: 'hidden' }}>
-                                    <h3 style={{ fontSize: '0.9rem', margin: '0 0 0.1rem 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tech.name}</h3>
-                                    <p style={{ margin: 0, color: 'var(--primary-color)', fontWeight: '500', fontSize: '0.75rem' }}>{tech.specialty}</p>
+                                <div style={{ textAlign: 'center', width: '100%' }}>
+                                    <h3 style={{ fontSize: '1rem', margin: '0 0 0.2rem 0', fontWeight: 'bold' }}>{tech.name}</h3>
+                                    <p style={{ margin: 0, color: 'var(--primary-color)', fontWeight: '600', fontSize: '0.85rem' }}>{tech.specialty}</p>
                                     {Number(tech.rating || 0) > 0 && (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.7rem', color: '#f1c40f' }}>
-                                            <Star size={10} fill="#f1c40f" />
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', fontSize: '0.8rem', color: '#f1c40f', marginTop: '0.2rem' }}>
+                                            <Star size={14} fill="#f1c40f" />
                                             <span style={{ fontWeight: 'bold' }}>{Number(tech.rating || 0).toFixed(1)}</span>
-                                            <span style={{ color: '#999', fontSize: '0.65rem', marginLeft: '2px' }}>({tech.reviews_count} votes)</span>
+                                            <span style={{ color: '#999', fontSize: '0.75rem' }}>({tech.reviews_count} avis)</span>
                                         </div>
                                     )}
                                 </div>
                             </div>
 
                             {/* Description & Location (Flexible Spacer) */}
-                            <div style={{ flex: 1 }}>
-                                <p style={{ fontSize: '0.75rem', color: '#666', lineHeight: '1.3', marginBottom: '0.5rem' }}>
-                                    {tech.description.length > 50 ? tech.description.substring(0, 50) + '...' : tech.description}
+                            <div style={{ flex: 1, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                <p style={{ fontSize: '0.8rem', color: '#666', lineHeight: '1.4', marginBottom: '0.75rem', textAlign: 'center' }}>
+                                    {tech.description.length > 60 ? tech.description.substring(0, 60) + '...' : tech.description}
                                 </p>
 
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#888', fontSize: '0.7rem', marginBottom: '0.75rem' }}>
-                                    <MapPin size={10} /> {tech.city}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#888', fontSize: '0.75rem', marginBottom: '1rem' }}>
+                                    <MapPin size={12} /> {tech.city} {tech.district && tech.district !== '-' ? `(${tech.district})` : ''}
                                 </div>
                             </div>
 

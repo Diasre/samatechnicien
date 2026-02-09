@@ -29,11 +29,19 @@ const Register = () => {
         specialty: 'Informatique',
         otherSpecialty: '',
         city: '',
-        district: ''
+        district: '',
+        image: null // Store the file object, not the URL yet
     });
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setFormData({ ...formData, image: file });
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -90,8 +98,28 @@ const Register = () => {
                 email_verified: false
             };
 
-            // 🚀 NOUVELLE SOLUTION : Supabase Auth (Native + Trigger)
             try {
+                let imageUrl = null;
+                if (formData.role === 'technician' && formData.image) {
+                    try {
+                        const fileExt = formData.image.name.split('.').pop();
+                        const fileName = `avatars/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+                        const { error: uploadError, data: uploadData } = await supabase.storage
+                            .from('produits') // Using 'produits' bucket as it is public
+                            .upload(fileName, formData.image);
+
+                        if (uploadError) {
+                            console.error("Image upload failed:", uploadError);
+                            // Continue registration without image if upload fails
+                        } else {
+                            const { data: publicUrlData } = supabase.storage.from('produits').getPublicUrl(fileName);
+                            imageUrl = publicUrlData.publicUrl;
+                        }
+                    } catch (imgErr) {
+                        console.error("Image processing error:", imgErr);
+                    }
+                }
+
                 // On délègue TOUT à Supabase Auth. Le Trigger SQL s'occupera de créer le profil public.
                 const { data: authData, error: authError } = await supabase.auth.signUp({
                     email: formData.email,
@@ -103,6 +131,7 @@ const Register = () => {
                             role: formData.role,
                             city: formData.city,      // Ajouté pour le Trigger
                             district: formData.district, // Ajouté pour le Trigger
+                            image: imageUrl, // Pass current image URL
                             specialty: formData.role === 'technician'
                                 ? (formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty)
                                 : null
@@ -424,6 +453,22 @@ const Register = () => {
                                 style={{
                                     width: '100%', padding: '0.35rem', borderRadius: '4px',
                                     border: '1px solid #ddd', fontSize: '0.8rem'
+                                }}
+                            />
+                        </div>
+                    )}
+
+                    {/* Image Upload for Technicians */}
+                    {formData.role === 'technician' && (
+                        <div style={{ marginBottom: '0.5rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.1rem', fontWeight: '500', fontSize: '0.75rem' }}>Photo de profil (Optionnel)</label>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleImageChange}
+                                style={{
+                                    width: '100%', padding: '0.35rem', borderRadius: '4px',
+                                    border: '1px solid #ddd', fontSize: '0.8rem', backgroundColor: 'white'
                                 }}
                             />
                         </div>
