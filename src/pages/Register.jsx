@@ -239,7 +239,7 @@ const Register = () => {
             </Link>
 
             <div className="card" style={{ width: '100%', maxWidth: '380px', padding: '1rem' }}>
-                <h3 style={{ textAlign: 'center', marginBottom: '0.75rem', fontSize: '1.1rem' }}>Créer un compte V2</h3>
+                <h3 style={{ textAlign: 'center', marginBottom: '0.75rem', fontSize: '1.1rem' }}>Créer un compte</h3>
 
                 <form onSubmit={handleSubmit}>
                     {/* Nom complet */}
