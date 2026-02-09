@@ -241,7 +241,7 @@ const Dashboard = () => {
         }
     };
 
-    const standardSpecialties = ["Informatique", "Reparateur telephone", "Reparateur imprimante", "Réseaux", "Maintenancier", "Mécanicien", "Maçon", "Plombier", "Menuisier"];
+    const standardSpecialties = ["Informatique", "Reparateur telephone", "Reparateur imprimante", "Réseaux", "Maintenancier", "Mécanicien", "Maçon", "Plombier", "Menuisier", "Sérigraphie"];
 
     const handleEdit = (tech) => {
         const isStandard = standardSpecialties.includes(tech.specialty);
@@ -695,6 +695,7 @@ const Dashboard = () => {
                                     <option value="Maçon">Maçon</option>
                                     <option value="Plombier">Plombier</option>
                                     <option value="Menuisier">Menuisier</option>
+                                    <option value="Sérigraphie">Sérigraphie</option>
                                     <option value="Autre">Autre</option>
                                 </select>
                             </div>

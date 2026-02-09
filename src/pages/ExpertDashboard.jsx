@@ -37,7 +37,7 @@ const ExpertDashboard = () => {
         commentsEnabled: true
     });
 
-    const standardSpecialties = ["Informatique", "Reparateur telephone", "Reparateur imprimante", "Réseaux", "Maintenancier", "Mécanicien", "Maçon", "Plombier", "Menuisier"];
+    const standardSpecialties = ["Informatique", "Reparateur telephone", "Reparateur imprimante", "Réseaux", "Maintenancier", "Mécanicien", "Maçon", "Plombier", "Menuisier", "Sérigraphie"];
 
     useEffect(() => {
         if (user?.id) {
@@ -496,6 +496,7 @@ const ExpertDashboard = () => {
                                             <option value="Maçon">Maçon</option>
                                             <option value="Plombier">Plombier</option>
                                             <option value="Menuisier">Menuisier</option>
+                                            <option value="Sérigraphie">Sérigraphie</option>
                                             <option value="Autre">Autre</option>
                                         </select>
                                     </div>
