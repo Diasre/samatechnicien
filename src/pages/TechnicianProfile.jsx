@@ -95,8 +95,8 @@ const TechnicianProfile = () => {
                 const { data: productsData, error: productsError } = await supabase
                     .from('products')
                     .select('*')
-                    .eq('technicianId', id)
-                    .eq('status', 'available'); // Only show available products on profile? Or all? Let's show all for now or maybe just available. Keeping it simple.
+                    .eq('technicianid', id)
+                    .eq('status', 'available'); // Only show available products on profile
 
                 if (productsData) setProducts(productsData);
 
