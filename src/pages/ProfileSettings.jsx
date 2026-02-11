@@ -120,10 +120,15 @@ const ProfileSettings = () => {
 
         setIsSaving(true);
         try {
-            // 1. Verify availability of update data
+            // 1. Verify Authentication & ID match
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            if (!authUser) {
+                alert("Session expirée. Veuillez vous reconnecter.");
+                window.location.href = '/login';
+                return;
+            }
+
             // Detect correct column name for generic 'fullName'
-            // We check the 'user' object keys to find if it uses 'fullname', 'full_name' or 'fullName'
-            // Default to 'fullname' as it's the most common Postgres convention if not found
             const nameColumn = Object.keys(user).find(k => ['fullname', 'full_name', 'fullName'].includes(k)) || 'fullname';
 
             // 2. Upload Image
@@ -133,16 +138,15 @@ const ProfileSettings = () => {
                 if (url) imageUrl = url;
             }
 
-            // 3. Update User
             // 3. Update User Profile (Public Table)
-            // Ensure we only send defined fields to avoid overwriting with null/undefined if not intended
+            // Ensure we only send defined fields
             const updates = {};
             if (formData.fullName) updates[nameColumn] = formData.fullName;
             if (formData.email) updates.email = formData.email;
             if (formData.phone) updates.phone = formData.phone;
             if (imageUrl) updates.image = imageUrl;
 
-            // Technician specific fields (only update if role is technician)
+            // Technician specific fields
             if (user.role === 'technician') {
                 if (formData.specialty !== undefined) updates.specialty = formData.specialty;
                 if (formData.city !== undefined) updates.city = formData.city;
@@ -150,16 +154,23 @@ const ProfileSettings = () => {
                 if (formData.description !== undefined) updates.description = formData.description;
             }
 
-            const { error: profileError } = await supabase
+            // TRY 1: Direct Update
+            let updateSuccess = false;
+
+            const { data: updateData, error: profileError } = await supabase
                 .from('users')
                 .update(updates)
-                .eq('id', user.id);
+                .eq('id', authUser.id) // Use auth ID to be sure
+                .select(); // Return data to verify update happened
 
-            // Fallback to RPC if direct update fails (permission issues)
-            if (profileError) {
-                console.warn("Direct update failed, trying RPC fallback:", profileError.message);
+            if (!profileError && updateData && updateData.length > 0) {
+                updateSuccess = true;
+            } else {
+                console.warn("Direct update failed or returned no data (RLS blocking?). Trying RPC...", profileError);
+            }
 
-                // Construct RPC params (mapping JS camelCase to SQL snake_case/params)
+            // TRY 2: RPC Fallback (if direct update failed)
+            if (!updateSuccess) {
                 const rpcParams = {
                     p_fullname: formData.fullName || null,
                     p_phone: formData.phone || null,
@@ -171,11 +182,15 @@ const ProfileSettings = () => {
                     p_email: formData.email || null
                 };
 
-                const { error: rpcError } = await supabase.rpc('update_user_profile', rpcParams);
+                const { error: rpcError } = await supabase.rpc('update_profile_v2', rpcParams);
 
                 if (rpcError) {
-                    console.error("RPC update failed too:", rpcError);
-                    throw profileError; // Throw original error if both fail
+                    // Try V1 RPC as last resort
+                    const { error: rpcErrorV1 } = await supabase.rpc('update_user_profile', rpcParams);
+                    if (rpcErrorV1) {
+                        console.error("All update methods failed.");
+                        throw new Error(`Mise à jour impossible. (Direct: ${profileError?.message}, RPC: ${rpcError.message})`);
+                    }
                 }
             }
 
@@ -187,21 +202,17 @@ const ProfileSettings = () => {
                 if (authError) throw authError;
             }
 
-            // Removed 'if (error) throw error;' because 'error' is not defined here.
-            // profileError and authError are already checked above.
-
             alert("Profil mis à jour avec succès !");
 
-            // Update local storage to reflect changes immediately
+            // Update local storage
             const updatedLocalUser = { ...user, ...updates };
-            // Don't store password in local storage if possible, but keep structure consistent
             localStorage.setItem('user', JSON.stringify(updatedLocalUser));
             setUser(updatedLocalUser);
 
             // Clear password fields
             setFormData(prev => ({ ...prev, currentPassword: '', password: '', confirmPassword: '' }));
 
-            // Force reload if role changed (to update navigation etc)
+            // Force reload if needed
             if (updates.role && updates.role !== user.role) {
                 window.location.reload();
             }
