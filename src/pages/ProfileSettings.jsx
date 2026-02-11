@@ -204,12 +204,19 @@ const ProfileSettings = () => {
 
         setIsSaving(true);
         try {
-            const { error } = await supabase
-                .from('users')
-                .update({ role: 'technician' })
-                .eq('id', user.id);
+            // 1. Tenter avec la fonction sécurisée (RPC)
+            const { error: rpcError } = await supabase.rpc('become_technician');
 
-            if (error) throw error;
+            if (rpcError) {
+                // Si la fonction n'existe pas encore (fallback), tenter la mise à jour directe
+                console.warn("RPC failed, trying direct update:", rpcError.message);
+                const { error: updateError } = await supabase
+                    .from('users')
+                    .update({ role: 'technician', availability: 'available' })
+                    .eq('id', user.id);
+
+                if (updateError) throw updateError;
+            }
 
             alert("Félicitations ! Vous êtes maintenant un Technicien. Veuillez compléter votre profil.");
 
