@@ -135,16 +135,20 @@ const ProfileSettings = () => {
 
             // 3. Update User
             // 3. Update User Profile (Public Table)
-            const updates = {
-                [nameColumn]: formData.fullName,
-                email: formData.email,
-                phone: formData.phone,
-                image: imageUrl,
-                specialty: formData.specialty,
-                city: formData.city,
-                district: formData.district,
-                description: formData.description
-            };
+            // Ensure we only send defined fields to avoid overwriting with null/undefined if not intended
+            const updates = {};
+            if (formData.fullName) updates[nameColumn] = formData.fullName;
+            if (formData.email) updates.email = formData.email;
+            if (formData.phone) updates.phone = formData.phone;
+            if (imageUrl) updates.image = imageUrl;
+
+            // Technician specific fields (only update if role is technician)
+            if (user.role === 'technician') {
+                if (formData.specialty !== undefined) updates.specialty = formData.specialty;
+                if (formData.city !== undefined) updates.city = formData.city;
+                if (formData.district !== undefined) updates.district = formData.district;
+                if (formData.description !== undefined) updates.description = formData.description;
+            }
 
             const { error: profileError } = await supabase
                 .from('users')
