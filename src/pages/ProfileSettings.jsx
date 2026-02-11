@@ -151,11 +151,32 @@ const ProfileSettings = () => {
             }
 
             const { error: profileError } = await supabase
-                .from('users')
                 .update(updates)
                 .eq('id', user.id);
 
-            if (profileError) throw profileError;
+            // Fallback to RPC if direct update fails (permission issues)
+            if (profileError) {
+                console.warn("Direct update failed, trying RPC fallback:", profileError.message);
+
+                // Construct RPC params (mapping JS camelCase to SQL snake_case/params)
+                const rpcParams = {
+                    p_fullname: formData.fullName || null,
+                    p_phone: formData.phone || null,
+                    p_city: formData.city || null,
+                    p_district: formData.district || null,
+                    p_specialty: formData.specialty || null,
+                    p_description: formData.description || null,
+                    p_image: imageUrl || null,
+                    p_email: formData.email || null
+                };
+
+                const { error: rpcError } = await supabase.rpc('update_user_profile', rpcParams);
+
+                if (rpcError) {
+                    console.error("RPC update failed too:", rpcError);
+                    throw profileError; // Throw original error if both fail
+                }
+            }
 
             // 4. Update Password (Supabase Auth)
             if (formData.password) {
