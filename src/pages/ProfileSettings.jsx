@@ -14,7 +14,12 @@ const ProfileSettings = () => {
         phone: '',
         currentPassword: '',
         password: '',
-        confirmPassword: ''
+        confirmPassword: '',
+        // Technician specific fields
+        specialty: '',
+        city: '',
+        district: '',
+        description: ''
     });
     const [imageFile, setImageFile] = useState(null);
     const [previewImage, setPreviewImage] = useState(null);
@@ -39,7 +44,11 @@ const ProfileSettings = () => {
                         ...prev,
                         fullName: data.fullname || data.full_name || data.fullName || '',
                         email: data.email,
-                        phone: data.phone || ''
+                        phone: data.phone || '',
+                        specialty: data.specialty || '',
+                        city: data.city || '',
+                        district: data.district || '',
+                        description: data.description || ''
                     }));
                     setPreviewImage(data.image);
                 }
@@ -124,21 +133,32 @@ const ProfileSettings = () => {
             }
 
             // 3. Update User
+            // 3. Update User Profile (Public Table)
             const updates = {
                 [nameColumn]: formData.fullName,
                 email: formData.email,
                 phone: formData.phone,
-                image: imageUrl
+                image: imageUrl,
+                specialty: formData.specialty,
+                city: formData.city,
+                district: formData.district,
+                description: formData.description
             };
 
-            if (formData.password) {
-                updates.password = formData.password; // In real app, hash this!
-            }
-
-            const { error } = await supabase
+            const { error: profileError } = await supabase
                 .from('users')
                 .update(updates)
                 .eq('id', user.id);
+
+            if (profileError) throw profileError;
+
+            // 4. Update Password (Supabase Auth)
+            if (formData.password) {
+                const { error: authError } = await supabase.auth.updateUser({
+                    password: formData.password
+                });
+                if (authError) throw authError;
+            }
 
             if (error) throw error;
 
@@ -169,6 +189,43 @@ const ProfileSettings = () => {
         };
         setQrData(JSON.stringify(data));
         setShowQRModal(true);
+    };
+
+    const handleBecomeTechnician = async () => {
+        if (!window.confirm("Voulez-vous vraiment activer le mode Technicien ? Cela vous permettra de proposer vos services.")) {
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            const { error } = await supabase
+                .from('users')
+                .update({ role: 'technician' })
+                .eq('id', user.id);
+
+            if (error) throw error;
+
+            alert("Félicitations ! Vous êtes maintenant un Technicien. Veuillez compléter votre profil.");
+
+            // Update local state
+            const updatedUser = { ...user, role: 'technician' };
+            setUser(updatedUser);
+            localStorage.setItem('user', JSON.stringify(updatedUser)); // Update stored user
+
+            // Initialiser les champs vides pour le technicien
+            setFormData(prev => ({
+                ...prev,
+                specialty: '',
+                city: '',
+                district: '',
+                description: ''
+            }));
+
+        } catch (error) {
+            console.error("Error upgrading to technician:", error);
+            alert("Erreur: " + error.message);
+        }
+        setIsSaving(false);
     };
 
     if (!localUser) return <div className="container" style={{ padding: '2rem' }}>Veuillez vous connecter.</div>;
@@ -222,6 +279,34 @@ const ProfileSettings = () => {
                     </div>
                 </div>
 
+                {/* Section Devenir Technicien (Pour les clients uniquement) */}
+                {user.role === 'client' && (
+                    <div style={{
+                        marginTop: '-1rem', marginBottom: '2rem', padding: '1.5rem',
+                        backgroundColor: '#e3f2fd', borderRadius: '12px', border: '1px solid #bbdefb'
+                    }}>
+                        <h3 style={{ fontSize: '1.1rem', marginTop: 0, color: '#0d47a1', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            🛠️ Devenir Technicien
+                        </h3>
+                        <p style={{ fontSize: '0.9rem', color: '#1565c0', lineHeight: '1.5' }}>
+                            Vous êtes un réparateur professionnel ? Activez le mode Technicien pour proposer vos services, être visible sur la carte et gérer vos produits.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={handleBecomeTechnician}
+                            disabled={isSaving}
+                            className="btn"
+                            style={{
+                                backgroundColor: '#1976d2', color: 'white', border: 'none',
+                                padding: '0.75rem 1.5rem', borderRadius: '8px', cursor: 'pointer',
+                                fontWeight: '600', marginTop: '0.5rem', width: '100%'
+                            }}
+                        >
+                            {isSaving ? 'Activation...' : 'Activer le mode Technicien'}
+                        </button>
+                    </div>
+                )}
+
                 <form onSubmit={handleSave}>
                     <div style={{ marginBottom: '1.25rem' }}>
                         <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>Nom complet</label>
@@ -259,6 +344,67 @@ const ProfileSettings = () => {
                             />
                         </div>
                     </div>
+
+                    {/* Technician Specific Fields */}
+                    {user.role === 'technician' && (
+                        <div style={{ padding: '1.5rem', backgroundColor: '#f9f9f9', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid #eee' }}>
+                            <h3 style={{ fontSize: '1rem', marginTop: 0, marginBottom: '1rem', color: 'var(--primary-color)' }}>Informations Professionnelles</h3>
+
+                            <div style={{ marginBottom: '1.25rem' }}>
+                                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>Spécialité</label>
+                                <select
+                                    name="specialty"
+                                    value={formData.specialty}
+                                    onChange={handleInputChange}
+                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ddd', backgroundColor: 'white' }}
+                                >
+                                    <option value="">Choisir une spécialité</option>
+                                    <option value="Réparation Mobile">Réparation Mobile</option>
+                                    <option value="Informatique">Informatique</option>
+                                    <option value="Électronique">Électronique</option>
+                                    <option value="Froid et Climatisation">Froid et Climatisation</option>
+                                    <option value="Électricité">Électricité</option>
+                                    <option value="Plomberie">Plomberie</option>
+                                    <option value="Sérigraphie">Sérigraphie</option>
+                                </select>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div style={{ marginBottom: '1.25rem' }}>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>Ville</label>
+                                    <input
+                                        type="text"
+                                        name="city"
+                                        value={formData.city}
+                                        onChange={handleInputChange}
+                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ddd' }}
+                                    />
+                                </div>
+                                <div style={{ marginBottom: '1.25rem' }}>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>Quartier</label>
+                                    <input
+                                        type="text"
+                                        name="district"
+                                        value={formData.district}
+                                        onChange={handleInputChange}
+                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ddd' }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div style={{ marginBottom: '0' }}>
+                                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>Description / Biographie</label>
+                                <textarea
+                                    name="description"
+                                    value={formData.description}
+                                    onChange={handleInputChange}
+                                    rows="4"
+                                    placeholder="Décrivez vos compétences et services..."
+                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ddd', resize: 'vertical' }}
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     <div style={{ marginTop: '2rem', borderTop: '1px solid #eee', paddingTop: '1.5rem' }}>
                         <h3 style={{ fontSize: '1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -312,46 +458,48 @@ const ProfileSettings = () => {
                 </form>
 
 
-            </div>
+            </div >
 
             {/* Modal pour le QR Code */}
-            {showQRModal && (
-                <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 3000,
-                    display: 'flex', justifyContent: 'center', alignItems: 'center',
-                    padding: '2rem'
-                }} onClick={() => setShowQRModal(false)}>
-                    <div className="card animate-scale-up" style={{
-                        backgroundColor: 'white', padding: '2rem', textAlign: 'center',
-                        maxWidth: '400px', width: '100%'
-                    }} onClick={e => e.stopPropagation()}>
-                        <h3 style={{ marginBottom: '1rem' }}>Votre QR Code</h3>
-                        <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '1.5rem' }}>
-                            Scannez ce code avec l'application SamaTechnicien sur votre autre appareil pour vous connecter.
-                        </p>
-
-                        <div style={{ padding: '1.5rem', backgroundColor: '#f8f9fa', borderRadius: '12px', display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
-                            <QRCodeSVG value={qrData} size={200} />
-                        </div>
-
-                        <div style={{ backgroundColor: '#fff3cd', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
-                            <p style={{ margin: 0, fontSize: '0.75rem', color: '#856404' }}>
-                                ⚠️ <strong>Attention:</strong> Ce code contient vos identifiants. Ne le partagez jamais et ne le montrez pas à d'autres personnes.
+            {
+                showQRModal && (
+                    <div style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 3000,
+                        display: 'flex', justifyContent: 'center', alignItems: 'center',
+                        padding: '2rem'
+                    }} onClick={() => setShowQRModal(false)}>
+                        <div className="card animate-scale-up" style={{
+                            backgroundColor: 'white', padding: '2rem', textAlign: 'center',
+                            maxWidth: '400px', width: '100%'
+                        }} onClick={e => e.stopPropagation()}>
+                            <h3 style={{ marginBottom: '1rem' }}>Votre QR Code</h3>
+                            <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '1.5rem' }}>
+                                Scannez ce code avec l'application SamaTechnicien sur votre autre appareil pour vous connecter.
                             </p>
-                        </div>
 
-                        <button
-                            className="btn btn-primary"
-                            style={{ width: '100%' }}
-                            onClick={() => setShowQRModal(false)}
-                        >
-                            Fermer
-                        </button>
+                            <div style={{ padding: '1.5rem', backgroundColor: '#f8f9fa', borderRadius: '12px', display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                                <QRCodeSVG value={qrData} size={200} />
+                            </div>
+
+                            <div style={{ backgroundColor: '#fff3cd', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
+                                <p style={{ margin: 0, fontSize: '0.75rem', color: '#856404' }}>
+                                    ⚠️ <strong>Attention:</strong> Ce code contient vos identifiants. Ne le partagez jamais et ne le montrez pas à d'autres personnes.
+                                </p>
+                            </div>
+
+                            <button
+                                className="btn btn-primary"
+                                style={{ width: '100%' }}
+                                onClick={() => setShowQRModal(false)}
+                            >
+                                Fermer
+                            </button>
+                        </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };
 
