@@ -160,7 +160,8 @@ const ProfileSettings = () => {
                 if (authError) throw authError;
             }
 
-            if (error) throw error;
+            // Removed 'if (error) throw error;' because 'error' is not defined here.
+            // profileError and authError are already checked above.
 
             alert("Profil mis à jour avec succès !");
 
