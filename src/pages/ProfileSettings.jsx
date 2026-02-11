@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { User, Lock, Save, ArrowLeft, QrCode, Camera } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { QRCodeSVG } from 'qrcode.react';
 
 const ProfileSettings = () => {
+    const navigate = useNavigate();
     const localUser = JSON.parse(localStorage.getItem('user'));
     const [user, setUser] = useState(localUser);
     const [isSaving, setIsSaving] = useState(false);
@@ -218,32 +219,16 @@ const ProfileSettings = () => {
                 if (updateError) throw updateError;
             }
 
-            alert("Félicitations ! Vous êtes maintenant un Technicien. Veuillez compléter votre profil.");
+            alert("Félicitations ! Vous êtes maintenant un Technicien. Vous allez être redirigé vers la liste des techniciens.");
 
             // Update local state
             const updatedUser = { ...user, role: 'technician', availability: 'available' };
             setUser(updatedUser);
             localStorage.setItem('user', JSON.stringify(updatedUser)); // Update stored user
 
-            // Initialiser les champs vides pour le technicien
-            setFormData(prev => ({
-                ...prev,
-                specialty: '',
-                city: '',
-                district: '',
-                description: ''
-            }));
-
-            // Force UI update directly without reload to avoid race conditions
-            // and provide a smoother experience
-            const refreshUser = { ...user, role: 'technician', availability: 'available' };
-            setUser(refreshUser);
-            // Also update localStorage manually as backup
-            localStorage.setItem('user', JSON.stringify(refreshUser));
-
-            // Scroll to the new fields
+            // Redirect to Technicians List to show they are now listed
             setTimeout(() => {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                navigate('/technicians');
             }, 500);
 
         } catch (error) {
