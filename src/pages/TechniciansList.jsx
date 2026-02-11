@@ -56,7 +56,8 @@ const TechniciansList = () => {
                             phone: user.phone || null,
                             image: user.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullname || user.fullName || 'Tech')}&background=random&color=fff&size=150`,
                             description: user.description || 'Technicien professionnel référencé.',
-                            isBlocked: user.isblocked !== undefined ? user.isblocked : user.isBlocked
+                            isBlocked: user.isblocked !== undefined ? user.isblocked : user.isBlocked,
+                            availability: user.availability || 'available' // Default to available
                         };
                     });
 
@@ -83,7 +84,12 @@ const TechniciansList = () => {
         const isVisible = isAdmin ? true : !tech.isBlocked;
 
         return matchesSearch && matchesSpecialty && isVisible;
-    }).sort((a, b) => b.rating - a.rating);
+    }).sort((a, b) => {
+        // Sort by availability first, then rating
+        if (a.availability === 'available' && b.availability !== 'available') return -1;
+        if (a.availability !== 'available' && b.availability === 'available') return 1;
+        return b.rating - a.rating;
+    });
 
     const specialties = [...new Set(allTechnicians.map(t => t.specialty))];
 
@@ -244,6 +250,13 @@ const TechniciansList = () => {
                                             <span style={{ color: '#999', fontSize: '0.75rem' }}>({tech.reviews_count} avis)</span>
                                         </div>
                                     )}
+                                    <div style={{ marginTop: '0.25rem', fontSize: '0.75rem' }}>
+                                        {tech.availability === 'unavailable' ? (
+                                            <span style={{ color: '#dc3545', fontWeight: 'bold' }}>🔴 Indisponible</span>
+                                        ) : (
+                                            <span style={{ color: '#28a745', fontWeight: 'bold' }}>🟢 Disponible</span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 

@@ -174,6 +174,11 @@ const ProfileSettings = () => {
             // Clear password fields
             setFormData(prev => ({ ...prev, currentPassword: '', password: '', confirmPassword: '' }));
 
+            // Force reload if role changed (to update navigation etc)
+            if (updates.role && updates.role !== user.role) {
+                window.location.reload();
+            }
+
         } catch (error) {
             console.error(error);
             alert("Erreur lors de la mise à jour: " + error.message);
@@ -209,7 +214,7 @@ const ProfileSettings = () => {
             alert("Félicitations ! Vous êtes maintenant un Technicien. Veuillez compléter votre profil.");
 
             // Update local state
-            const updatedUser = { ...user, role: 'technician' };
+            const updatedUser = { ...user, role: 'technician', availability: 'available' };
             setUser(updatedUser);
             localStorage.setItem('user', JSON.stringify(updatedUser)); // Update stored user
 
@@ -221,6 +226,9 @@ const ProfileSettings = () => {
                 district: '',
                 description: ''
             }));
+
+            // Recharger la page pour débloquer les menus
+            window.location.reload();
 
         } catch (error) {
             console.error("Error upgrading to technician:", error);
@@ -349,7 +357,37 @@ const ProfileSettings = () => {
                     {/* Technician Specific Fields */}
                     {user.role === 'technician' && (
                         <div style={{ padding: '1.5rem', backgroundColor: '#f9f9f9', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid #eee' }}>
-                            <h3 style={{ fontSize: '1rem', marginTop: 0, marginBottom: '1rem', color: 'var(--primary-color)' }}>Informations Professionnelles</h3>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                <h3 style={{ fontSize: '1rem', marginTop: 0, marginBottom: 0, color: 'var(--primary-color)' }}>Informations Professionnelles</h3>
+
+                                {/* Status Toggle */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem' }}>
+                                    <span style={{ fontWeight: 'bold', color: user.availability === 'unavailable' ? '#dc3545' : '#28a745' }}>
+                                        {user.availability === 'unavailable' ? '🔴 Indisponible' : '🟢 Disponible'}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            const newStatus = user.availability === 'unavailable' ? 'available' : 'unavailable';
+                                            try {
+                                                await supabase.from('users').update({ availability: newStatus }).eq('id', user.id);
+                                                const updated = { ...user, availability: newStatus };
+                                                setUser(updated);
+                                                localStorage.setItem('user', JSON.stringify(updated));
+                                            } catch (e) {
+                                                console.error(e);
+                                                alert("Erreur maj statut");
+                                            }
+                                        }}
+                                        style={{
+                                            padding: '4px 8px', borderRadius: '4px', border: '1px solid #ccc',
+                                            backgroundColor: 'white', cursor: 'pointer', fontSize: '0.75rem'
+                                        }}
+                                    >
+                                        Changer
+                                    </button>
+                                </div>
+                            </div>
 
                             <div style={{ marginBottom: '1.25rem' }}>
                                 <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>Spécialité</label>
