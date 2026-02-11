@@ -234,8 +234,17 @@ const ProfileSettings = () => {
                 description: ''
             }));
 
-            // Recharger la page pour débloquer les menus
-            window.location.reload();
+            // Force UI update directly without reload to avoid race conditions
+            // and provide a smoother experience
+            const refreshUser = { ...user, role: 'technician', availability: 'available' };
+            setUser(refreshUser);
+            // Also update localStorage manually as backup
+            localStorage.setItem('user', JSON.stringify(refreshUser));
+
+            // Scroll to the new fields
+            setTimeout(() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }, 500);
 
         } catch (error) {
             console.error("Error upgrading to technician:", error);
