@@ -151,6 +151,7 @@ const ProfileSettings = () => {
             }
 
             const { error: profileError } = await supabase
+                .from('users')
                 .update(updates)
                 .eq('id', user.id);
 
