@@ -139,19 +139,26 @@ const ProfileSettings = () => {
             }
 
             // 3. Update User Profile (Public Table)
-            // Ensure we only send defined fields
+            // Ensure we only send defined fields AND only if they changed (to avoid unique constraint issues)
             const updates = {};
-            if (formData.fullName) updates[nameColumn] = formData.fullName;
-            if (formData.email) updates.email = formData.email;
-            if (formData.phone) updates.phone = formData.phone;
-            if (imageUrl) updates.image = imageUrl;
+            if (formData.fullName && formData.fullName !== user[nameColumn]) updates[nameColumn] = formData.fullName;
+            if (formData.email && formData.email !== user.email) updates.email = formData.email;
+            if (formData.phone !== user.phone) updates.phone = formData.phone;
+            if (imageUrl && imageUrl !== user.image) updates.image = imageUrl;
 
             // Technician specific fields
             if (user.role === 'technician') {
-                if (formData.specialty !== undefined) updates.specialty = formData.specialty;
-                if (formData.city !== undefined) updates.city = formData.city;
-                if (formData.district !== undefined) updates.district = formData.district;
-                if (formData.description !== undefined) updates.description = formData.description;
+                if (formData.specialty !== undefined && formData.specialty !== user.specialty) updates.specialty = formData.specialty;
+                if (formData.city !== undefined && formData.city !== user.city) updates.city = formData.city;
+                if (formData.district !== undefined && formData.district !== user.district) updates.district = formData.district;
+                if (formData.description !== undefined && formData.description !== user.description) updates.description = formData.description;
+            }
+
+            // If nothing changed, stop here
+            if (Object.keys(updates).length === 0 && !formData.password) {
+                alert("Aucune modification détectée.");
+                setIsSaving(false);
+                return;
             }
 
             // TRY 1: Direct Update
@@ -219,7 +226,12 @@ const ProfileSettings = () => {
 
         } catch (error) {
             console.error(error);
-            alert("Erreur lors de la mise à jour: " + error.message);
+            // Handle specific "duplicate key" error
+            if (error.message.includes("users_email_key")) {
+                alert("Erreur: Cet email est déjà utilisé par un autre compte.");
+            } else {
+                alert("Erreur lors de la mise à jour: " + error.message);
+            }
         }
         setIsSaving(false);
     };
