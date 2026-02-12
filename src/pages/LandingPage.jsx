@@ -163,7 +163,11 @@ const LandingPage = () => {
                                 </li>
                                 <li style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem', fontSize: '1.1rem' }}>
                                     <CheckCircle size={24} color="var(--primary-color)" style={{ marginRight: '1rem', flexShrink: 0 }} />
-                                    Possibilité d'activer le mode Technicien pour vendre vos articles dans la boutique.
+                                    Possibilité d'activer le mode Technicien depuis votre profil.
+                                </li>
+                                <li style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem', fontSize: '1.1rem' }}>
+                                    <CheckCircle size={24} color="var(--primary-color)" style={{ marginRight: '1rem', flexShrink: 0 }} />
+                                    Vendez vos articles et pièces détachées dans la boutique.
                                 </li>
                             </ul>
                             <Link to="/register" className="btn btn-primary" style={{ marginTop: '1rem' }}>
@@ -219,6 +223,10 @@ const LandingPage = () => {
                             <li style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem', fontSize: '1.1rem' }}>
                                 <CheckCircle size={24} color="var(--secondary-color)" style={{ marginRight: '1rem', flexShrink: 0 }} />
                                 Rejoignez une communauté de professionnels.
+                            </li>
+                            <li style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem', fontSize: '1.1rem' }}>
+                                <CheckCircle size={24} color="var(--secondary-color)" style={{ marginRight: '1rem', flexShrink: 0 }} />
+                                Partagez votre profil et votre boutique directement avec vos clients.
                             </li>
                         </ul>
                         <Link to="/register" className="btn btn-secondary" style={{ marginTop: '1rem' }}>
