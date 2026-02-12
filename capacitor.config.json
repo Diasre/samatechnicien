@@ -3,7 +3,7 @@
   "appName": "SamaTechnicien",
   "webDir": "dist",
   "server": {
-    "url": "http://10.28.236.131:5173",
+    "url": "http://10.154.155.226:5173",
     "cleartext": true
   }
 }
