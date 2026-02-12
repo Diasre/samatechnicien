@@ -161,6 +161,10 @@ const LandingPage = () => {
                                     <CheckCircle size={24} color="var(--primary-color)" style={{ marginRight: '1rem', flexShrink: 0 }} />
                                     Service client réactif.
                                 </li>
+                                <li style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem', fontSize: '1.1rem' }}>
+                                    <CheckCircle size={24} color="var(--primary-color)" style={{ marginRight: '1rem', flexShrink: 0 }} />
+                                    Possibilité d'activer le mode Technicien depuis votre profil.
+                                </li>
                             </ul>
                             <Link to="/register" className="btn btn-primary" style={{ marginTop: '1rem' }}>
                                 Trouver un réparateur
