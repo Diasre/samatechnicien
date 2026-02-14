@@ -22,7 +22,17 @@ const TechnicianProfile = () => {
             return;
         }
 
-        if (String(currentUser.id) === String(tech.id)) {
+        // Find the technician's UUID
+        // Try common column names where the auth UUID might be stored
+        const techUUID = tech.uuid || tech.user_id || tech.auth_id || (typeof tech.id === 'string' && tech.id.length > 20 ? tech.id : null);
+
+        if (!techUUID) {
+            console.error("Could not find Technician UUID in object:", tech);
+            alert("Erreur système: Impossible de trouver l'identifiant unique du technicien. Contactez l'administrateur.");
+            return;
+        }
+
+        if (String(currentUser.id) === String(techUUID)) {
             alert('Vous ne pouvez pas vous envoyer de message à vous-même.');
             return;
         }
@@ -30,7 +40,7 @@ const TechnicianProfile = () => {
         try {
             const { data, error } = await supabase.rpc('get_or_create_conversation', {
                 p1: currentUser.id,
-                p2: tech.id
+                p2: techUUID
             });
 
             if (error) throw error;
@@ -39,7 +49,7 @@ const TechnicianProfile = () => {
             navigate(`/chat?id=${data}`);
         } catch (error) {
             console.error('Error starting chat:', error);
-            alert('Erreur: ' + (error.message || JSON.stringify(error)));
+            alert('Impossible de démarrer la conversation.');
         }
     };
     const [reviews, setReviews] = useState([]);
