@@ -39,7 +39,7 @@ const TechnicianProfile = () => {
             navigate(`/chat?id=${data}`);
         } catch (error) {
             console.error('Error starting chat:', error);
-            alert('Impossible de démarrer la conversation.');
+            alert('Erreur: ' + (error.message || JSON.stringify(error)));
         }
     };
     const [reviews, setReviews] = useState([]);
