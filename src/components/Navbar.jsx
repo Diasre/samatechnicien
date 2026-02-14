@@ -124,7 +124,8 @@ const Navbar = () => {
                         onClick={toggleMenu}
                         style={{
                             display: 'none', background: 'none', border: 'none',
-                            color: 'var(--text-primary)', cursor: 'pointer', padding: '5px'
+                            color: 'var(--text-primary)', cursor: 'pointer', padding: '8px', // Increased padding for easier click
+                            marginTop: '8px' // Pushes the button down slightly
                         }}
                     >
                         {isOpen ? <X size={28} /> : <Menu size={28} />}
