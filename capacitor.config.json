@@ -1,9 +1,5 @@
 {
   "appId": "com.samatechnicien.app",
   "appName": "SamaTechnicien",
-  "webDir": "dist",
-  "server": {
-    "url": "http://10.154.155.226:5173",
-    "cleartext": true
-  }
+  "webDir": "dist"
 }

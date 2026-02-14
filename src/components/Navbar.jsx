@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, ShoppingBag, MessageSquare, Settings } from 'lucide-react';
+import { Menu, X, ShoppingBag, MessageSquare, MessageCircle, Settings } from 'lucide-react';
 import logo from '../assets/logo.png';
 
 const Navbar = () => {
@@ -89,6 +89,12 @@ const Navbar = () => {
                             )}
                         </Link>
 
+                        {isLoggedIn && (
+                            <Link to="/chat" style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center', position: 'relative' }} title="Mes Messages">
+                                <MessageCircle size={18} />
+                            </Link>
+                        )}
+
                         {isLoggedIn ? (
                             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                                 <Link to="/profile" style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center' }} title="Paramètres">
@@ -140,6 +146,11 @@ const Navbar = () => {
                     </>
                 )}
                 <hr style={{ border: 'none', borderTop: '1px solid #eee', width: '100%' }} />
+                {isLoggedIn && (
+                    <Link to="/chat" onClick={toggleMenu} style={{ textDecoration: 'none', color: 'var(--text-primary)', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <MessageCircle size={20} /> Mes Messages
+                    </Link>
+                )}
                 <Link to="/cart" onClick={toggleMenu} style={{ textDecoration: 'none', color: 'var(--text-primary)', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <ShoppingBag size={20} /> Panier ({cartCount})
                 </Link>

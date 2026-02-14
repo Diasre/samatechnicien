@@ -1,0 +1,57 @@
+
+Configuration IP de Windows
+
+
+Carte Ethernet Ethernet :
+
+   Statut du m‚dia. . . . . . . . . . . . : M‚dia d‚connect‚
+   Suffixe DNS propre … la connexion. . . : 
+
+Carte inconnue Connexion au r‚seau localÿ:
+
+   Statut du m‚dia. . . . . . . . . . . . : M‚dia d‚connect‚
+   Suffixe DNS propre … la connexion. . . : 
+
+Carte Ethernet Ethernet 3 :
+
+   Suffixe DNS propre … la connexion. . . : 
+   Adresse IPv6 de liaison locale. . . . .: fe80::74e7:e51d:7671:399d%8
+   Adresse IPv4. . . . . . . . . . . . . .: 192.168.56.1
+   Masque de sous-r‚seau. . . .ÿ. . . . . : 255.255.255.0
+   Passerelle par d‚faut. . . .ÿ. . . . . : 
+
+Carte Ethernet Ethernet 4 :
+
+   Suffixe DNS propre … la connexion. . . : 
+   Adresse IPv6 de liaison locale. . . . .: fe80::9226:a1bc:f5d3:e63f%9
+   Adresse IPv4. . . . . . . . . . . . . .: 10.154.155.226
+   Masque de sous-r‚seau. . . .ÿ. . . . . : 255.255.255.0
+   Passerelle par d‚faut. . . .ÿ. . . . . : 10.154.155.48
+
+Carte r‚seau sans fil Connexion au r‚seau local* 9ÿ:
+
+   Statut du m‚dia. . . . . . . . . . . . : M‚dia d‚connect‚
+   Suffixe DNS propre … la connexion. . . : 
+
+Carte r‚seau sans fil Connexion au r‚seau local* 10ÿ:
+
+   Statut du m‚dia. . . . . . . . . . . . : M‚dia d‚connect‚
+   Suffixe DNS propre … la connexion. . . : 
+
+Carte r‚seau sans fil Wi-Fiÿ:
+
+   Statut du m‚dia. . . . . . . . . . . . : M‚dia d‚connect‚
+   Suffixe DNS propre … la connexion. . . : home
+
+Carte Ethernet Connexion r‚seau Bluetooth :
+
+   Statut du m‚dia. . . . . . . . . . . . : M‚dia d‚connect‚
+   Suffixe DNS propre … la connexion. . . : 
+
+Carte Ethernet vEthernet (Default Switch) :
+
+   Suffixe DNS propre … la connexion. . . : 
+   Adresse IPv6 de liaison locale. . . . .: fe80::e5c7:534c:7b38:77fd%57
+   Adresse IPv4. . . . . . . . . . . . . .: 172.20.144.1
+   Masque de sous-r‚seau. . . .ÿ. . . . . : 255.255.240.0
+   Passerelle par d‚faut. . . .ÿ. . . . . : 

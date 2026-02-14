@@ -6,6 +6,7 @@ import Home from './pages/Home';
 import TechniciansList from './pages/TechniciansList';
 import TechnicianProfile from './pages/TechnicianProfile';
 import Marketplace from './pages/Marketplace';
+import Chat from './pages/Chat';
 import Cart from './pages/Cart';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -143,6 +144,11 @@ function App() {
                     <Route path="/invite" element={
                         <ProtectedRoute>
                             <Invite />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/chat" element={
+                        <ProtectedRoute>
+                            <Chat />
                         </ProtectedRoute>
                     } />
                 </Routes>

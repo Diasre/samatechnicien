@@ -377,7 +377,7 @@ const Marketplace = () => {
         setIsFormVisible(false);
         setEditingProduct(null);
         setNewProduct({
-            title: '', price: '', category: 'Smartphone', condition: 'Occasion', description: '',
+            title: '', price: '', category: 'Cartes mères de téléphone', condition: 'Occasion', description: '',
             label1: '', label2: '', label3: ''
         });
         setImageFiles([null, null, null]);
@@ -445,7 +445,7 @@ const Marketplace = () => {
                                 }
 
                                 setEditingProduct(null);
-                                setNewProduct({ title: '', price: '', category: 'Smartphone', condition: 'Occasion', description: '' });
+                                setNewProduct({ title: '', price: '', category: 'Cartes mères de téléphone', condition: 'Occasion', description: '' });
                                 setIsFormVisible(true);
                             }
                         }}
@@ -474,11 +474,56 @@ const Marketplace = () => {
                             <div>
                                 <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>Catégorie</label>
                                 <select name="category" value={newProduct.category} onChange={handleInputChange} style={{ width: '100%', padding: '0.4rem', border: '1px solid #ddd', borderRadius: '4px' }}>
-                                    <option>Smartphone</option>
-                                    <option>Laptop</option>
-                                    <option>Accessoire</option>
-                                    <option>Composant</option>
-                                    <option>Autre</option>
+                                    <optgroup label="🔧 Téléphone & Électronique">
+                                        <option>Cartes mères de téléphone</option>
+                                        <option>Écrans</option>
+                                        <option>Batteries</option>
+                                        <option>Caméras</option>
+                                        <option>Haut-parleurs</option>
+                                        <option>Connecteurs</option>
+                                        <option>Pièces de rechange diverses</option>
+                                    </optgroup>
+                                    <optgroup label="💻 Informatique">
+                                        <option>Cartes mères PC</option>
+                                        <option>Disques durs</option>
+                                        <option>RAM</option>
+                                        <option>Alimentation</option>
+                                        <option>Écrans PC</option>
+                                        <option>Claviers / souris</option>
+                                        <option>Maintenance informatique</option>
+                                    </optgroup>
+                                    <optgroup label="🚗 Pièces automobiles">
+                                        <option>Moteur</option>
+                                        <option>Batterie</option>
+                                        <option>Alternateur</option>
+                                        <option>Démarreur</option>
+                                        <option>Plaquettes de frein</option>
+                                        <option>Bougies</option>
+                                        <option>Filtre à huile / air</option>
+                                        <option>Capteurs (ABS, température, etc.)</option>
+                                        <option>Phares et feux</option>
+                                        <option>Pièces de carrosserie</option>
+                                    </optgroup>
+                                    <optgroup label="🏠 Maison & Bâtiment">
+                                        <option>Plomberie</option>
+                                        <option>Maçonnerie</option>
+                                        <option>Électricité</option>
+                                        <option>Climatisation</option>
+                                        <option>Menuiserie</option>
+                                    </optgroup>
+                                    <optgroup label="📹 Sécurité & Surveillance">
+                                        <option>Caméras de surveillance</option>
+                                        <option>DVR / NVR</option>
+                                        <option>Câbles</option>
+                                        <option>Disques durs</option>
+                                        <option>Alarmes</option>
+                                    </optgroup>
+                                    <optgroup label="⚙️ Autres services techniques">
+                                        <option>Réparation motos</option>
+                                        <option>Réparation appareils électroménagers</option>
+                                        <option>Soudure</option>
+                                        <option>Installation panneaux solaires</option>
+                                    </optgroup>
                                 </select>
                             </div>
                             <div>
