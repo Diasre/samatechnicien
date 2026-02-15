@@ -21,16 +21,59 @@ const Chat = () => {
 
     // Effect to handle deep linking via URL parameter (?id=...)
     useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        const conversationId = params.get('id');
+        const handleDeepLink = async () => {
+            const params = new URLSearchParams(window.location.search);
+            const conversationId = params.get('id');
 
-        if (conversationId && conversations.length > 0) {
+            if (!conversationId) return;
+
+            // 1. Try to find in loaded list
             const targetConv = conversations.find(c => c.id === conversationId);
+
             if (targetConv) {
+                // Found in list, select it
                 setSelectedConversation(targetConv);
+            } else {
+                // 2. Not in list (maybe new?), fetch specifically
+                try {
+                    const { data, error } = await supabase
+                        .from('conversations')
+                        .select(`
+                            id, 
+                            created_at, 
+                            participant1:participant1_id (id, full_name, avatar_url),
+                            participant2:participant2_id (id, full_name, avatar_url),
+                            updated_at
+                        `)
+                        .eq('id', conversationId)
+                        .single();
+
+                    if (data) {
+                        // Format it
+                        const otherUser = data.participant1.id === user.id ? data.participant2 : data.participant1;
+                        const formattedConv = {
+                            id: data.id,
+                            otherUser: otherUser || { full_name: 'Utilisateur Inconnu' },
+                            updated_at: data.updated_at
+                        };
+
+                        // Select it immediately
+                        setSelectedConversation(formattedConv);
+
+                        // Add to list responsibly
+                        setConversations(prev => {
+                            if (prev.find(c => c.id === formattedConv.id)) return prev;
+                            return [formattedConv, ...prev];
+                        });
+                    }
+                } catch (err) {
+                    console.error("Error fetching specific conversation:", err);
+                }
             }
-        }
-    }, [conversations]);
+        };
+
+        handleDeepLink();
+    }, [conversations, window.location.search]);
 
     useEffect(() => {
         if (selectedConversation) {
