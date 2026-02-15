@@ -10,14 +10,37 @@ const Chat = () => {
     const [newMessage, setNewMessage] = useState('');
     const messagesEndRef = useRef(null);
 
-    // Get user from localStorage as used in the rest of the app
+    // Get user from localStorage
     const user = JSON.parse(localStorage.getItem('user'));
+    const [userUUID, setUserUUID] = useState(null);
+
+    // Resolve User UUID on mount
+    useEffect(() => {
+        const resolveUserUUID = async () => {
+            if (!user) return;
+
+            // Allow direct UUIDs
+            let resolved = user.uuid || user.user_id || user.auth_id || (typeof user.id === 'string' && user.id.length > 20 ? user.id : null);
+
+            // If ID is integer, try to fetch UUID via RPC
+            if (!resolved && user.id) {
+                try {
+                    const { data, error } = await supabase.rpc('get_technician_uuid', {
+                        technician_id: Number(user.id)
+                    });
+                    if (data && !error) resolved = data;
+                } catch (e) { console.error("Error resolving:", e); }
+            }
+            if (resolved) setUserUUID(resolved);
+        };
+        resolveUserUUID();
+    }, []);
 
     useEffect(() => {
-        if (user) {
+        if (userUUID) {
             fetchConversations();
         }
-    }, []);
+    }, [userUUID]);
 
     // Effect to handle deep linking via URL parameter (?id=...)
     useEffect(() => {
@@ -103,9 +126,10 @@ const Chat = () => {
     };
 
     const fetchConversations = async () => {
+        if (!userUUID) return;
         setLoading(true);
         try {
-            // Fetch conversations where user is participant
+            // Fetch conversations where user is participant USING UUID
             const { data, error } = await supabase
                 .from('conversations')
                 .select(`
@@ -114,17 +138,17 @@ const Chat = () => {
                     participant1:participant1_id (id, full_name, avatar_url),
                     participant2:participant2_id (id, full_name, avatar_url)
                 `)
-                .or(`participant1_id.eq.${user.id},participant2_id.eq.${user.id}`)
+                .or(`participant1_id.eq.${userUUID},participant2_id.eq.${userUUID}`)
                 .order('updated_at', { ascending: false });
 
             if (error) throw error;
 
             // Format data to identify "other user"
             const formatted = data.map(conv => {
-                const otherUser = conv.participant1.id === user.id ? conv.participant2 : conv.participant1;
+                const otherUser = conv.participant1.id === userUUID ? conv.participant2 : conv.participant1;
                 return {
                     id: conv.id,
-                    otherUser: otherUser || { full_name: 'Utilisateur Inconnu' }, // Fallback if user deleted
+                    otherUser: otherUser || { full_name: 'Utilisateur Inconnu' },
                     updated_at: conv.updated_at
                 };
             });
