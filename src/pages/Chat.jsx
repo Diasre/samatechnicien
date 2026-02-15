@@ -129,30 +129,50 @@ const Chat = () => {
         if (!userUUID) return;
         setLoading(true);
         try {
-            // Fetch conversations where user is participant USING UUID
-            const { data, error } = await supabase
-                .from('conversations')
-                .select(`
-                    id, 
-                    created_at, 
-                    participant1:participant1_id (id, full_name, avatar_url),
-                    participant2:participant2_id (id, full_name, avatar_url)
-                `)
-                .or(`participant1_id.eq.${userUUID},participant2_id.eq.${userUUID}`)
-                .order('updated_at', { ascending: false });
-
-            if (error) throw error;
-
-            // Format data to identify "other user"
-            const formatted = data.map(conv => {
-                const otherUser = conv.participant1.id === userUUID ? conv.participant2 : conv.participant1;
-                return {
-                    id: conv.id,
-                    otherUser: otherUser || { full_name: 'Utilisateur Inconnu' },
-                    updated_at: conv.updated_at
-                };
+            // Priority: Try the robust RPC call (bypasses RLS issues)
+            const { data: rpcData, error: rpcError } = await supabase.rpc('fetch_my_conversations', {
+                p_user_uuid: userUUID
             });
-            setConversations(formatted);
+
+            if (rpcData && !rpcError) {
+                // Map RPC result to component format
+                const formatted = rpcData.map(c => ({
+                    id: c.id,
+                    otherUser: {
+                        id: c.other_user_id,
+                        full_name: c.other_user_name,
+                        avatar_url: c.other_user_image
+                    },
+                    updated_at: c.updated_at
+                }));
+                setConversations(formatted);
+            } else {
+                // Fallback: Try standard query (might fail due to permissions)
+                console.warn("RPC fetch failed, falling back to standard query", rpcError);
+
+                const { data, error } = await supabase
+                    .from('conversations')
+                    .select(`
+                        id, 
+                        created_at, 
+                        participant1:participant1_id (id, full_name, avatar_url),
+                        participant2:participant2_id (id, full_name, avatar_url)
+                    `)
+                    .or(`participant1_id.eq.${userUUID},participant2_id.eq.${userUUID}`)
+                    .order('updated_at', { ascending: false });
+
+                if (error) throw error;
+
+                const formatted = data.map(conv => {
+                    const otherUser = conv.participant1.id === userUUID ? conv.participant2 : conv.participant1;
+                    return {
+                        id: conv.id,
+                        otherUser: otherUser || { full_name: 'Utilisateur Inconnu' },
+                        updated_at: conv.updated_at
+                    };
+                });
+                setConversations(formatted);
+            }
         } catch (error) {
             console.error('Error fetching conversations:', error);
         } finally {
