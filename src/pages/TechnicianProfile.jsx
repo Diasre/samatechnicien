@@ -53,18 +53,35 @@ const TechnicianProfile = () => {
         }
 
         try {
-            const { data, error } = await supabase.rpc('get_or_create_conversation', {
-                p1: currentUser.id,
-                p2: techUUID
-            });
+            // 1. Try to find an existing conversation directly (Bypassing RPC)
+            const { data: existingConvs, error: fetchError } = await supabase
+                .from('conversations')
+                .select('id')
+                .or(`and(participant1_id.eq.${currentUser.id},participant2_id.eq.${techUUID}),and(participant1_id.eq.${techUUID},participant2_id.eq.${currentUser.id})`);
 
-            if (error) throw error;
+            if (fetchError) throw fetchError;
 
-            // Redirect to chat with the conversation open
-            navigate(`/chat?id=${data}`);
+            let conversationId;
+
+            if (existingConvs && existingConvs.length > 0) {
+                conversationId = existingConvs[0].id;
+            } else {
+                // 2. Create new conversation if none exists
+                const { data: newConv, error: createError } = await supabase
+                    .from('conversations')
+                    .insert([{ participant1_id: currentUser.id, participant2_id: techUUID }])
+                    .select()
+                    .single();
+
+                if (createError) throw createError;
+                conversationId = newConv.id;
+            }
+
+            // Redirect to chat
+            navigate(`/chat?id=${conversationId}`);
         } catch (error) {
             console.error('Error starting chat:', error);
-            alert('Impossible de démarrer la conversation.');
+            alert(`Erreur détaillée:\n${error.message || JSON.stringify(error)}\n\nTechUUID: ${techUUID}`);
         }
     };
     const [reviews, setReviews] = useState([]);
