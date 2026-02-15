@@ -22,8 +22,29 @@ const TechnicianProfile = () => {
             return;
         }
 
-        // Find the technician's UUID
-        // Try common column names where the auth UUID might be stored
+        // --- 1. RESOLVE CURRENT USER UUID ---
+        let currentUserUUID = currentUser.uuid || currentUser.user_id || currentUser.auth_id || (typeof currentUser.id === 'string' && currentUser.id.length > 20 ? currentUser.id : null);
+
+        if (!currentUserUUID && Number.isInteger(Number(currentUser.id))) {
+            try {
+                // We reuse the same RPC to find OUR own UUID
+                const { data: myRemoteUUID, error: myUuidError } = await supabase.rpc('get_technician_uuid', {
+                    technician_id: Number(currentUser.id)
+                });
+                if (!myUuidError && myRemoteUUID) {
+                    currentUserUUID = myRemoteUUID;
+                }
+            } catch (err) {
+                console.error("Failed to retrieve my UUID via RPC", err);
+            }
+        }
+
+        if (!currentUserUUID) {
+            alert("Erreur: Impossible de récupérer votre identifiant sécurisé. Veuillez vous déconnecter et vous reconnecter.");
+            return;
+        }
+
+        // --- 2. RESOLVE TECHNICIAN UUID ---
         let techUUID = tech.uuid || tech.user_id || tech.auth_id || (typeof tech.id === 'string' && tech.id.length > 20 ? tech.id : null);
 
         // Fallback: Ask Supabase to find the UUID based on the integer ID
@@ -43,21 +64,22 @@ const TechnicianProfile = () => {
 
         if (!techUUID) {
             console.error("Could not find Technician UUID in object:", tech);
-            alert("Erreur système: Impossible de trouver l'identifiant unique du technicien. Veuillez demander au technicien de se reconnecter une fois pour mettre à jour son profil.");
+            alert("Erreur système: Impossible de trouver l'identifiant unique du technicien.");
             return;
         }
 
-        if (String(currentUser.id) === String(techUUID)) {
+        // Check if self-chat
+        if (currentUserUUID === techUUID) {
             alert('Vous ne pouvez pas vous envoyer de message à vous-même.');
             return;
         }
 
         try {
-            // 1. Try to find an existing conversation directly (Bypassing RPC)
+            // 3. Try to find an existing conversation directly (Bypassing RPC)
             const { data: existingConvs, error: fetchError } = await supabase
                 .from('conversations')
                 .select('id')
-                .or(`and(participant1_id.eq.${currentUser.id},participant2_id.eq.${techUUID}),and(participant1_id.eq.${techUUID},participant2_id.eq.${currentUser.id})`);
+                .or(`and(participant1_id.eq.${currentUserUUID},participant2_id.eq.${techUUID}),and(participant1_id.eq.${techUUID},participant2_id.eq.${currentUserUUID})`);
 
             if (fetchError) throw fetchError;
 
@@ -66,10 +88,10 @@ const TechnicianProfile = () => {
             if (existingConvs && existingConvs.length > 0) {
                 conversationId = existingConvs[0].id;
             } else {
-                // 2. Create new conversation if none exists
+                // 4. Create new conversation if none exists
                 const { data: newConv, error: createError } = await supabase
                     .from('conversations')
-                    .insert([{ participant1_id: currentUser.id, participant2_id: techUUID }])
+                    .insert([{ participant1_id: currentUserUUID, participant2_id: techUUID }])
                     .select()
                     .single();
 
@@ -81,7 +103,7 @@ const TechnicianProfile = () => {
             navigate(`/chat?id=${conversationId}`);
         } catch (error) {
             console.error('Error starting chat:', error);
-            alert(`Erreur détaillée:\n${error.message || JSON.stringify(error)}\n\nTechUUID: ${techUUID}`);
+            alert(`Erreur détaillée:\n${error.message || JSON.stringify(error)}`);
         }
     };
     const [reviews, setReviews] = useState([]);
