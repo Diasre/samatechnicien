@@ -24,11 +24,26 @@ const TechnicianProfile = () => {
 
         // Find the technician's UUID
         // Try common column names where the auth UUID might be stored
-        const techUUID = tech.uuid || tech.user_id || tech.auth_id || (typeof tech.id === 'string' && tech.id.length > 20 ? tech.id : null);
+        let techUUID = tech.uuid || tech.user_id || tech.auth_id || (typeof tech.id === 'string' && tech.id.length > 20 ? tech.id : null);
+
+        // Fallback: Ask Supabase to find the UUID based on the integer ID
+        if (!techUUID && Number.isInteger(Number(tech.id))) {
+            try {
+                const { data: remoteUUID, error: uuidError } = await supabase.rpc('get_technician_uuid', {
+                    technician_id: Number(tech.id)
+                });
+                if (!uuidError && remoteUUID) {
+                    techUUID = remoteUUID;
+                    console.log("UUID retrieved via RPC:", techUUID);
+                }
+            } catch (err) {
+                console.error("Failed to retrieve UUID via RPC", err);
+            }
+        }
 
         if (!techUUID) {
             console.error("Could not find Technician UUID in object:", tech);
-            alert("Erreur système: Impossible de trouver l'identifiant unique du technicien. Contactez l'administrateur.");
+            alert("Erreur système: Impossible de trouver l'identifiant unique du technicien. Veuillez demander au technicien de se reconnecter une fois pour mettre à jour son profil.");
             return;
         }
 
