@@ -488,14 +488,7 @@ const TechnicianProfile = () => {
                                 >
                                     <Phone size={16} /> Appel
                                 </button>
-                                <button
-                                    className="btn btn-secondary"
-                                    style={{ width: '100%', marginBottom: '0.75rem', padding: '0.5rem', fontSize: '0.85rem', backgroundColor: 'var(--secondary-color)', color: 'white' }}
-                                    onClick={handleStartChat}
-                                    disabled={tech.isBlocked}
-                                >
-                                    <MessageSquare size={16} /> Envoyer un message
-                                </button>
+
                                 <button
                                     className="btn"
                                     style={{
