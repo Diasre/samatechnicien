@@ -289,7 +289,7 @@ const TechniciansList = () => {
                                         onClick={() => handleWhatsApp(tech)}
                                         disabled={tech.isBlocked}
                                     >
-                                        WA
+                                        WhatsApp
                                     </button>
                                 </div>
                                 {/* Admin Actions */}

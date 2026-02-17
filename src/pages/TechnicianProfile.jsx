@@ -14,6 +14,10 @@ const TechnicianProfile = () => {
     // ... existing states ...
 
     const handleStartChat = async () => {
+        console.log("handleStartChat triggered");
+        // alert("Debug: Fonction lancée..."); // Uncommented for visible confirmation if needed, but console is cleaner for now unless requested.
+        // Actually, user requested they see NOTHING. Let's add a clear visual indicator that something is happening.
+
         const currentUser = JSON.parse(localStorage.getItem('user'));
 
         if (!currentUser) {

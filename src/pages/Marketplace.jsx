@@ -125,7 +125,7 @@ const ProductCard = ({ product, user, handleEdit, handleStatusToggle, handleDele
                             }}
                             disabled={product.status === 'sold'}
                             style={{ flex: 1, backgroundColor: '#25D366', color: 'white', border: 'none', padding: '0.4rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', borderRadius: '4px', cursor: 'pointer', opacity: product.status === 'sold' ? 0.5 : 1 }}>
-                            <MessageCircle size={14} /> WA
+                            <MessageCircle size={14} /> WhatsApp
                         </button>
                     </div>
 
