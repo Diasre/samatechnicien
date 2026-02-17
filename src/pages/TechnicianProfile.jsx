@@ -565,11 +565,16 @@ const TechnicianProfile = () => {
                                     ) : (
                                         <div style={{ textAlign: 'center', padding: '0.5rem' }}>
                                             <div style={{ padding: '0.75rem', backgroundColor: '#fff3e0', color: '#e65100', borderRadius: '6px', fontSize: '0.8rem', textAlign: 'center', marginBottom: '0.75rem' }}>
-                                                Connectez-vous pour laisser un avis.
+                                                Identifiez-vous pour laisser un avis ou contacter ce technicien.
                                             </div>
-                                            <Link to="/login" className="btn btn-outline" style={{ display: 'inline-block', padding: '0.4rem 1rem', fontSize: '0.8rem', textDecoration: 'none' }}>
-                                                Se connecter
-                                            </Link>
+                                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                                                <Link to="/login" className="btn btn-outline" style={{ padding: '0.4rem 1rem', fontSize: '0.8rem', textDecoration: 'none' }}>
+                                                    Se connecter
+                                                </Link>
+                                                <Link to="/register" className="btn btn-primary" style={{ padding: '0.4rem 1rem', fontSize: '0.8rem', textDecoration: 'none' }}>
+                                                    Créer un compte
+                                                </Link>
+                                            </div>
                                         </div>
                                     )}
                                 </div>

@@ -411,6 +411,50 @@ const Register = () => {
 
 
 
+                    {/* Role Selection */}
+                    <div style={{ marginBottom: '1rem' }}>
+                        <label style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.75rem' }}>
+                            <Shield size={14} /> Je suis :
+                        </label>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <label style={{
+                                flex: 1, cursor: 'pointer', padding: '0.35rem',
+                                border: `2px solid ${formData.role === 'technician' ? 'var(--primary-color)' : '#ddd'}`,
+                                borderRadius: '4px', textAlign: 'center',
+                                backgroundColor: formData.role === 'technician' ? '#f0fdf4' : 'transparent',
+                                fontSize: '0.75rem'
+                            }}>
+                                <input
+                                    type="radio"
+                                    name="role"
+                                    value="technician"
+                                    checked={formData.role === 'technician'}
+                                    onChange={handleChange}
+                                    style={{ display: 'none' }}
+                                />
+                                <span style={{ fontWeight: '600' }}>Technicien</span>
+                            </label>
+
+                            <label style={{
+                                flex: 1, cursor: 'pointer', padding: '0.35rem',
+                                border: `2px solid ${formData.role === 'client' ? 'var(--primary-color)' : '#ddd'}`,
+                                borderRadius: '4px', textAlign: 'center',
+                                backgroundColor: formData.role === 'client' ? '#f0fdf4' : 'transparent',
+                                fontSize: '0.75rem'
+                            }}>
+                                <input
+                                    type="radio"
+                                    name="role"
+                                    value="client"
+                                    checked={formData.role === 'client'}
+                                    onChange={handleChange}
+                                    style={{ display: 'none' }}
+                                />
+                                <span style={{ fontWeight: '600' }}>Client</span>
+                            </label>
+                        </div>
+                    </div>
+
                     {/* Specialty Select - Only for Technicians */}
                     {formData.role === 'technician' && (
                         <div style={{ marginBottom: '0.5rem' }}>
