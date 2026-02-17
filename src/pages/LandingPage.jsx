@@ -85,7 +85,7 @@ const LandingPage = () => {
                         opacity: '0',
                         animation: 'fadeInUp 0.8s ease-out 0.6s forwards'
                     }}>
-                        <Link to="/register" className="btn" style={{
+                        <Link to="/technicians" className="btn" style={{
                             backgroundColor: 'white',
                             color: 'var(--primary-color)',
                             fontWeight: 'bold',
@@ -96,7 +96,7 @@ const LandingPage = () => {
                             display: 'flex',
                             alignItems: 'center'
                         }}>
-                            Commencer maintenant <ArrowRight size={20} style={{ marginLeft: '8px' }} />
+                            Trouver un réparateur <ArrowRight size={20} style={{ marginLeft: '8px' }} />
                         </Link>
                         <Link to="/login" className="btn btn-outline" style={{
                             borderColor: 'white',
@@ -170,7 +170,7 @@ const LandingPage = () => {
                                     Vendez vos articles et pièces détachées dans la boutique.
                                 </li>
                             </ul>
-                            <Link to="/register" className="btn btn-primary" style={{ marginTop: '1rem' }}>
+                            <Link to="/technicians" className="btn btn-primary" style={{ marginTop: '1rem' }}>
                                 Trouver un réparateur
                             </Link>
                         </div>
@@ -261,14 +261,14 @@ const LandingPage = () => {
                     }}>
                         Rejoignez dès aujourd'hui la première plateforme de réparation au Sénégal.
                     </p>
-                    <Link to="/register" className="btn btn-primary" style={{
+                    <Link to="/technicians" className="btn btn-primary" style={{
                         padding: '1rem 3rem',
                         fontSize: '1.2rem',
                         borderRadius: '30px',
                         animation: 'pulse-green 2s infinite',
                         display: 'inline-block'
                     }}>
-                        Créer un compte gratuitement
+                        Rechercher un technicien
                     </Link>
                 </div>
             </section>
