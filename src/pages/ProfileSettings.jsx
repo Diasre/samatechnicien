@@ -20,6 +20,7 @@ const ProfileSettings = () => {
         specialty: '',
         city: '',
         district: '',
+        skills: '',
         description: ''
     });
     const [imageFile, setImageFile] = useState(null);
@@ -49,6 +50,7 @@ const ProfileSettings = () => {
                         specialty: data.specialty || '',
                         city: data.city || '',
                         district: data.district || '',
+                        skills: data.skills || '',
                         description: data.description || ''
                     }));
                     setPreviewImage(data.image);
@@ -151,6 +153,7 @@ const ProfileSettings = () => {
                 if (formData.specialty !== undefined && formData.specialty !== user.specialty) updates.specialty = formData.specialty;
                 if (formData.city !== undefined && formData.city !== user.city) updates.city = formData.city;
                 if (formData.district !== undefined && formData.district !== user.district) updates.district = formData.district;
+                if (formData.skills !== undefined && formData.skills !== user.skills) updates.skills = formData.skills;
                 if (formData.description !== undefined && formData.description !== user.description) updates.description = formData.description;
             }
 
@@ -183,6 +186,7 @@ const ProfileSettings = () => {
                     p_phone: formData.phone || null,
                     p_city: formData.city || null,
                     p_district: formData.district || null,
+                    p_skills: formData.skills || null,
                     p_specialty: formData.specialty || null,
                     p_description: formData.description || null,
                     p_image: imageUrl || null,
@@ -479,6 +483,18 @@ const ProfileSettings = () => {
                                         style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ddd' }}
                                     />
                                 </div>
+                            </div>
+
+                            <div style={{ marginBottom: '1.25rem' }}>
+                                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>Compétences (séparez par des virgules)</label>
+                                <input
+                                    type="text"
+                                    name="skills"
+                                    value={formData.skills}
+                                    onChange={handleInputChange}
+                                    placeholder="Ex: Réparation iPhone, Soudure, Déblocage..."
+                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ddd' }}
+                                />
                             </div>
 
                             <div style={{ marginBottom: '0' }}>

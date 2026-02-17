@@ -453,13 +453,17 @@ const TechnicianProfile = () => {
 
                             <h4 style={{ marginTop: '1.25rem', fontSize: '1rem' }}>Compétences</h4>
                             <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.4rem' }}>
-                                {['Réparation', 'Logiciel', 'Soudure'].map(skill => (
-                                    <span key={skill} style={{
-                                        backgroundColor: '#f1f5f9', padding: '3px 10px', borderRadius: '12px', fontSize: '0.75rem'
-                                    }}>
-                                        {skill}
-                                    </span>
-                                ))}
+                                {tech.skills ? (
+                                    tech.skills.split(',').map(skill => (
+                                        <span key={skill.trim()} style={{
+                                            backgroundColor: '#f1f5f9', padding: '3px 10px', borderRadius: '12px', fontSize: '0.75rem'
+                                        }}>
+                                            {skill.trim()}
+                                        </span>
+                                    ))
+                                ) : (
+                                    <span style={{ color: '#888', fontStyle: 'italic', fontSize: '0.8rem' }}>Aucune compétence spécifiée</span>
+                                )}
                             </div>
 
                             <h4 style={{ marginTop: '1.25rem', fontSize: '1rem' }}>Horaires</h4>
