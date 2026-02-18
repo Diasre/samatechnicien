@@ -221,12 +221,29 @@ p {
 }
 
 .nav-link {
-  transition: color 0.2s;
+  transition: all 0.3s ease;
+  padding: 0.5rem 1.25rem;
+  border-radius: 50px;
+  /* Makes it round/pill shaped */
+  font-weight: 500;
+  text-decoration: none !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  color: var(--text-primary);
 }
 
-.nav-link:hover,
-.nav-link.active-link {
+.nav-link:hover {
+  background-color: rgba(46, 204, 113, 0.1);
   color: var(--primary-color) !important;
+  transform: translateY(-1px);
+}
+
+.nav-link.active-link {
+  background-color: var(--primary-color);
+  color: white !important;
+  box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3);
 }
 
 /* 3D Effects for Marketplace */

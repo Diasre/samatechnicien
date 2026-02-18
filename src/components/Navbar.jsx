@@ -60,14 +60,14 @@ const Navbar = () => {
                 </Link>
 
                 {/* Desktop Menu */}
-                <div className="desktop-menu" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                    <Link to="/" className={`nav-link ${isActive('/')}`} style={{ textDecoration: 'none', color: 'var(--text-primary)', fontWeight: '500', fontSize: '0.85rem' }}>Accueil</Link>
-                    <Link to="/technicians" className={`nav-link ${isActive('/technicians')}`} style={{ textDecoration: 'none', color: 'var(--text-primary)', fontWeight: '500', fontSize: '0.85rem' }}>Trouver un technicien</Link>
-                    <Link to="/marketplace" className={`nav-link ${isActive('/marketplace')}`} style={{ textDecoration: 'none', color: 'var(--text-primary)', fontWeight: '500', fontSize: '0.85rem' }}>Boutique des techniciens</Link>
+                <div className="desktop-menu" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <Link to="/" className={`nav-link ${isActive('/')}`}>Accueil</Link>
+                    <Link to="/technicians" className={`nav-link ${isActive('/technicians')}`}>Trouver un technicien</Link>
+                    <Link to="/marketplace" className={`nav-link ${isActive('/marketplace')}`}>Boutique des techniciens</Link>
                     {user?.role === 'technician' && (
                         <>
-                            <Link to="/expert-dashboard" className={`nav-link ${isActive('/expert-dashboard')}`} style={{ textDecoration: 'none', color: 'var(--primary-color)', fontWeight: '600', fontSize: '0.85rem' }}>Mon Espace Expert</Link>
-                            <Link to="/forum" className={`nav-link ${isActive('/forum')}`} style={{ textDecoration: 'none', color: 'var(--primary-color)', fontWeight: '600', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <Link to="/expert-dashboard" className={`nav-link ${isActive('/expert-dashboard')}`} style={{ color: 'var(--primary-color)', fontWeight: '600' }}>Mon Espace Expert</Link>
+                            <Link to="/forum" className={`nav-link ${isActive('/forum')}`} style={{ color: 'var(--primary-color)', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <MessageSquare size={16} /> Forum
                             </Link>
                         </>
