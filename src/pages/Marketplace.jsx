@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import API_URL from '../config';
 import { supabase } from '../supabaseClient';
 import { products } from '../data/mockData';
@@ -188,11 +189,12 @@ const ProductCard = ({ product, user, handleEdit, handleStatusToggle, handleDele
 };
 
 const Marketplace = () => {
-    const [products, setProducts] = React.useState([]);
-    const [loading, setLoading] = React.useState(true);
-    const [isFormVisible, setIsFormVisible] = React.useState(false);
-    const [selectedProduct, setSelectedProduct] = React.useState(null);
-    const [newProduct, setNewProduct] = React.useState({
+    const location = useLocation();
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [isFormVisible, setIsFormVisible] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [newProduct, setNewProduct] = useState({
         title: '',
         price: '',
         category: 'Smartphone',
@@ -255,9 +257,24 @@ const Marketplace = () => {
         setLoading(false);
     };
 
-    React.useEffect(() => {
+    useEffect(() => {
         fetchProducts();
     }, []);
+
+    // Gérer l'ouverture directe d'un produit via l'URL (?id=...)
+    useEffect(() => {
+        if (!loading && products.length > 0) {
+            const params = new URLSearchParams(location.search);
+            const productId = params.get('id');
+            if (productId) {
+                const product = products.find(p => p.id.toString() === productId.toString());
+                if (product) {
+                    setSelectedProduct(product);
+                    // Optionnel : Scroller jusqu'aux détails si nécessaire
+                }
+            }
+        }
+    }, [location.search, products, loading]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
