@@ -69,11 +69,11 @@ const Footer = () => {
                     <ul style={{ listStyle: 'none', padding: 0 }}>
                         <li style={{ marginBottom: '1rem', display: 'flex', gap: '0.75rem', color: '#9ca3af' }}>
                             <Mail size={18} color="#10b981" />
-                            <span style={{ fontSize: '0.95rem' }}>contact@samatechnicien.com</span>
+                            <span style={{ fontSize: '0.95rem' }}>dias@samatechnicien.com</span>
                         </li>
                         <li style={{ marginBottom: '1rem', display: 'flex', gap: '0.75rem', color: '#9ca3af' }}>
                             <Phone size={18} color="#10b981" />
-                            <span style={{ fontSize: '0.95rem' }}>+221 77 XXX XX XX</span>
+                            <span style={{ fontSize: '0.95rem' }}>+221 77 859 96 49</span>
                         </li>
                         <li style={{ display: 'flex', gap: '0.75rem', color: '#9ca3af' }}>
                             <MapPin size={18} color="#10b981" />
