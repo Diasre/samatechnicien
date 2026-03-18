@@ -1,5 +1,6 @@
 import React from 'react';
 import Navbar from './Navbar';
+import Footer from './Footer';
 import { Outlet, useLocation } from 'react-router-dom';
 
 const Layout = ({ children }) => {
@@ -12,6 +13,7 @@ const Layout = ({ children }) => {
             <main style={{ minHeight: 'calc(100vh - 64px)' }}>
                 {children ? children : <Outlet />}
             </main>
+            {!hideNavbarRoutes.includes(location.pathname) && <Footer />}
         </>
     );
 };
