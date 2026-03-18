@@ -13,7 +13,7 @@ const ExpertDashboard = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const [feedbackMsg, setFeedbackMsg] = useState('');
-    const [sendingFeedback, setSendingFeedback] = false;
+    const [sendingFeedback, setSendingFeedback] = useState(false);
     const [products, setProducts] = useState([]);
 
     // Import Supabase client if not already imported at top (I will add import in next step or assume it) 
