@@ -142,7 +142,7 @@ const TechnicianProfile = () => {
                 const [techRes, reviewsRes, productsRes] = await Promise.all([
                     supabase.from('users').select('*').eq('id', id).single(),
                     supabase.from('reviews').select('*, client:clientId(fullname), client_alt:clientid(fullname)').eq('technicianId', id).order('created_at', { ascending: false }),
-                    supabase.from('products').select('*').or(`technicianid.eq.${id},technicianId.eq.${id}`).eq('status', 'available')
+                    supabase.from('products').select('*').or(`technicianid.eq.${id},technicianId.eq.${id}`)
                 ]);
 
                 // Handle Profile
