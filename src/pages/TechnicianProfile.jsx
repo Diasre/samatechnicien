@@ -576,65 +576,108 @@ const TechnicianProfile = () => {
                             )}
                         </div>
 
-                        {/* Reviews List */}
-                        <div style={{ marginTop: '1.5rem' }}>
-                            <h4 style={{ fontSize: '1rem' }}>Avis récents ({reviews.length})</h4>
-                            <div style={{ maxHeight: '300px', overflowY: 'auto', marginTop: '0.5rem' }}>
-                                {reviews.length === 0 ? (
-                                    <p style={{ fontSize: '0.85rem', color: '#888' }}>Aucun avis pour le moment.</p>
-                                ) : (
-                                    reviews.map(review => (
-                                        <div key={review.id} style={{ borderBottom: '1px solid #eee', paddingBottom: '0.75rem', marginBottom: '0.75rem' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <strong style={{ fontSize: '0.85rem' }}>{review.clientName}</strong>
-                                                <div style={{ display: 'flex', gap: '2px' }}>
-                                                    {[1, 2, 3, 4, 5].map(s => (
-                                                        <Star key={s} size={10} fill={s <= review.rating ? "gold" : "none"} color={s <= review.rating ? "gold" : "#ccc"} />
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            <p style={{ fontSize: '0.8rem', color: '#444', marginTop: '0.25rem', marginBottom: '0.2rem' }}>{review.comment}</p>
-                                            <span style={{ fontSize: '0.7rem', color: '#999' }}>{new Date(review.createdAt).toLocaleDateString()}</span>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
                         </div>
                     </div>
-                </div>
 
-                {/* Boutique de l'expert */}
+                {/* Boutique de l'expert - REMONTÉE ICI */}
                 {products.length > 0 && (
-                    <div style={{ padding: '1rem', borderTop: '1px solid #eee', backgroundColor: '#fcfcfc' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1rem' }}>
-                            <ShoppingBag size={20} color="var(--primary-color)" />
-                            <h3 style={{ fontSize: '1.1rem', margin: 0 }}>Ma Boutique - Articles en vente</h3>
+                    <div style={{ padding: '1.5rem', borderTop: '1px solid #f0f0f0', backgroundColor: '#f9fafb' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{ backgroundColor: '#10b981', padding: '8px', borderRadius: '10px', color: 'white' }}>
+                                    <ShoppingBag size={20} />
+                                </div>
+                                <h3 style={{ fontSize: '1.2rem', fontWeight: '800', margin: 0, color: '#111' }}>
+                                    Mes Publications & Articles
+                                </h3>
+                            </div>
+                            <Link to="/marketplace" style={{ fontSize: '0.85rem', color: '#10b981', fontWeight: '600', textDecoration: 'none' }}>
+                                Voir toute la boutique →
+                            </Link>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '1rem' }}>
+
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                            gap: '1.25rem'
+                        }}>
                             {Array.isArray(products) && products.map(product => (
-                                <div key={product.id} className="card" style={{ padding: '0.5rem', fontSize: '0.8rem' }}>
-                                    <img
-                                        src={product.image || 'https://via.placeholder.com/150'}
-                                        alt={product.title}
-                                        style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '4px', marginBottom: '0.5rem' }}
-                                    />
-                                    <div style={{ fontWeight: 'bold', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                <div key={product.id} style={{
+                                    backgroundColor: 'white',
+                                    borderRadius: '16px',
+                                    padding: '10px',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                                    border: '1px solid #f0f0f0',
+                                    transition: 'transform 0.2s ease'
+                                }}
+                                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-5px)'}
+                                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+                                >
+                                    <div style={{ position: 'relative' }}>
+                                        <img
+                                            src={product.image || 'https://via.placeholder.com/150'}
+                                            alt={product.title}
+                                            style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: '12px', marginBottom: '0.75rem' }}
+                                        />
+                                        {product.status === 'sold' && (
+                                            <div style={{
+                                                position: 'absolute', top: '8px', right: '8px',
+                                                backgroundColor: '#ef4444', color: 'white',
+                                                padding: '2px 8px', borderRadius: '6px',
+                                                fontSize: '0.65rem', fontWeight: 'bold'
+                                            }}>VENDU</div>
+                                        )}
+                                    </div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#111', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                         {product.title}
                                     </div>
-                                    <div style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>
-                                        {product.price} FCFA
+                                    <div style={{ color: '#10b981', fontWeight: '800', fontSize: '1rem' }}>
+                                        {Number(product.price).toLocaleString()} <span style={{ fontSize: '0.7rem' }}>FCFA</span>
                                     </div>
-                                    {product.status === 'sold' && (
-                                        <div style={{ fontSize: '0.7rem', color: 'red', fontWeight: 'bold' }}>VENDU</div>
-                                    )}
-                                    <Link to="/marketplace" style={{ fontSize: '0.7rem', textDecoration: 'none', color: '#666', marginTop: '4px', display: 'block' }}>
-                                        Voir en boutique
+                                    <Link to={`/marketplace?id=${product.id}`} style={{
+                                        fontSize: '0.75rem', textDecoration: 'none', color: '#6b7280',
+                                        marginTop: '10px', display: 'block', textAlign: 'center',
+                                        padding: '6px', borderRadius: '8px', backgroundColor: '#f3f4f6'
+                                    }}>
+                                        Détails de l'article
                                     </Link>
                                 </div>
                             ))}
                         </div>
                     </div>
                 )}
+
+                {/* Reviews List - RESTAURÉE ICI */}
+                <div style={{ padding: '1.5rem', borderTop: '1px solid #f0f0f0' }}>
+                    <h4 style={{ fontSize: '1.1rem', fontWeight: '800', marginBottom: '1.25rem', color: '#111' }}>
+                        Avis récents ({reviews.length})
+                    </h4>
+                    <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                        {reviews.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>
+                                <MessageSquare size={40} style={{ marginBottom: '0.5rem', opacity: 0.3 }} />
+                                <p style={{ fontSize: '0.9rem' }}>Aucun avis pour le moment.</p>
+                            </div>
+                        ) : (
+                            reviews.map(review => (
+                                <div key={review.id} style={{ borderBottom: '1px solid #f9fafb', paddingBottom: '1.25rem', marginBottom: '1.25rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div style={{ fontWeight: '700', fontSize: '0.95rem', color: '#111' }}>{review.clientName}</div>
+                                        <div style={{ display: 'flex', gap: '2px' }}>
+                                            {[1, 2, 3, 4, 5].map(s => (
+                                                <Star key={s} size={12} fill={s <= review.rating ? "gold" : "none"} color={s <= review.rating ? "gold" : "#e5e7eb"} />
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <p style={{ fontSize: '0.9rem', color: '#4b5563', marginTop: '0.6rem', marginBottom: '0.4rem', lineHeight: '1.5' }}>
+                                        {review.comment}
+                                    </p>
+                                    <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{new Date(review.createdAt || review.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
 
                 {/* Footer Section: Report Issue Form */}
                 <div style={{ padding: '1.5rem', borderTop: '1px solid #eee', backgroundColor: '#fff' }}>
