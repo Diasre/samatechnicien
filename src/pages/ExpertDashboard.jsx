@@ -449,13 +449,23 @@ const ExpertDashboard = () => {
                                     </div>
                                 ) : (
                                     products.map(product => (
-                                        <div key={product.id} style={{
-                                            backgroundColor: 'white',
-                                            borderRadius: '10px',
-                                            padding: '6px',
-                                            border: '1px solid #eee',
-                                            position: 'relative'
-                                        }}>
+                                        <Link 
+                                            key={product.id} 
+                                            to={`/marketplace?id=${product.id}`}
+                                            style={{
+                                                textDecoration: 'none',
+                                                color: 'inherit',
+                                                backgroundColor: 'white',
+                                                borderRadius: '10px',
+                                                padding: '6px',
+                                                border: '1px solid #eee',
+                                                position: 'relative',
+                                                display: 'block',
+                                                transition: 'transform 0.2s ease'
+                                            }}
+                                            onMouseOver={e => e.currentTarget.style.transform = 'translateY(-3px)'}
+                                            onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+                                        >
                                             <img
                                                 src={product.image || 'https://via.placeholder.com/150'}
                                                 alt={product.title}
@@ -475,7 +485,7 @@ const ExpertDashboard = () => {
                                                     fontSize: '0.55rem', fontWeight: 'bold'
                                                 }}>VENDU</div>
                                             )}
-                                        </div>
+                                        </Link>
                                     ))
                                 )}
                             </div>

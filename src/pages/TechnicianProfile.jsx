@@ -602,16 +602,22 @@ const TechnicianProfile = () => {
                             gap: '1.25rem'
                         }}>
                             {Array.isArray(products) && products.map(product => (
-                                <div key={product.id} style={{
-                                    backgroundColor: 'white',
-                                    borderRadius: '16px',
-                                    padding: '10px',
-                                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                                    border: '1px solid #f0f0f0',
-                                    transition: 'transform 0.2s ease'
-                                }}
-                                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-5px)'}
-                                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+                                <Link 
+                                    key={product.id} 
+                                    to={`/marketplace?id=${product.id}`}
+                                    style={{
+                                        textDecoration: 'none',
+                                        color: 'inherit',
+                                        backgroundColor: 'white',
+                                        borderRadius: '16px',
+                                        padding: '10px',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                                        border: '1px solid #f0f0f0',
+                                        transition: 'transform 0.2s ease',
+                                        display: 'block'
+                                    }}
+                                    onMouseOver={e => e.currentTarget.style.transform = 'translateY(-5px)'}
+                                    onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
                                 >
                                     <div style={{ position: 'relative' }}>
                                         <img
@@ -634,14 +640,14 @@ const TechnicianProfile = () => {
                                     <div style={{ color: '#10b981', fontWeight: '800', fontSize: '1rem' }}>
                                         {Number(product.price).toLocaleString()} <span style={{ fontSize: '0.7rem' }}>FCFA</span>
                                     </div>
-                                    <Link to={`/marketplace?id=${product.id}`} style={{
-                                        fontSize: '0.75rem', textDecoration: 'none', color: '#6b7280',
+                                    <div style={{
+                                        fontSize: '0.75rem', color: '#6b7280',
                                         marginTop: '10px', display: 'block', textAlign: 'center',
                                         padding: '6px', borderRadius: '8px', backgroundColor: '#f3f4f6'
                                     }}>
-                                        Détails de l'article
-                                    </Link>
-                                </div>
+                                        Voir les détails
+                                    </div>
+                                </Link>
                             ))}
                         </div>
                     </div>
