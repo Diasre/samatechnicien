@@ -10,6 +10,7 @@ const TechniciansList = () => {
     const [selectedSpecialty, setSelectedSpecialty] = useState('');
     const [allTechnicians, setAllTechnicians] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [errorMsg, setErrorMsg] = useState(null);
 
     useEffect(() => {
         const fetchTechnicians = async () => {
@@ -64,23 +65,34 @@ const TechniciansList = () => {
                     setAllTechnicians(realTechs);
                 }
             } catch (error) {
-                console.error("Error fetching technicians:", error.message);
+                console.error("Error fetching technicians:", error);
+                setErrorMsg(error.message || "Impossible de charger les techniciens.");
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         };
 
         fetchTechnicians();
     }, []);
 
+    // Safe user parsing
+    let currentUser = null;
+    try {
+        const stored = localStorage.getItem('user');
+        if (stored && stored !== 'undefined') {
+            currentUser = JSON.parse(stored);
+        }
+    } catch (e) {
+        console.error("Erreur parsing localStorage user:", e);
+    }
+    const isAdmin = currentUser && currentUser.role === 'admin';
+
     const filteredTechnicians = allTechnicians.filter(tech => {
-        const matchesSearch = tech.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            tech.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            tech.specialty.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = (tech.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+            (tech.city?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+            (tech.specialty?.toLowerCase() || '').includes(searchTerm.toLowerCase());
         const matchesSpecialty = selectedSpecialty ? tech.specialty === selectedSpecialty : true;
 
-        // Show all if admin, otherwise hide blocked
-        const currentUser = JSON.parse(localStorage.getItem('user'));
-        const isAdmin = currentUser && currentUser.role === 'admin';
         const isVisible = isAdmin ? true : !tech.isBlocked;
 
         return matchesSearch && matchesSpecialty && isVisible;
@@ -156,10 +168,7 @@ const TechniciansList = () => {
             }
         }
     };
-
-    // Mock admin check - in real app check user role from context/storage
-    const currentUser = JSON.parse(localStorage.getItem('user'));
-    const isAdmin = currentUser && currentUser.role === 'admin';
+    // Handle admin check is done above globally now
 
     return (
         <div className="container" style={{ padding: '1rem 1rem' }}>
@@ -194,6 +203,11 @@ const TechniciansList = () => {
             {/* List */}
             {loading ? (
                 <div style={{ textAlign: 'center', padding: '3rem' }}>Chargement des techniciens...</div>
+            ) : errorMsg ? (
+                <div style={{ textAlign: 'center', padding: '3rem', color: '#dc3545', fontWeight: 'bold' }}>
+                    <AlertCircle size={32} style={{ marginBottom: '0.5rem' }} /><br />
+                    Une erreur est survenue : {errorMsg}
+                </div>
             ) : filteredTechnicians.length === 0 ? (
                 <div className="card" style={{ padding: '2rem', textAlign: 'center', backgroundColor: '#f8f9fa' }}>
                     <p style={{ color: '#666' }}>Aucun technicien trouvé pour cette recherche ou spécialité.</p>
