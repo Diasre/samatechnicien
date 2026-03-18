@@ -222,44 +222,83 @@ const Login = () => {
     };
 
     return (
-        <div className="container" style={{
+        <div style={{
             display: 'flex', justifyContent: 'center', alignItems: 'center',
-            minHeight: '100vh', padding: '1rem', position: 'relative',
-            paddingBottom: '2rem'
+            minHeight: '100vh', padding: '1rem',
+            background: 'radial-gradient(circle at center, #1a4d2e 0%, #0c2b1a 100%)',
+            position: 'relative', overflow: 'hidden'
         }}>
-            <Link to="/" style={{ position: 'absolute', top: '40px', left: '20px', color: '#666' }}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+            {/* Background Pattern Icons (Simulated with CSS) */}
+            <div style={{
+                position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 30l10-10m0 0l-5-5m5 5l5 5' stroke='%23ffffff10' stroke-width='2' fill='none'/%3E%3C/svg%3E")`,
+                opacity: 0.3
+            }}></div>
+
+            <Link to="/" style={{ position: 'absolute', top: '2rem', left: '2rem', color: 'rgba(255,255,255,0.7)', zIndex: 10 }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
             </Link>
 
-            <div className="card" style={{ width: '100%', maxWidth: '350px', padding: '1.5rem', position: 'relative' }}>
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-                    <div style={{ padding: '0.75rem', backgroundColor: 'var(--primary-color)', borderRadius: '50%', color: 'white' }}>
-                        <Lock size={24} />
+            <div className="card" style={{
+                width: '100%', maxWidth: '420px', padding: '2.5rem 2rem', border: 'none',
+                borderRadius: '40px', backgroundColor: '#fdfdfd', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                position: 'relative', zIndex: 1
+            }}>
+                {/* Green Lock Icon Box */}
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                    <div style={{
+                        width: '80px', height: '80px', backgroundColor: '#10b981', borderRadius: '24px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: 'white', boxShadow: '0 10px 20px rgba(16, 185, 129, 0.3)',
+                        transform: 'rotate(-2deg)'
+                    }}>
+                        <Lock size={36} strokeWidth={2.5} />
                     </div>
                 </div>
 
-                <h3 style={{ textAlign: 'center', marginBottom: '1.5rem', fontSize: '1.25rem' }}>Connexion</h3>
+                {/* Logo Section */}
+                <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '900', letterSpacing: '-0.5px' }}>
+                        <span style={{ color: '#065f46' }}>sama</span>
+                        <span style={{ color: '#f59e0b' }}>technicien</span>
+                        <span style={{ color: '#065f46' }}>.com</span>
+                    </div>
+                </div>
 
-
+                <h2 style={{
+                    textAlign: 'center', marginBottom: '0.5rem', fontSize: '2.2rem',
+                    fontWeight: '900', color: '#111', fontFamily: "'Outfit', sans-serif",
+                    letterSpacing: '-1px'
+                }}>
+                    Connexion
+                </h2>
+                <p style={{ textAlign: 'center', color: '#666', marginBottom: '2rem', fontSize: '1rem' }}>
+                    Bienvenue ! Accédez à votre espace
+                </p>
 
                 <form onSubmit={handleSubmit}>
-                    <div style={{ marginBottom: '1rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 'bold', fontSize: '0.8rem' }}>Email</label>
+                    <div style={{ marginBottom: '1.25rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.6rem', fontWeight: '600', color: '#333', fontSize: '0.95rem' }}>
+                            Email
+                        </label>
                         <input
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             style={{
-                                width: '100%', padding: '0.75rem', borderRadius: '8px',
-                                border: '1px solid #ddd', fontSize: '0.9rem'
+                                width: '100%', padding: '1rem 1.25rem', borderRadius: '18px',
+                                border: '2px solid #eef2f1', backgroundColor: '#fcfdfd', fontSize: '1rem',
+                                outline: 'none', transition: 'all 0.3s ease'
                             }}
+                            onFocus={(e) => e.target.style.borderColor = '#10b981'}
+                            onBlur={(e) => e.target.style.borderColor = '#eef2f1'}
                             placeholder="votre@email.com"
                             required
                         />
                     </div>
 
-                    <div style={{ marginBottom: '1.5rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 'bold', fontSize: '0.8rem' }}>
+                    <div style={{ marginBottom: '0.75rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.6rem', fontWeight: '600', color: '#333', fontSize: '0.95rem' }}>
                             Mot de passe
                         </label>
                         <div style={{ position: 'relative' }}>
@@ -268,43 +307,40 @@ const Login = () => {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 style={{
-                                    width: '100%', padding: '0.75rem', paddingRight: '40px', borderRadius: '8px',
-                                    border: '1px solid #ddd', fontSize: '0.9rem',
-                                    fontWeight: 'bold'
+                                    width: '100%', padding: '1rem 3.5rem 1rem 1.25rem', borderRadius: '18px',
+                                    border: '2px solid #eef2f1', backgroundColor: '#fcfdfd', fontSize: '1rem',
+                                    outline: 'none', transition: 'all 0.3s ease'
                                 }}
+                                onFocus={(e) => e.target.style.borderColor = '#10b981'}
+                                onBlur={(e) => e.target.style.borderColor = '#eef2f1'}
+                                placeholder="••••••••"
                                 required
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
                                 style={{
-                                    position: 'absolute',
-                                    right: '10px',
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    background: 'none',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    color: '#666',
-                                    padding: '5px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
+                                    position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)',
+                                    background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8',
+                                    display: 'flex', alignItems: 'center'
                                 }}
-                                aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
                             >
-                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                {showPassword ? <EyeOff size={22} /> : <Eye size={22} />}
                             </button>
                         </div>
                     </div>
 
-                    <div style={{ textAlign: 'right', marginBottom: '1rem' }}>
-                        <Link to="/forgot-password" style={{ color: 'var(--primary-color)', fontSize: '0.85rem', textDecoration: 'none' }}>
+                    <div style={{ textAlign: 'right', marginBottom: '2rem' }}>
+                        <Link to="/forgot-password" style={{ color: '#059669', fontSize: '0.95rem', fontWeight: '600', textDecoration: 'none' }}>
                             Mot de passe oublié ?
                         </Link>
                     </div>
 
-                    <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '0.8rem', fontSize: '1rem', fontWeight: 'bold' }}>
+                    <button type="submit" className="btn btn-primary" style={{
+                        width: '100%', padding: '1.1rem', borderRadius: '18px',
+                        fontSize: '1.1rem', fontWeight: 'bold', backgroundColor: '#059669',
+                        boxShadow: '0 10px 15px -3px rgba(5, 150, 105, 0.3)'
+                    }}>
                         Se connecter
                     </button>
 
@@ -313,8 +349,8 @@ const Login = () => {
                             type="button"
                             onClick={handleResend}
                             style={{
-                                width: '100%', padding: '0.75rem', backgroundColor: '#f39c12',
-                                color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.9rem',
+                                width: '100%', padding: '0.75rem', backgroundColor: '#f59e0b',
+                                color: 'white', border: 'none', borderRadius: '12px', fontSize: '0.9rem',
                                 fontWeight: '600', cursor: 'pointer', marginTop: '1rem'
                             }}
                         >
@@ -323,16 +359,14 @@ const Login = () => {
                     )}
                 </form>
 
-                <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.9rem' }}>
-                    Pas de compte ? <Link to="/register" style={{ color: 'var(--primary-color)', fontWeight: 'bold', textDecoration: 'none' }}>S'inscrire</Link>
+                <p style={{ textAlign: 'center', marginTop: '1.5rem', color: '#444', fontSize: '0.95rem' }}>
+                    Pas de compte ? <Link to="/register" style={{ color: '#059669', fontWeight: 'bold', textDecoration: 'none' }}>S'inscrire</Link>
                 </p>
 
-                <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.7rem', color: '#666', lineHeight: '1.4' }}>
-                    En vous connectant, vous acceptez nos <Link to="/terms" style={{ color: 'var(--primary-color)', textDecoration: 'underline' }}>Conditions Générales d'Utilisation</Link> et la <Link to="/terms" style={{ color: 'var(--primary-color)', textDecoration: 'underline' }}>Politique de Confidentialité</Link>.
+                <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.75rem', color: '#94a3b8', lineHeight: '1.4' }}>
+                    En vous connectant, vous acceptez nos <Link to="/terms" style={{ color: '#10b981' }}>CGU</Link> et la <Link to="/terms" style={{ color: '#10b981' }}>Politique de Confidentialité</Link>.
                 </p>
             </div>
-
-
         </div>
     );
 };
