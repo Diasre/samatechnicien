@@ -138,14 +138,16 @@ const TechnicianProfile = () => {
         const loadTechnician = async () => {
             setLoading(true);
             try {
-                // 1. Fetch Technician Profile
-                const { data: techData, error: techError } = await supabase
-                    .from('users')
-                    .select('*')
-                    .eq('id', id)
-                    .single();
+                // Fetch Profile, Reviews and Products in parallel for maximum speed
+                const [techRes, reviewsRes, productsRes] = await Promise.all([
+                    supabase.from('users').select('*').eq('id', id).single(),
+                    supabase.from('reviews').select('*, client:clientId(fullname), client_alt:clientid(fullname)').eq('technicianId', id).order('created_at', { ascending: false }),
+                    supabase.from('products').select('*').or(`technicianid.eq.${id},technicianId.eq.${id}`).eq('status', 'available')
+                ]);
 
-                if (techError) throw techError;
+                // Handle Profile
+                if (techRes.error) throw techRes.error;
+                const techData = techRes.data;
 
                 if (techData) {
                     setTech({
@@ -158,24 +160,18 @@ const TechnicianProfile = () => {
                     });
                 }
 
-                // 2. Fetch Reviews (with client name)
-                const { data: reviewsData, error: reviewsError } = await supabase
-                    .from('reviews')
-                    .select('*, client:clientId(fullname)')
-                    .eq('technicianId', id)
-                    .order('created_at', { ascending: false });
-
+                // Handle Reviews
+                const reviewsData = reviewsRes.data;
                 let calculatedRating = 0;
                 let calculatedCount = 0;
 
                 if (reviewsData) {
                     const mappedReviews = reviewsData.map(r => ({
                         ...r,
-                        clientName: r.client?.fullname || r.client?.fullName || 'Client Anonyme'
+                        clientName: r.client?.fullname || r.client_alt?.fullname || r.client?.fullName || 'Client Anonyme'
                     }));
                     setReviews(mappedReviews);
 
-                    // Calculate stats dynamically
                     calculatedCount = mappedReviews.length;
                     if (calculatedCount > 0) {
                         const total = mappedReviews.reduce((sum, r) => sum + r.rating, 0);
@@ -192,14 +188,10 @@ const TechnicianProfile = () => {
                     }));
                 }
 
-                // 3. Fetch Products
-                const { data: productsData, error: productsError } = await supabase
-                    .from('products')
-                    .select('*')
-                    .eq('technicianid', id)
-                    .eq('status', 'available'); // Only show available products on profile
-
-                if (productsData) setProducts(productsData);
+                // Handle Products
+                if (productsRes.data) {
+                    setProducts(productsRes.data);
+                }
 
             } catch (error) {
                 console.error("Critical error loading technician profile:", error.message);

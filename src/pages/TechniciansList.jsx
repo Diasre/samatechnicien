@@ -15,32 +15,49 @@ const TechniciansList = () => {
     useEffect(() => {
         const fetchTechnicians = async () => {
             setLoading(true);
-            try {
-                // Fetch technicians from Supabase
-                const { data, error } = await supabase
-                    .from('users')
-                    .select('*')
-                    .eq('role', 'technician');
+            setErrorMsg(null);
 
-                if (error) throw error;
+            // Safety timeout: if after 7s it's still loading, show an error
+            const timer = setTimeout(() => {
+                setLoading(false);
+                setErrorMsg("Le serveur est trop long à répondre. Vérifiez votre connexion ou si le projet Supabase est actif (non suspendu).");
+            }, 7000);
+
+            try {
+                console.log("Fetching technicians and reviews...");
+                // Fetch both in parallel for better performance
+                const [techsRes, reviewsRes] = await Promise.all([
+                    supabase.from('users').select('*').eq('role', 'technician'),
+                    supabase.from('reviews').select('*') // Select all to safely find technician ID column
+                ]);
+
+                clearTimeout(timer);
+
+                if (techsRes.error) {
+                    console.error("Supabase Error (Techs):", techsRes.error);
+                    throw techsRes.error;
+                }
+                
+                const data = techsRes.data;
+                const reviewsData = reviewsRes.data;
+                console.log("Data received:", { techsCount: data?.length, reviewsCount: reviewsData?.length });
 
                 if (data) {
-                    // Fetch reviews to calculate ratings
-                    const { data: reviewsData } = await supabase
-                        .from('reviews')
-                        .select('technicianId, rating');
-
-                    // Aggregate stats
+                    // Aggregate stats safely handling case-sensitivity
                     const stats = {};
                     if (reviewsData) {
                         reviewsData.forEach(r => {
-                            if (!stats[r.technicianId]) stats[r.technicianId] = { count: 0, sum: 0 };
-                            stats[r.technicianId].count++;
-                            stats[r.technicianId].sum += r.rating;
+                            // Try common variants of the technician ID column name
+                            const tId = r.technicianid || r.technicianId || r.technician_id;
+                            if (tId) {
+                                if (!stats[tId]) stats[tId] = { count: 0, sum: 0 };
+                                stats[tId].count++;
+                                stats[tId].sum += r.rating;
+                            }
                         });
                     }
 
-                    // Map real users to technician format (handling case-insensitivity of Supabase columns)
+                    // Map real users to technician format
                     const realTechs = data.map(user => {
                         const userStats = stats[user.id] || { count: 0, sum: 0 };
                         const avgRating = userStats.count > 0 ? (userStats.sum / userStats.count) : (user.rating || 0);
@@ -49,23 +66,30 @@ const TechniciansList = () => {
                             id: user.id,
                             name: user.fullname || user.fullName || 'Technicien',
                             specialty: user.specialty || 'Nouveau',
-                            // Handle potential otherSpecialty if specialty is Autre (though listing usually shows main)
                             rating: avgRating,
                             reviews_count: userStats.count,
                             city: user.city || 'Dakar',
                             district: user.district || '-',
                             phone: user.phone || null,
-                            image: user.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullname || user.fullName || 'Tech')}&background=random&color=fff&size=150`,
+                            image: user.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullname || user.fullName || 'Tech')}&background=random&color=fff&size=200`,
                             description: user.description || 'Technicien professionnel référencé.',
-                            isBlocked: user.isblocked !== undefined ? user.isblocked : user.isBlocked,
-                            availability: user.availability || 'available' // Default to available
+                            isBlocked: (user.isblocked !== undefined ? user.isblocked : user.isBlocked) === 1,
+                            availability: user.availability || 'available'
                         };
                     });
 
+                    // Sort by availability first, then rating
+                    realTechs.sort((a, b) => {
+                        if (a.availability === 'available' && b.availability !== 'available') return -1;
+                        if (a.availability !== 'available' && b.availability === 'available') return 1;
+                        return b.rating - a.rating;
+                    });
+                    
                     setAllTechnicians(realTechs);
                 }
             } catch (error) {
-                console.error("Error fetching technicians:", error);
+                clearTimeout(timer);
+                console.error("Critical error fetching technicians:", error);
                 setErrorMsg(error.message || "Impossible de charger les techniciens.");
             } finally {
                 setLoading(false);

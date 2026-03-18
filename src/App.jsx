@@ -64,35 +64,48 @@ function App() {
                 const localUser = localStorage.getItem('user');
 
                 if (!localUser) {
-                    console.log("🔄 Session Supabase détectée, synchronisation du profil...");
+                    try {
+                        console.log("🔄 Session Supabase détectée, synchronisation du profil pour:", session.user.email);
 
-                    // 1. On synchronise le statut vérifié
-                    if (session.user.email_confirmed_at) {
-                        await supabase.from('users').update({ email_verified: true }).eq('email', session.user.email);
-                    }
-
-                    // 2. On récupère le profil complet
-                    const { data: userData } = await supabase
-                        .from('users')
-                        .select('*')
-                        .eq('email', session.user.email)
-                        .single();
-
-                    if (userData) {
-                        // 3. On crée la session locale
-                        const mappedUser = {
-                            ...userData,
-                            fullName: userData.fullname || userData.fullName,
-                            isBlocked: (userData.isblocked !== undefined ? userData.isblocked : userData.isBlocked) === 1,
-                            commentsEnabled: (userData.commentsenabled !== undefined ? userData.commentsenabled : userData.commentsEnabled) !== 0,
-                        };
-
-                        localStorage.setItem('user', JSON.stringify(mappedUser));
-                        // alert("Connexion automatique réussie ! Bienvenue " + mappedUser.fullName);
-                        // On recharge pour mettre à jour l'interface (Header, etc.) uniquement si on n'est pas sur une page d'auth
-                        if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
-                            window.location.reload();
+                        // 1. On synchronise le statut vérifié
+                        if (session.user.email_confirmed_at) {
+                            await supabase.from('users').update({ email_verified: true }).eq('email', session.user.email);
                         }
+
+                        // 2. On récupère le profil complet (maybeSingle to avoids throwing error if none)
+                        const { data: userData, error: fetchError } = await supabase
+                            .from('users')
+                            .select('*')
+                            .eq('email', session.user.email)
+                            .maybeSingle();
+
+                        if (fetchError) {
+                            console.error("❌ Erreur lors de la récup profil:", fetchError.message);
+                            return;
+                        }
+
+                        if (userData) {
+                            console.log("✅ Profil trouvé, création session locale...");
+                            // 3. On crée la session locale
+                            const mappedUser = {
+                                ...userData,
+                                fullName: userData.fullname || userData.fullName,
+                                isBlocked: (userData.isblocked !== undefined ? userData.isblocked : userData.isBlocked) === 1,
+                                commentsEnabled: (userData.commentsenabled !== undefined ? userData.commentsenabled : userData.commentsEnabled) !== 0,
+                            };
+
+                            localStorage.setItem('user', JSON.stringify(mappedUser));
+                            
+                            // On recharge pour mettre à jour l'interface (Header, etc.) uniquement si on n'est pas sur une page d'auth
+                            if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+                                console.log("🔄 Rafraîchissement de la page...");
+                                window.location.reload();
+                            }
+                        } else {
+                            console.warn("⚠️ Aucun profil public trouvé pour cet email dans la table users.");
+                        }
+                    } catch (err) {
+                        console.error("💥 Erreur critique lors de la synchronisation:", err);
                     }
                 }
             }
