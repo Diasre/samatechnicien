@@ -66,9 +66,9 @@ const Navbar = () => {
                     <Link to="/marketplace" className={`nav-link ${isActive('/marketplace')}`}>Boutique des techniciens</Link>
                     {user?.role === 'technician' && (
                         <>
-                            <Link to="/expert-dashboard" className={`nav-link ${isActive('/expert-dashboard')}`} style={{ color: 'var(--primary-color)', fontWeight: '600' }}>Mon Espace Expert</Link>
+                            <Link to="/expert-dashboard" className={`nav-link ${isActive('/expert-dashboard')}`} style={{ color: 'var(--primary-color)', fontWeight: '600' }}>Mon profil</Link>
                             <Link to="/forum" className={`nav-link ${isActive('/forum')}`} style={{ color: 'var(--primary-color)', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <MessageSquare size={16} /> Forum
+                                <MessageSquare size={16} /> Communauté
                             </Link>
                         </>
                     )}
@@ -140,9 +140,9 @@ const Navbar = () => {
                 <Link to="/marketplace" onClick={toggleMenu} className={`nav-link ${isActive('/marketplace')}`} style={{ textDecoration: 'none', color: 'var(--text-primary)', fontSize: '1.25rem', fontWeight: '600' }}>Boutique des techniciens</Link>
                 {user?.role === 'technician' && (
                     <>
-                        <Link to="/expert-dashboard" onClick={toggleMenu} className={`nav-link ${isActive('/expert-dashboard')}`} style={{ textDecoration: 'none', color: 'var(--primary-color)', fontSize: '1.25rem', fontWeight: '700' }}>Mon Espace Expert</Link>
+                        <Link to="/expert-dashboard" onClick={toggleMenu} className={`nav-link ${isActive('/expert-dashboard')}`} style={{ textDecoration: 'none', color: 'var(--primary-color)', fontSize: '1.25rem', fontWeight: '700' }}>Mon profil</Link>
                         <Link to="/forum" onClick={toggleMenu} className={`nav-link ${isActive('/forum')}`} style={{ textDecoration: 'none', color: 'var(--primary-color)', fontSize: '1.25rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <MessageSquare size={20} /> Forum Techniciens
+                            <MessageSquare size={20} /> Communauté
                         </Link>
                     </>
                 )}

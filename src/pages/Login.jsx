@@ -200,9 +200,9 @@ const Login = () => {
             localStorage.setItem('user', JSON.stringify(mappedUser));
 
             // Welcome message only if manual login (less intrusive for auto-login)
-            if (!skipPasswordCheck) {
-                alert('Bienvenue ' + mappedUser.fullName + ' !');
-            }
+            // if (!skipPasswordCheck) {
+            //     alert('Bienvenue ' + mappedUser.fullName + ' !');
+            // }
 
             if (mappedUser.role === 'admin') {
                 navigate('/dashboard');

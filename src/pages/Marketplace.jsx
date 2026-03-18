@@ -21,7 +21,7 @@ const ProductCard = ({ product, user, handleEdit, handleStatusToggle, handleDele
             onClick={() => handleViewDetails(product)}
             style={{ padding: '0', overflow: 'hidden', fontSize: '0.8rem', display: 'flex', flexDirection: 'column', cursor: 'pointer' }}
         >
-            <div style={{ height: '200px', overflow: 'hidden', backgroundColor: '#f8f9fa', position: 'relative' }}>
+            <div style={{ height: '80px', overflow: 'hidden', backgroundColor: '#f8f9fa', position: 'relative' }}>
                 {/* Image principale */}
                 <img
                     src={currentImage.src}
@@ -82,39 +82,39 @@ const ProductCard = ({ product, user, handleEdit, handleStatusToggle, handleDele
                 )}
             </div>
 
-            <div style={{ padding: '0.75rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '4px' }}>
-                    <h3 style={{ fontSize: '0.9rem', marginBottom: '0.25rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.title}</h3>
+            <div style={{ padding: '0.2rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '3px' }}>
+                    <h3 style={{ fontSize: '0.75rem', marginBottom: '0.1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.title}</h3>
                     <span style={{
                         backgroundColor: '#e1f5fe', color: '#0288d1',
-                        padding: '1px 6px', borderRadius: '10px', fontSize: '0.65rem', flexShrink: 0
+                        padding: '1px 4px', borderRadius: '10px', fontSize: '0.55rem', flexShrink: 0
                     }}>{product.category}</span>
                 </div>
-                <p style={{ color: 'var(--primary-color)', fontWeight: 'bold', fontSize: '1rem', margin: '0.25rem 0' }}>
+                <p style={{ color: 'var(--primary-color)', fontWeight: 'bold', fontSize: '0.85rem', margin: '0 0 0.1rem 0' }}>
                     {product.price.toLocaleString()} F
                 </p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <p style={{ fontSize: '0.75rem', color: '#666', margin: 0 }}>{product.condition}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.1rem' }}>
+                    <p style={{ fontSize: '0.65rem', color: '#666', margin: 0 }}>{product.condition}</p>
                     <span style={{
-                        fontSize: '0.65rem', padding: '2px 8px', borderRadius: '12px',
+                        fontSize: '0.6rem', padding: '1px 6px', borderRadius: '10px',
                         color: 'white', fontWeight: 'bold',
                         backgroundColor: product.status === 'sold' ? '#dc3545' : '#28a745'
                     }}>
                         {product.status === 'sold' ? 'Vendu' : 'Disponible'}
                     </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem' }}>
-                    <p style={{ fontSize: '0.65rem', color: '#999', margin: 0 }}>Vendeur: {product.technicianName}</p>
-                    <span style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#666' }}>{product.technicianPhone}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.1rem' }}>
+                    <p style={{ fontSize: '0.55rem', color: '#999', margin: 0 }}>Par: {product.technicianName.substring(0, 10)}</p>
+                    <span style={{ fontSize: '0.55rem', fontWeight: 'bold', color: '#666' }}>{product.technicianPhone}</span>
                 </div>
 
-                <div style={{ marginTop: 'auto', paddingTop: '0.75rem' }}>
-                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                <div style={{ marginTop: 'auto', paddingTop: '0.1rem' }}>
+                    <div style={{ display: 'flex', gap: '0.15rem' }}>
                         <button className="btn btn-primary"
                             onClick={(e) => { e.stopPropagation(); window.open(`tel:${product.technicianPhone}`, '_self'); }}
                             disabled={product.status === 'sold'}
-                            style={{ flex: 1, padding: '0.4rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', opacity: product.status === 'sold' ? 0.5 : 1 }}>
-                            <Phone size={14} /> Appeler
+                            style={{ flex: 1, padding: '0.15rem', fontSize: '0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px', opacity: product.status === 'sold' ? 0.5 : 1 }}>
+                            <Phone size={10} /> Appeler
                         </button>
                         <button className="btn"
                             onClick={(e) => {
@@ -124,12 +124,12 @@ const ProductCard = ({ product, user, handleEdit, handleStatusToggle, handleDele
                                 window.open(`https://wa.me/${cleanPhone}`, '_blank');
                             }}
                             disabled={product.status === 'sold'}
-                            style={{ flex: 1, backgroundColor: '#25D366', color: 'white', border: 'none', padding: '0.4rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', borderRadius: '4px', cursor: 'pointer', opacity: product.status === 'sold' ? 0.5 : 1 }}>
-                            <MessageCircle size={14} /> WhatsApp
+                            style={{ flex: 1, backgroundColor: '#25D366', color: 'white', border: 'none', padding: '0.15rem', fontSize: '0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px', borderRadius: '3px', cursor: 'pointer', opacity: product.status === 'sold' ? 0.5 : 1 }}>
+                            <MessageCircle size={10} /> WhatsApp
                         </button>
                     </div>
 
-                    <div style={{ marginTop: '0.25rem' }}>
+                    <div style={{ marginTop: '0.15rem' }}>
                         <button className="btn"
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -140,8 +140,8 @@ const ProductCard = ({ product, user, handleEdit, handleStatusToggle, handleDele
                                 alert("Ajouté au panier !");
                             }}
                             disabled={product.status === 'sold'}
-                            style={{ width: '100%', backgroundColor: '#ff9800', color: 'white', border: 'none', padding: '0.4rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', borderRadius: '4px', cursor: 'pointer', opacity: product.status === 'sold' ? 0.5 : 1 }}>
-                            <ShoppingCart size={14} /> Ajouter au panier
+                            style={{ width: '100%', backgroundColor: '#ff9800', color: 'white', border: 'none', padding: '0.15rem', fontSize: '0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px', borderRadius: '3px', cursor: 'pointer', opacity: product.status === 'sold' ? 0.5 : 1 }}>
+                            <ShoppingCart size={10} /> Au panier
                         </button>
                     </div>
 
@@ -585,7 +585,7 @@ const Marketplace = () => {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.75rem' }} className="card-3d-wrapper">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '0.4rem' }} className="card-3d-wrapper">
                 {filteredProducts.length > 0 ? (
                     filteredProducts.map(product => (
                         <ProductCard

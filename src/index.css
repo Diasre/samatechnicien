@@ -358,3 +358,15 @@ p {
   max-width: 220px;
   margin-top: 1.5rem;
 }
+
+/* 🤖 Ajustements Mobile pour le Chatbot Botpress */
+@media (max-width: 768px) {
+  #bp-web-widget-container {
+    bottom: 15px !important;
+    /* Force le bouton à descendre plus bas */
+    right: 15px !important;
+    /* Force vers la droite pour équilibrer */
+    z-index: 99999 !important;
+    /* Le garde toujours au-dessus du reste */
+  }
+}

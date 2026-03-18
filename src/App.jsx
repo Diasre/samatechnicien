@@ -88,7 +88,7 @@ function App() {
                         };
 
                         localStorage.setItem('user', JSON.stringify(mappedUser));
-                        alert("Connexion automatique réussie ! Bienvenue " + mappedUser.fullName);
+                        // alert("Connexion automatique réussie ! Bienvenue " + mappedUser.fullName);
                         // On recharge pour mettre à jour l'interface (Header, etc.) uniquement si on n'est pas sur une page d'auth
                         if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
                             window.location.reload();

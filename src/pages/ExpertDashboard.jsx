@@ -260,7 +260,7 @@ const ExpertDashboard = () => {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <div>
-                    <h1 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>Mon Espace Expert</h1>
+                    <h1 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>Mon profil</h1>
                     <p style={{ fontSize: '0.85rem', color: '#666' }}>Gérez votre profil et suivez vos performances.</p>
                 </div>
                 {!editMode && (

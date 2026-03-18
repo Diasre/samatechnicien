@@ -199,10 +199,10 @@ const TechniciansList = () => {
                     <p style={{ color: '#666' }}>Aucun technicien trouvé pour cette recherche ou spécialité.</p>
                 </div>
             ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.75rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '0.4rem' }}>
                     {filteredTechnicians.map(tech => (
                         <div key={tech.id} className="card" style={{
-                            padding: '0.75rem',
+                            padding: '0.4rem',
                             display: 'flex',
                             flexDirection: 'column',
                             height: '100%',
@@ -219,9 +219,9 @@ const TechniciansList = () => {
                                     right: '0.5rem',
                                     backgroundColor: '#dc2626',
                                     color: 'white',
-                                    padding: '0.15rem 0.4rem',
-                                    borderRadius: '4px',
-                                    fontSize: '0.65rem',
+                                    padding: '0.1rem 0.3rem',
+                                    borderRadius: '3px',
+                                    fontSize: '0.6rem',
                                     fontWeight: 'bold',
                                     display: 'flex',
                                     alignItems: 'center',
@@ -234,23 +234,23 @@ const TechniciansList = () => {
                             )}
 
                             {/* Header Info */}
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '0.75rem' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '0.2rem' }}>
                                 <img
                                     src={tech.image}
                                     alt={tech.name}
-                                    style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', marginBottom: '0.5rem', border: '2px solid #eee' }}
+                                    style={{ width: '45px', height: '45px', borderRadius: '50%', objectFit: 'cover', marginBottom: '0.2rem', border: '1px solid #eee' }}
                                 />
                                 <div style={{ textAlign: 'center', width: '100%' }}>
-                                    <h3 style={{ fontSize: '1rem', margin: '0 0 0.2rem 0', fontWeight: 'bold' }}>{tech.name}</h3>
-                                    <p style={{ margin: 0, color: 'var(--primary-color)', fontWeight: '600', fontSize: '0.85rem' }}>{tech.specialty}</p>
+                                    <h3 style={{ fontSize: '0.8rem', margin: '0 0 0.1rem 0', fontWeight: 'bold' }}>{tech.name}</h3>
+                                    <p style={{ margin: 0, color: 'var(--primary-color)', fontWeight: '600', fontSize: '0.7rem' }}>{tech.specialty}</p>
                                     {Number(tech.rating || 0) > 0 && (
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', fontSize: '0.8rem', color: '#f1c40f', marginTop: '0.2rem' }}>
-                                            <Star size={14} fill="#f1c40f" />
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.2rem', fontSize: '0.75rem', color: '#f1c40f', marginTop: '0.1rem' }}>
+                                            <Star size={10} fill="#f1c40f" />
                                             <span style={{ fontWeight: 'bold' }}>{Number(tech.rating || 0).toFixed(1)}</span>
-                                            <span style={{ color: '#999', fontSize: '0.75rem' }}>({tech.reviews_count} avis)</span>
+                                            <span style={{ color: '#999', fontSize: '0.65rem' }}>({tech.reviews_count} avis)</span>
                                         </div>
                                     )}
-                                    <div style={{ marginTop: '0.25rem', fontSize: '0.75rem' }}>
+                                    <div style={{ marginTop: '0.1rem', fontSize: '0.65rem' }}>
                                         {tech.availability === 'unavailable' ? (
                                             <span style={{ color: '#dc3545', fontWeight: 'bold' }}>🔴 Indisponible</span>
                                         ) : (
@@ -262,22 +262,22 @@ const TechniciansList = () => {
 
                             {/* Description & Location (Flexible Spacer) */}
                             <div style={{ flex: 1, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                <p style={{ fontSize: '0.8rem', color: '#666', lineHeight: '1.4', marginBottom: '0.75rem', textAlign: 'center' }}>
-                                    {tech.description.length > 60 ? tech.description.substring(0, 60) + '...' : tech.description}
+                                <p style={{ fontSize: '0.65rem', color: '#666', lineHeight: '1.2', marginBottom: '0.2rem', textAlign: 'center' }}>
+                                    {tech.description.length > 35 ? tech.description.substring(0, 35) + '...' : tech.description}
                                 </p>
 
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#888', fontSize: '0.75rem', marginBottom: '1rem' }}>
-                                    <MapPin size={12} /> {tech.city} {tech.district && tech.district !== '-' ? `(${tech.district})` : ''}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#888', fontSize: '0.65rem', marginBottom: '0.2rem' }}>
+                                    <MapPin size={10} /> {tech.city} {tech.district && tech.district !== '-' ? `(${tech.district})` : ''}
                                 </div>
                             </div>
 
                             {/* Actions (Always at the bottom) */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <div style={{ display: 'flex', gap: '0.2rem' }}>
-                                    <Link to={`/technician/${tech.id}`} className="btn btn-outline" style={{ flex: 1, textAlign: 'center', textDecoration: 'none', padding: '0.25rem', fontSize: '0.7rem' }}>Profil</Link>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                <div style={{ display: 'flex', gap: '0.15rem' }}>
+                                    <Link to={`/technician/${tech.id}`} className="btn btn-outline" style={{ flex: 1, textAlign: 'center', textDecoration: 'none', padding: '0.15rem', fontSize: '0.65rem' }}>Profil</Link>
                                     <button
                                         className="btn btn-primary"
-                                        style={{ flex: 1, padding: '0.25rem', fontSize: '0.7rem' }}
+                                        style={{ flex: 1, padding: '0.15rem', fontSize: '0.65rem' }}
                                         onClick={() => handleContact(tech)}
                                         disabled={tech.isBlocked}
                                     >
@@ -285,7 +285,7 @@ const TechniciansList = () => {
                                     </button>
                                     <button
                                         className="btn"
-                                        style={{ flex: 1, backgroundColor: '#25D366', color: 'white', border: 'none', padding: '0.25rem', fontSize: '0.7rem' }}
+                                        style={{ flex: 1, backgroundColor: '#25D366', color: 'white', border: 'none', padding: '0.15rem', fontSize: '0.65rem' }}
                                         onClick={() => handleWhatsApp(tech)}
                                         disabled={tech.isBlocked}
                                     >
