@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import API_URL from '../config';
 import { supabase } from '../supabaseClient';
-import { User, Settings, Star, MessageSquare, Phone, MapPin, CheckCircle, Save, ArrowLeft, Share2, Flag } from 'lucide-react';
+import { User, Settings, Star, MessageSquare, Phone, MapPin, CheckCircle, Save, ArrowLeft, Share2, Flag, ShoppingBag } from 'lucide-react';
 import WelcomeOverlay from '../components/WelcomeOverlay';
 
 const ExpertDashboard = () => {
@@ -13,7 +13,8 @@ const ExpertDashboard = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const [feedbackMsg, setFeedbackMsg] = useState('');
-    const [sendingFeedback, setSendingFeedback] = useState(false);
+    const [sendingFeedback, setSendingFeedback] = false;
+    const [products, setProducts] = useState([]);
 
     // Import Supabase client if not already imported at top (I will add import in next step or assume it) 
     // Wait, I need to check imports. 
@@ -49,13 +50,15 @@ const ExpertDashboard = () => {
         setLoading(true);
         try {
             // Lancer les deux requêtes en PARALLÈLE pour gagner du temps
-            const [techResponse, reviewsResponse] = await Promise.all([
+            const [techResponse, reviewsResponse, productsResponse] = await Promise.all([
                 supabase.from('users').select('*').eq('id', user.id).single(),
-                supabase.from('reviews').select('*, client:clientId(fullname)').eq('technicianId', user.id).order('created_at', { ascending: false })
+                supabase.from('reviews').select('*, client:clientId(fullname)').eq('technicianId', user.id).order('created_at', { ascending: false }),
+                supabase.from('products').select('*').eq('technicianid', user.id).order('created_at', { ascending: false })
             ]);
 
             const { data: tech, error: techError } = techResponse;
             const { data: reviewsData, error: reviewsError } = reviewsResponse;
+            const { data: productsData, error: productsError } = productsResponse;
 
             if (techError) {
                 console.error("Supabase error fetching user:", techError);
@@ -102,6 +105,10 @@ const ExpertDashboard = () => {
                     clientName: r.client?.fullname || 'Client Anonyme'
                 }));
                 setReviews(mappedReviews);
+            }
+
+            if (productsData) {
+                setProducts(productsData);
             }
 
         } catch (error) {
@@ -636,7 +643,66 @@ const ExpertDashboard = () => {
                                                     </div>
                                                 </div>
                                                 <p style={{ fontSize: '0.8rem', color: '#555', margin: '0.25rem 0' }}>{review.comment}</p>
-                                                <span style={{ fontSize: '0.7rem', color: '#999' }}>{new Date(review.createdAt).toLocaleDateString()}</span>
+                                                <span style={{ fontSize: '0.7rem', color: '#999' }}>{new Date(review.createdAt || review.created_at).toLocaleDateString()}</span>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Publications Card */}
+                            <div className="card" style={{ padding: '1.5rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <div style={{ backgroundColor: 'var(--primary-color)', padding: '8px', borderRadius: '10px', color: 'white' }}>
+                                            <ShoppingBag size={20} />
+                                        </div>
+                                        <h3 style={{ fontSize: '1.2rem', fontWeight: '800', margin: 0 }}>
+                                            Mes Publications
+                                        </h3>
+                                    </div>
+                                    <Link to="/marketplace" style={{ fontSize: '0.85rem', color: 'var(--primary-color)', fontWeight: '600', textDecoration: 'none' }}>
+                                        Gérer ma boutique →
+                                    </Link>
+                                </div>
+
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                                    gap: '1rem'
+                                }}>
+                                    {products.length === 0 ? (
+                                        <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '1.5rem', color: '#999', backgroundColor: '#f9fafb', borderRadius: '12px' }}>
+                                            <p style={{ margin: 0, fontSize: '0.9rem' }}>Vous n'avez pas encore d'articles en vente.</p>
+                                        </div>
+                                    ) : (
+                                        products.map(product => (
+                                            <div key={product.id} style={{
+                                                backgroundColor: 'white',
+                                                borderRadius: '12px',
+                                                padding: '8px',
+                                                border: '1px solid #eee',
+                                                position: 'relative'
+                                            }}>
+                                                <img
+                                                    src={product.image || 'https://via.placeholder.com/150'}
+                                                    alt={product.title}
+                                                    style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '8px', marginBottom: '8px' }}
+                                                />
+                                                <div style={{ fontWeight: 'bold', fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '2px' }}>
+                                                    {product.title}
+                                                </div>
+                                                <div style={{ color: 'var(--primary-color)', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                                                    {Number(product.price).toLocaleString()} F
+                                                </div>
+                                                {product.status === 'sold' && (
+                                                    <div style={{
+                                                        position: 'absolute', top: '5px', right: '5px',
+                                                        backgroundColor: '#ef4444', color: 'white',
+                                                        padding: '2px 6px', borderRadius: '4px',
+                                                        fontSize: '0.6rem', fontWeight: 'bold'
+                                                    }}>VENDU</div>
+                                                )}
                                             </div>
                                         ))
                                     )}
