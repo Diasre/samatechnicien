@@ -18,6 +18,7 @@ import ProfileSettings from './pages/ProfileSettings';
 import Invite from './pages/Invite';
 import ForgotPassword from './pages/ForgotPassword';
 import UpdatePassword from './pages/UpdatePassword';
+import Terms from './pages/Terms';
 
 const AdminRoute = ({ children }) => {
     const user = JSON.parse(localStorage.getItem('user'));
@@ -129,6 +130,7 @@ function App() {
                     <Route path="/register" element={<Register />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/update-password" element={<UpdatePassword />} />
+                    <Route path="/terms" element={<Terms />} />
                     <Route path="/dashboard" element={
                         <AdminRoute>
                             <Dashboard />

@@ -326,6 +326,10 @@ const Login = () => {
                 <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.9rem' }}>
                     Pas de compte ? <Link to="/register" style={{ color: 'var(--primary-color)', fontWeight: 'bold', textDecoration: 'none' }}>S'inscrire</Link>
                 </p>
+
+                <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.7rem', color: '#666', lineHeight: '1.4' }}>
+                    En vous connectant, vous acceptez nos <Link to="/terms" style={{ color: 'var(--primary-color)', textDecoration: 'underline' }}>Conditions Générales d'Utilisation</Link> et la <Link to="/terms" style={{ color: 'var(--primary-color)', textDecoration: 'underline' }}>Politique de Confidentialité</Link>.
+                </p>
             </div>
 
 

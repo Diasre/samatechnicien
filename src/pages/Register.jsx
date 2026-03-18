@@ -523,7 +523,7 @@ const Register = () => {
                 </form>
 
                 <p style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.75rem', color: '#666', lineHeight: '1.4' }}>
-                    En vous inscrivant, vous acceptez nos Conditions Générales d'Utilisation et la Politique de Confidentialité.
+                    En vous inscrivant, vous acceptez nos <Link to="/terms" style={{ color: 'var(--primary-color)', textDecoration: 'underline' }}>Conditions Générales d'Utilisation</Link> et la <Link to="/terms" style={{ color: 'var(--primary-color)', textDecoration: 'underline' }}>Politique de Confidentialité</Link>.
                 </p>
 
                 <p style={{ textAlign: 'center', marginTop: '0.75rem', fontSize: '0.85rem' }}>

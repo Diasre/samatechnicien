@@ -228,9 +228,27 @@ const TechniciansList = () => {
             {loading ? (
                 <div style={{ textAlign: 'center', padding: '3rem' }}>Chargement des techniciens...</div>
             ) : errorMsg ? (
-                <div style={{ textAlign: 'center', padding: '3rem', color: '#dc3545', fontWeight: 'bold' }}>
-                    <AlertCircle size={32} style={{ marginBottom: '0.5rem' }} /><br />
-                    Une erreur est survenue : {errorMsg}
+                <div className="container" style={{ padding: '1rem', textAlign: 'center' }}>
+                    <div className="card" style={{ padding: '2rem', border: '1px solid #ffc107', backgroundColor: '#fff8e1' }}>
+                        <div style={{ color: '#d32f2f', marginBottom: '1rem', fontWeight: 'bold' }}>
+                            Une erreur est survenue : {errorMsg}
+                        </div>
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                            <button className="btn btn-primary" onClick={() => window.location.reload()}>
+                                Réessayer
+                            </button>
+                            <button className="btn btn-outline" onClick={() => {
+                                setAllTechnicians(mockTechnicians);
+                                setErrorMsg(null);
+                                setLoading(false);
+                            }}>
+                                Passer en mode Démo (Test)
+                            </button>
+                        </div>
+                        <p style={{ marginTop: '1rem', fontSize: '0.8rem', color: '#856404' }}>
+                            Note: Vérifiez que votre projet Supabase est "Active" et relancez votre terminal avec <code>npm run dev</code>.
+                        </p>
+                    </div>
                 </div>
             ) : filteredTechnicians.length === 0 ? (
                 <div className="card" style={{ padding: '2rem', textAlign: 'center', backgroundColor: '#f8f9fa' }}>
