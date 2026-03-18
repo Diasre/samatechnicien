@@ -421,6 +421,66 @@ const ExpertDashboard = () => {
                         </div>
                     </div>
 
+                    {/* Publications Card - DÉPLACÉE ICI */}
+                    {!editMode && (
+                        <div className="card" style={{ padding: '1.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <div style={{ backgroundColor: 'var(--primary-color)', padding: '8px', borderRadius: '10px', color: 'white' }}>
+                                        <ShoppingBag size={20} />
+                                    </div>
+                                    <h3 style={{ fontSize: '1.1rem', fontWeight: '800', margin: 0 }}>
+                                        Mes Publications
+                                    </h3>
+                                </div>
+                                <Link to="/marketplace" style={{ fontSize: '0.8rem', color: 'var(--primary-color)', fontWeight: '600', textDecoration: 'none' }}>
+                                    Gérer ma boutique →
+                                </Link>
+                            </div>
+
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+                                gap: '0.75rem'
+                            }}>
+                                {products.length === 0 ? (
+                                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '1rem', color: '#999', backgroundColor: '#f9fafb', borderRadius: '10px' }}>
+                                        <p style={{ margin: 0, fontSize: '0.8rem' }}>Aucun article en vente.</p>
+                                    </div>
+                                ) : (
+                                    products.map(product => (
+                                        <div key={product.id} style={{
+                                            backgroundColor: 'white',
+                                            borderRadius: '10px',
+                                            padding: '6px',
+                                            border: '1px solid #eee',
+                                            position: 'relative'
+                                        }}>
+                                            <img
+                                                src={product.image || 'https://via.placeholder.com/150'}
+                                                alt={product.title}
+                                                style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '6px', marginBottom: '6px' }}
+                                            />
+                                            <div style={{ fontWeight: 'bold', fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '2px' }}>
+                                                {product.title}
+                                            </div>
+                                            <div style={{ color: 'var(--primary-color)', fontWeight: 'bold', fontSize: '0.8rem' }}>
+                                                {Number(product.price).toLocaleString()} F
+                                            </div>
+                                            {product.status === 'sold' && (
+                                                <div style={{
+                                                    position: 'absolute', top: '4px', right: '4px',
+                                                    backgroundColor: '#ef4444', color: 'white',
+                                                    padding: '1px 4px', borderRadius: '3px',
+                                                    fontSize: '0.55rem', fontWeight: 'bold'
+                                                }}>VENDU</div>
+                                            )}
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Right Column: Settings or Bio */}
@@ -644,65 +704,6 @@ const ExpertDashboard = () => {
                                                 </div>
                                                 <p style={{ fontSize: '0.8rem', color: '#555', margin: '0.25rem 0' }}>{review.comment}</p>
                                                 <span style={{ fontSize: '0.7rem', color: '#999' }}>{new Date(review.createdAt || review.created_at).toLocaleDateString()}</span>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Publications Card */}
-                            <div className="card" style={{ padding: '1.5rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <div style={{ backgroundColor: 'var(--primary-color)', padding: '8px', borderRadius: '10px', color: 'white' }}>
-                                            <ShoppingBag size={20} />
-                                        </div>
-                                        <h3 style={{ fontSize: '1.2rem', fontWeight: '800', margin: 0 }}>
-                                            Mes Publications
-                                        </h3>
-                                    </div>
-                                    <Link to="/marketplace" style={{ fontSize: '0.85rem', color: 'var(--primary-color)', fontWeight: '600', textDecoration: 'none' }}>
-                                        Gérer ma boutique →
-                                    </Link>
-                                </div>
-
-                                <div style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-                                    gap: '1rem'
-                                }}>
-                                    {products.length === 0 ? (
-                                        <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '1.5rem', color: '#999', backgroundColor: '#f9fafb', borderRadius: '12px' }}>
-                                            <p style={{ margin: 0, fontSize: '0.9rem' }}>Vous n'avez pas encore d'articles en vente.</p>
-                                        </div>
-                                    ) : (
-                                        products.map(product => (
-                                            <div key={product.id} style={{
-                                                backgroundColor: 'white',
-                                                borderRadius: '12px',
-                                                padding: '8px',
-                                                border: '1px solid #eee',
-                                                position: 'relative'
-                                            }}>
-                                                <img
-                                                    src={product.image || 'https://via.placeholder.com/150'}
-                                                    alt={product.title}
-                                                    style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '8px', marginBottom: '8px' }}
-                                                />
-                                                <div style={{ fontWeight: 'bold', fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '2px' }}>
-                                                    {product.title}
-                                                </div>
-                                                <div style={{ color: 'var(--primary-color)', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                                                    {Number(product.price).toLocaleString()} F
-                                                </div>
-                                                {product.status === 'sold' && (
-                                                    <div style={{
-                                                        position: 'absolute', top: '5px', right: '5px',
-                                                        backgroundColor: '#ef4444', color: 'white',
-                                                        padding: '2px 6px', borderRadius: '4px',
-                                                        fontSize: '0.6rem', fontWeight: 'bold'
-                                                    }}>VENDU</div>
-                                                )}
                                             </div>
                                         ))
                                     )}
