@@ -14,7 +14,7 @@ const Home = () => {
     if (isLoggedIn) {
         return (
             <div className="container animate-fade-in" style={{
-                padding: '0.5rem 1rem',
+                padding: '1.5rem 1rem',
                 textAlign: 'center',
                 minHeight: '80vh',
                 display: 'flex',
@@ -22,20 +22,10 @@ const Home = () => {
                 justifyContent: 'center'
             }}>
                 <WelcomeOverlay userName={user.fullName} duration={2000} />
-                <div style={{
-                    width: '180px', height: '180px', margin: '0 auto 0.75rem',
-                    backgroundColor: 'white', borderRadius: '50%',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
-                }}>
-                    <img src={logo} alt="SamaTechnicien Logo" style={{ maxWidth: '85%', height: 'auto', objectFit: 'contain' }} />
+                <div style={{ marginBottom: '2rem' }}>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '0.5rem' }}>Espace Services</h2>
+                    <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Choisissez une action pour continuer</p>
                 </div>
-                <h1 style={{ fontSize: '1.35rem', marginBottom: '0.25rem', marginTop: '0' }}>
-                    Bienvenue, <span style={{ color: 'var(--primary-color)' }}>{user.fullName}</span> !
-                </h1>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-                    Que souhaitez-vous faire aujourd'hui ?
-                </p>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', maxWidth: '360px', margin: '0 auto', width: '100%' }}>
                     <Link to="/technicians" className="card" style={{ textDecoration: 'none', padding: '0.5rem', transition: 'transform 0.2s', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', aspectRatio: '1 / 1', borderRadius: '50%' }}>
