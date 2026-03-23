@@ -158,16 +158,19 @@ const Register = () => {
                         </div>
                     )}
 
-                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.8rem' }}>
-                        <div style={{ flex: 1 }}>
-                            <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.8rem' }}>Ville</label>
-                            <input type="text" name="city" value={formData.city} onChange={handleChange} style={{ width: '100%', padding: '0.7rem', borderRadius: '12px', border: '2px solid #eef2f1', outline: 'none' }} placeholder="Dakar" />
+                    {/* Location - Only for Technicians */}
+                    {formData.role === 'technician' && (
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.8rem' }}>
+                            <div style={{ flex: 1 }}>
+                                <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.8rem' }}>Ville</label>
+                                <input type="text" name="city" value={formData.city} onChange={handleChange} style={{ width: '100%', padding: '0.7rem', borderRadius: '12px', border: '2px solid #eef2f1', outline: 'none' }} placeholder="Dakar" />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.8rem' }}>Quartier</label>
+                                <input type="text" name="district" value={formData.district} onChange={handleChange} style={{ width: '100%', padding: '0.7rem', borderRadius: '12px', border: '2px solid #eef2f1', outline: 'none' }} placeholder="Médina" />
+                            </div>
                         </div>
-                        <div style={{ flex: 1 }}>
-                            <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.8rem' }}>Quartier</label>
-                            <input type="text" name="district" value={formData.district} onChange={handleChange} style={{ width: '100%', padding: '0.7rem', borderRadius: '12px', border: '2px solid #eef2f1', outline: 'none' }} placeholder="Médina" />
-                        </div>
-                    </div>
+                    )}
 
                     <div style={{ marginBottom: '1rem' }}>
                         <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 'bold', fontSize: '0.8rem' }}>Je suis :</label>
