@@ -13,7 +13,7 @@ const MobileNav = () => {
         { path: '/', icon: Home, label: 'Accueil' },
         { path: '/marketplace', icon: ShoppingBag, label: 'Boutique' },
         { 
-            path: isTechnician ? '/expert-dashboard' : '/technicians', 
+            path: isTechnician ? '/expert-dashboard' : '/register', 
             icon: PlusSquare, 
             label: isTechnician ? 'Publier' : 'Pros',
             highlight: true 
