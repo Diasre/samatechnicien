@@ -85,7 +85,7 @@ const LandingPage = () => {
                         opacity: '0',
                         animation: 'fadeInUp 0.8s ease-out 0.6s forwards'
                     }}>
-                        <Link to="/technicians" className="btn" style={{
+                        <Link to="/register" className="btn" style={{
                             backgroundColor: 'white',
                             color: 'var(--primary-color)',
                             fontWeight: 'bold',
