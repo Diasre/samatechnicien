@@ -88,12 +88,12 @@ const Register = () => {
     return (
         <div style={{ 
             minHeight: '100vh', 
-            background: 'radial-gradient(circle at center, #1a4d2e 0%, #0c2b1a 100%)',
+            background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             padding: '1.5rem',
-            color: '#fff',
+            color: '#1e293b',
             fontFamily: "'Outfit', sans-serif"
         }}>
             {/* Steps Progress */}
@@ -103,12 +103,12 @@ const Register = () => {
             </div>
 
             <div style={{ width: '100%', maxWidth: '440px' }}>
-                <h1 style={{ fontSize: '2.4rem', fontWeight: '900', marginBottom: '0.2rem', letterSpacing: '-1px' }}>Inscription</h1>
-                <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1rem', marginBottom: '2rem', fontWeight: '500' }}>Créez votre compte SamaTechnicien</p>
+                <h1 style={{ fontSize: '2.4rem', fontWeight: '900', marginBottom: '0.2rem', letterSpacing: '-1px', color: '#1e293b' }}>Inscription</h1>
+                <p style={{ color: '#64748b', fontSize: '1rem', marginBottom: '2rem', fontWeight: '500' }}>Créez votre compte SamaTechnicien</p>
 
                 {step === 1 ? (
                     <div style={{ animation: 'fadeIn 0.4s ease' }}>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: '800', marginBottom: '1.5rem' }}>Je souhaite...</h3>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: '800', marginBottom: '1.5rem', color: '#1e293b' }}>Je souhaite...</h3>
                         
                         <div style={{ display: 'flex', gap: '1rem', marginBottom: '2.5rem' }}>
                             {/* Role Client */}
@@ -124,33 +124,34 @@ const Register = () => {
                                 }}
                             >
                                 <Search size={32} />
-                                <span style={{ fontWeight: '700', fontSize: '1rem' }}>Client</span>
+                                <span style={{ fontWeight: '700', fontSize: '1rem', color: formData.role === 'client' ? '#fff' : '#1e293b' }}>Client</span>
                             </button>
 
-                            {/* Role Travailleur/Technicien */}
+                            {/* Role Technicien */}
                             <button 
                                 onClick={() => setFormData({ ...formData, role: 'technician' })}
                                 style={{ 
                                     flex: 1, height: '140px', borderRadius: '25px', 
-                                    border: `2px solid ${formData.role === 'technician' ? '#10b981' : 'rgba(255,255,255,0.2)'}`,
-                                    background: formData.role === 'technician' ? '#10b981' : 'rgba(255,255,255,0.1)',
-                                    backdropFilter: 'blur(10px)', color: '#fff', cursor: 'pointer',
+                                    border: `2px solid ${formData.role === 'technician' ? '#10b981' : 'rgba(255,255,255,0.8)'}`,
+                                    background: formData.role === 'technician' ? '#10b981' : 'rgba(255,255,255,0.7)',
+                                    backdropFilter: 'blur(10px)', color: formData.role === 'technician' ? '#fff' : '#1e293b', cursor: 'pointer',
                                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                                    transition: 'all 0.3s ease'
+                                    transition: 'all 0.3s ease',
+                                    boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
                                 }}
                             >
-                                <Hammer size={32} />
-                                <span style={{ fontWeight: '700', fontSize: '1rem' }}>Travailleur</span>
+                                <Hammer size={32} color={formData.role === 'technician' ? '#fff' : '#10b981'} />
+                                <span style={{ fontWeight: '700', fontSize: '1rem', color: formData.role === 'technician' ? '#fff' : '#1e293b' }}>Technicien</span>
                             </button>
                         </div>
 
                         <div style={{ marginBottom: '2rem' }}>
-                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#10b981', background: '#0b2416', width: 'fit-content', padding: '2px 8px', borderRadius: '6px', transform: 'translateY(10px) translateX(15px)', zIndex: 1, position: 'relative' }}>Téléphone</label>
+                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#10b981', background: '#fff', width: 'fit-content', padding: '2px 8px', borderRadius: '6px', transform: 'translateY(10px) translateX(15px)', zIndex: 1, position: 'relative', border: '1px solid #f1f5f9' }}>Téléphone</label>
                             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                                 <Phone size={20} style={{ position: 'absolute', left: '1.2rem', color: '#10b981' }} />
                                 <input 
                                     type="tel" name="phone" value={formData.phone} onChange={handleChange}
-                                    style={{ width: '100%', padding: '1.2rem 1.2rem 1.2rem 3.2rem', borderRadius: '20px', border: '2px solid #10b981', background: 'transparent', color: '#fff', fontSize: '1.1rem', outline: 'none' }}
+                                    style={{ width: '100%', padding: '1.2rem 1.2rem 1.2rem 3.2rem', borderRadius: '20px', border: '2px solid #10b981', background: 'rgba(255,255,255,0.8)', color: '#1e293b', fontSize: '1.1rem', outline: 'none', backdropFilter: 'blur(10px)' }}
                                     placeholder="+221 77 000 00 00"
                                 />
                                 <div style={{ position: 'absolute', right: '1rem', background: '#10b98120', color: '#10b981', padding: '4px 10px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: '800' }}>Valide ✓</div>
@@ -175,48 +176,48 @@ const Register = () => {
                     /* Step 2 */
                     <div style={{ animation: 'fadeIn 0.4s ease' }}>
                         <div style={{ marginBottom: '1.2rem' }}>
-                             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)' }}>Nom Complet</label>
+                             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b' }}>Nom Complet</label>
                              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                                 <User size={18} style={{ position: 'absolute', left: '1rem', color: '#10b981' }} />
-                                <input type="text" name="fullName" required value={formData.fullName} onChange={handleChange} style={{ width: '100%', padding: '1rem 1rem 1rem 2.8rem', borderRadius: '20px', border: '2px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(5px)', color: '#fff', outline: 'none' }} placeholder="Moussa Diop" />
+                                <input type="text" name="fullName" required value={formData.fullName} onChange={handleChange} style={{ width: '100%', padding: '1rem 1rem 1rem 2.8rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', color: '#1e293b', outline: 'none' }} placeholder="Moussa Diop" />
                              </div>
                         </div>
 
                         <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.2rem' }}>
                             <div style={{ flex: 1 }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)' }}>Identifiant</label>
-                                <input type="text" name="username" required value={formData.username} onChange={handleChange} style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.1)', color: '#fff', outline: 'none' }} placeholder="@moussa" />
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b' }}>Identifiant</label>
+                                <input type="text" name="username" required value={formData.username} onChange={handleChange} style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: 'rgba(255,255,255,0.8)', color: '#1e293b', outline: 'none' }} placeholder="@moussa" />
                             </div>
                             <div style={{ width: '100px' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)' }}>PIN</label>
-                                <input type="text" maxLength="4" required value={formData.pinCode} onChange={(e) => setFormData({ ...formData, pinCode: e.target.value.replace(/\D/g, '').slice(0, 4) })} style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.1)', color: '#fff', outline: 'none', textAlign: 'center', fontWeight: '900', letterSpacing: '4px' }} placeholder="0000" />
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b' }}>PIN</label>
+                                <input type="text" maxLength="4" required value={formData.pinCode} onChange={(e) => setFormData({ ...formData, pinCode: e.target.value.replace(/\D/g, '').slice(0, 4) })} style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: 'rgba(255,255,255,0.8)', color: '#1e293b', outline: 'none', textAlign: 'center', fontWeight: '900', letterSpacing: '4px' }} placeholder="0000" />
                             </div>
                         </div>
 
                         {formData.role === 'technician' && (
                             <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.2rem' }}>
                                 <div style={{ flex: 1 }}>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)' }}>Ville</label>
-                                    <input type="text" name="city" value={formData.city} onChange={handleChange} style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.1)', color: '#fff', outline: 'none' }} placeholder="Dakar" />
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b' }}>Ville</label>
+                                    <input type="text" name="city" value={formData.city} onChange={handleChange} style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: 'rgba(255,255,255,0.8)', color: '#1e293b', outline: 'none' }} placeholder="Dakar" />
                                 </div>
                                 <div style={{ flex: 1 }}>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)' }}>Quartier</label>
-                                    <input type="text" name="district" value={formData.district} onChange={handleChange} style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.1)', color: '#fff', outline: 'none' }} placeholder="Parcelles" />
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b' }}>Quartier</label>
+                                    <input type="text" name="district" value={formData.district} onChange={handleChange} style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: 'rgba(255,255,255,0.8)', color: '#1e293b', outline: 'none' }} placeholder="Parcelles" />
                                 </div>
                             </div>
                         )}
 
                         {!isMobile && (
                             <div style={{ marginBottom: '1.2rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)' }}>Email</label>
-                                <input type="email" name="email" value={formData.email} onChange={handleChange} style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.1)', color: '#fff', outline: 'none' }} placeholder="votre@mail.com" />
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b' }}>Email</label>
+                                <input type="email" name="email" value={formData.email} onChange={handleChange} style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: 'rgba(255,255,255,0.8)', color: '#1e293b', outline: 'none' }} placeholder="votre@mail.com" />
                             </div>
                         )}
 
                         <div style={{ display: 'flex', gap: '15px', marginTop: '1.5rem' }}>
                             <button 
                                 onClick={() => setStep(1)}
-                                style={{ flex: 1, padding: '1.2rem', borderRadius: '22px', border: '2px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#fff', fontWeight: '700', cursor: 'pointer' }}
+                                style={{ flex: 1, padding: '1.2rem', borderRadius: '22px', border: '2px solid #f1f5f9', background: '#fff', color: '#64748b', fontWeight: '700', cursor: 'pointer' }}
                             >
                                 Retour
                             </button>
@@ -230,12 +231,12 @@ const Register = () => {
                     </div>
                 )}
 
-                <p style={{ textAlign: 'center', marginTop: '2.5rem', fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', lineHeight: '1.5' }}>
-                    En vous inscrivant, vous acceptez nos <span style={{ color: '#fff', textDecoration: 'underline' }}>Conditions Générales</span> et la <span style={{ color: '#fff', textDecoration: 'underline' }}>Politique de Confidentialité</span>.
+                <p style={{ textAlign: 'center', marginTop: '2.5rem', fontSize: '0.85rem', color: '#64748b', lineHeight: '1.5' }}>
+                    En vous inscrivant, vous acceptez nos <span style={{ color: '#10b981', textDecoration: 'underline' }}>Conditions Générales</span> et la <span style={{ color: '#10b981', textDecoration: 'underline' }}>Politique de Confidentialité</span>.
                 </p>
 
-                <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '1.05rem', color: '#fff', fontWeight: '700' }}>
-                    Déjà un compte ? <Link to="/login" style={{ color: '#fff', textDecoration: 'none', borderBottom: '2px solid #10b981', paddingBottom: '2px', marginLeft: '8px' }}>Connexion</Link>
+                <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '1.05rem', color: '#1e293b', fontWeight: '700' }}>
+                    Déjà un compte ? <Link to="/login" style={{ color: '#10b981', textDecoration: 'none', borderBottom: '2px solid #10b981', paddingBottom: '2px', marginLeft: '8px' }}>Connexion</Link>
                 </p>
             </div>
 
