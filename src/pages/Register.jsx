@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { User, Mail, Lock, Shield, Phone, Eye, EyeOff } from 'lucide-react';
+import { User, Mail, Lock, Shield, Phone, Eye, EyeOff, MapPin, Briefcase, ChevronRight } from 'lucide-react';
 
 const Register = () => {
     const navigate = useNavigate();
@@ -44,21 +44,11 @@ const Register = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        // Background generation for Mobile
         const finalEmail = isMobile ? `${formData.username.toLowerCase().trim()}@samatechnicien.dummy` : formData.email;
         const finalPassword = isMobile ? `PIN_${formData.pinCode}_SamaTech221` : formData.password;
 
         if (!isMobile) {
-            if (formData.password !== formData.confirmPassword) {
-                alert('Les mots de passe ne correspondent pas.');
-                return;
-            }
-            const emailRegex = /^[a-zA-Z0-9._-]+@(gmail\.com|outlook\.com|yahoo\.com|yahoo\.fr|hotmail\.com|hotmail\.fr|icloud\.com)$/i;
-            if (!emailRegex.test(formData.email)) {
-                alert("Email invalide (Gmail, Outlook, Yahoo, Hotmail, iCloud requis)");
-                return;
-            }
+            if (formData.password !== formData.confirmPassword) return alert('Les mots de passe ne correspondent pas.');
         }
 
         try {
@@ -91,92 +81,88 @@ const Register = () => {
                 }
             });
 
-            if (authError) {
-                alert("Erreur: " + authError.message);
-                return;
-            }
-
-            alert(isMobile ? `Bienvenue ${formData.fullName} ! Votre compte est prêt.` : "Inscription réussie ! Vérifiez vos emails.");
+            if (authError) return alert("Erreur: " + authError.message);
+            alert(isMobile ? `Bienvenue ${formData.fullName} !` : "Inscription réussie !");
             navigate('/login');
-
         } catch (error) {
             console.error('Registration error:', error);
             alert('Erreur lors de l\'inscription.');
         }
     };
 
+    const InputField = ({ icon: Icon, label, ...props }) => (
+        <div style={{ marginBottom: '1rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: '700', fontSize: '0.85rem', color: '#1e293b', marginLeft: '4px' }}>{label}</label>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <Icon size={18} style={{ position: 'absolute', left: '1rem', color: '#64748b' }} />
+                <input {...props} style={{ width: '100%', padding: '0.85rem 1rem 0.85rem 2.8rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: '#f8fafc', fontSize: '0.95rem', outline: 'none', transition: 'all 0.3s' }} 
+                       onFocus={(e) => { e.target.style.borderColor = '#10b981'; e.target.style.background = '#fff'; }}
+                       onBlur={(e) => { e.target.style.borderColor = '#f1f5f9'; e.target.style.background = '#f8fafc'; }} />
+            </div>
+        </div>
+    );
+
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', padding: '1rem', background: 'radial-gradient(circle at center, #1a4d2e 0%, #0c2b1a 100%)' }}>
-            <div style={{ width: '100%', maxWidth: '440px', padding: '2rem 1.5rem', borderRadius: '35px', backgroundColor: '#fff', boxShadow: '0 20px 40px rgba(0,0,0,0.5)', margin: '2rem 0' }}>
-                <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-                    <div style={{ width: '60px', height: '60px', background: '#10b981', borderRadius: '18px', margin: '0 auto 10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-                        <User size={30} />
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', padding: '1rem', background: '#0c2b1a' }}>
+            {/* Soft decorative circles */}
+            <div style={{ position: 'fixed', top: '-10%', right: '-10%', width: '400px', height: '400px', borderRadius: '50%', background: 'radial-gradient(circle, #10b98120 0%, transparent 70%)', pointerEvents: 'none' }} />
+            <div style={{ position: 'fixed', bottom: '-10%', left: '-10%', width: '300px', height: '300px', borderRadius: '50%', background: 'radial-gradient(circle, #f59e0b10 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+            <div style={{ width: '100%', maxWidth: '440px', padding: '2.5rem 1.75rem', borderRadius: '40px', backgroundColor: 'rgba(255, 255, 255, 0.98)', backdropFilter: 'blur(10px)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', margin: '2rem 0', position: 'relative' }}>
+                
+                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                    <div style={{ padding: '4px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', width: '70px', height: '70px', borderRadius: '24px', margin: '0 auto 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: '0 10px 20px rgba(16, 185, 129, 0.3)' }}>
+                        <User size={35} strokeWidth={2.5} />
                     </div>
-                    <h2 style={{ fontSize: '1.8rem', fontWeight: '900', color: '#111' }}>Créer un compte</h2>
-                    <p style={{ color: '#666', fontSize: '0.85rem' }}>{isMobile ? 'Rejoignez-nous en 10 secondes' : 'Rejoignez la communauté'}</p>
+                    <h2 style={{ fontSize: '2rem', fontWeight: '900', color: '#0f172a', letterSpacing: '-1px' }}>Rejoignez-nous</h2>
+                    <p style={{ color: '#64748b', fontSize: '0.95rem', fontWeight: '500' }}>{isMobile ? 'Création de compte instantanée' : 'Démarrez votre aventure aujourd\'hui'}</p>
                 </div>
 
                 <form onSubmit={handleSubmit}>
-                    <div style={{ marginBottom: '0.8rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.8rem' }}>Nom Complet</label>
-                        <input type="text" name="fullName" required value={formData.fullName} onChange={handleChange} style={{ width: '100%', padding: '0.7rem', borderRadius: '12px', border: '2px solid #eef2f1', outline: 'none' }} placeholder="Moussa Diop" />
-                    </div>
+                    <InputField icon={User} label="Nom Complet" type="text" name="fullName" required value={formData.fullName} onChange={handleChange} placeholder="Moussa Diop" />
 
-                    {!isMobile && (
-                        <div style={{ marginBottom: '0.8rem' }}>
-                            <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.8rem' }}>Email</label>
-                            <input type="email" name="email" required value={formData.email} onChange={handleChange} style={{ width: '100%', padding: '0.7rem', borderRadius: '12px', border: '2px solid #eef2f1', outline: 'none' }} placeholder="moussa@mail.com" />
-                        </div>
-                    )}
+                    {!isMobile && <InputField icon={Mail} label="Email" type="email" name="email" required value={formData.email} onChange={handleChange} placeholder="moussa@mail.com" />}
 
-                    <div style={{ marginBottom: '0.8rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.8rem' }}>Téléphone</label>
-                        <input type="tel" name="phone" required value={formData.phone} onChange={handleChange} style={{ width: '100%', padding: '0.7rem', borderRadius: '12px', border: '2px solid #eef2f1', outline: 'none' }} placeholder="+221 ..." />
-                    </div>
+                    <InputField icon={Phone} label="Téléphone" type="tel" name="phone" required value={formData.phone} onChange={handleChange} placeholder="+221 ..." />
 
-                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.8rem' }}>
+                    <div style={{ display: 'flex', gap: '1rem' }}>
                         <div style={{ flex: 1 }}>
-                            <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.8rem' }}>Identifiant (@...)</label>
-                            <input type="text" name="username" required value={formData.username} onChange={handleChange} style={{ width: '100%', padding: '0.7rem', borderRadius: '12px', border: '2px solid #eef2f1', outline: 'none' }} placeholder="moussa221" />
+                            <InputField icon={Briefcase} label="Identifiant" type="text" name="username" required value={formData.username} onChange={handleChange} placeholder="moussa221" />
                         </div>
-                        <div style={{ width: '90px' }}>
-                            <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.8rem' }}>Code PIN</label>
-                            <input type="text" maxLength="4" required value={formData.pinCode} onChange={(e) => setFormData({ ...formData, pinCode: e.target.value.replace(/\D/g, '').slice(0, 4) })} style={{ width: '100%', padding: '0.7rem', borderRadius: '12px', border: '2px solid #eef2f1', outline: 'none', textAlign: 'center', letterSpacing: '3px' }} placeholder="1234" />
+                        <div style={{ width: '100px' }}>
+                             <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: '700', fontSize: '0.85rem', color: '#1e293b' }}>PIN</label>
+                             <input type="text" maxLength="4" required value={formData.pinCode} onChange={(e) => setFormData({ ...formData, pinCode: e.target.value.replace(/\D/g, '').slice(0, 4) })} style={{ width: '100%', padding: '0.85rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: '#f8fafc', outline: 'none', textAlign: 'center', fontWeight: '900', fontSize: '1.2rem', letterSpacing: '2px' }} placeholder="0000" />
                         </div>
                     </div>
 
                     {!isMobile && (
-                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.8rem' }}>
+                        <div style={{ display: 'flex', gap: '0.75rem' }}>
                             <div style={{ flex: 1 }}>
-                                <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.8rem' }}>Mot de passe</label>
-                                <input type="password" name="password" required value={formData.password} onChange={handleChange} style={{ width: '100%', padding: '0.7rem', borderRadius: '12px', border: '2px solid #eef2f1', outline: 'none' }} placeholder="••••••••" />
+                                <InputField icon={Lock} label="Mot de passe" type="password" name="password" required value={formData.password} onChange={handleChange} placeholder="••••••••" />
                             </div>
                             <div style={{ flex: 1 }}>
-                                <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.8rem' }}>Confirmer</label>
-                                <input type="password" name="confirmPassword" required value={formData.confirmPassword} onChange={handleChange} style={{ width: '100%', padding: '0.7rem', borderRadius: '12px', border: '2px solid #eef2f1', outline: 'none' }} placeholder="••••••••" />
+                                <InputField icon={Shield} label="Confirmation" type="password" name="confirmPassword" required value={formData.confirmPassword} onChange={handleChange} placeholder="••••••••" />
                             </div>
                         </div>
                     )}
 
-                    {/* Location - Only for Technicians */}
                     {formData.role === 'technician' && (
-                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.8rem' }}>
+                        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
                             <div style={{ flex: 1 }}>
-                                <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.8rem' }}>Ville</label>
-                                <input type="text" name="city" value={formData.city} onChange={handleChange} style={{ width: '100%', padding: '0.7rem', borderRadius: '12px', border: '2px solid #eef2f1', outline: 'none' }} placeholder="Dakar" />
+                                <InputField icon={MapPin} label="Ville" type="text" name="city" value={formData.city} onChange={handleChange} placeholder="Dakar" />
                             </div>
                             <div style={{ flex: 1 }}>
-                                <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.8rem' }}>Quartier</label>
-                                <input type="text" name="district" value={formData.district} onChange={handleChange} style={{ width: '100%', padding: '0.7rem', borderRadius: '12px', border: '2px solid #eef2f1', outline: 'none' }} placeholder="Médina" />
+                                <InputField icon={MapPin} label="Quartier" type="text" name="district" value={formData.district} onChange={handleChange} placeholder="Médina" />
                             </div>
                         </div>
                     )}
 
-                    <div style={{ marginBottom: '1rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 'bold', fontSize: '0.8rem' }}>Je suis :</label>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <div style={{ marginBottom: '1.5rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.6rem', fontWeight: '700', fontSize: '0.85rem', color: '#1e293b' }}>Votre profil :</label>
+                        <div style={{ display: 'flex', gap: '0.75rem', background: '#f1f5f9', padding: '6px', borderRadius: '20px' }}>
                             {['technician', 'client'].map(r => (
-                                <button key={r} type="button" onClick={() => setFormData({ ...formData, role: r })} style={{ flex: 1, padding: '0.6rem', borderRadius: '12px', border: `2px solid ${formData.role === r ? '#10b981' : '#eef2f1'}`, background: formData.role === r ? '#f0fdf4' : '#fff', color: formData.role === r ? '#065f46' : '#666', fontWeight: 'bold', cursor: 'pointer' }}>
+                                <button key={r} type="button" onClick={() => setFormData({ ...formData, role: r })} 
+                                        style={{ flex: 1, padding: '0.75rem', borderRadius: '15px', border: 'none', cursor: 'pointer', background: formData.role === r ? '#fff' : 'transparent', color: formData.role === r ? '#10b981' : '#64748b', fontWeight: '800', fontSize: '0.85rem', boxShadow: formData.role === r ? '0 4px 10px rgba(0,0,0,0.05)' : 'none', transition: 'all 0.3s' }}>
                                     {r === 'technician' ? 'Technicien' : 'Client'}
                                 </button>
                             ))}
@@ -184,43 +170,31 @@ const Register = () => {
                     </div>
 
                     {formData.role === 'technician' && (
-                        <>
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.8rem' }}>Spécialité</label>
-                                <select name="specialty" value={formData.specialty} onChange={handleChange} style={{ width: '100%', padding: '0.7rem', borderRadius: '12px', border: '2px solid #eef2f1', outline: 'none' }}>
-                                    <option value="Informatique">Informatique</option>
-                                    <option value="Reparateur telephone">Réparateur téléphone</option>
-                                    <option value="Mécanicien">Mécanicien</option>
-                                    <option value="Plombier">Plombier</option>
-                                    <option value="Menuisier">Menuisier</option>
-                                    <option value="Autre">Autre</option>
-                                </select>
-                            </div>
-
+                        <div style={{ marginBottom: '1.25rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.85rem' }}>Spécialité</label>
+                            <select name="specialty" value={formData.specialty} onChange={handleChange} style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: '#f8fafc', outline: 'none', cursor: 'pointer', fontWeight: '600' }}>
+                                <option value="Informatique">Informatique</option>
+                                <option value="Reparateur telephone">Réparateur téléphone</option>
+                                <option value="Mécanicien">Mécanicien</option>
+                                <option value="Plombier">Plombier</option>
+                                <option value="Autre">Autre</option>
+                            </select>
                             {formData.specialty === 'Autre' && (
-                                <div style={{ marginBottom: '1rem' }}>
-                                    <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.8rem' }}>Précisez votre métier</label>
-                                    <input 
-                                        type="text" 
-                                        name="otherSpecialty" 
-                                        required 
-                                        value={formData.otherSpecialty} 
-                                        onChange={handleChange} 
-                                        style={{ width: '100%', padding: '0.7rem', borderRadius: '12px', border: '2px solid #eef2f1', outline: 'none' }} 
-                                        placeholder="Ex: Électricien, Carreleur..." 
-                                    />
-                                </div>
+                                <input type="text" name="otherSpecialty" required value={formData.otherSpecialty} onChange={handleChange} style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: '20px', border: '2px solid #10b981', background: '#fff', outline: 'none', marginTop: '0.75rem' }} placeholder="Ex: Électricien, Carreleur..." />
                             )}
-                        </>
+                        </div>
                     )}
 
-                    <button type="submit" style={{ width: '100%', padding: '1rem', background: '#10b981', color: '#fff', border: 'none', borderRadius: '15px', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer', boxShadow: '0 10px 15px rgba(16, 185, 129, 0.3)' }}>
-                        M'inscrire
+                    <button type="submit" style={{ width: '100%', padding: '1.1rem', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', borderRadius: '22px', fontWeight: '900', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 10px 25px rgba(16, 185, 129, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'transform 0.2s' }}
+                            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.98)'}
+                            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}>
+                        Créer mon compte
+                        <ChevronRight size={20} />
                     </button>
                 </form>
 
-                <p style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.9rem', color: '#666' }}>
-                    Déjà un compte ? <Link to="/login" style={{ color: '#10b981', fontWeight: 'bold', textDecoration: 'none' }}>Connexion</Link>
+                <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.95rem', color: '#64748b', fontWeight: '600' }}>
+                    Déjà inscrit ? <Link to="/login" style={{ color: '#10b981', fontWeight: '900', textDecoration: 'none', marginLeft: '5px' }}>Connexion</Link>
                 </p>
             </div>
         </div>
