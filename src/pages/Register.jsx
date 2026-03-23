@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { User, Mail, Lock, Shield, Phone, Eye, EyeOff, MapPin, Briefcase, ChevronRight } from 'lucide-react';
+import { User, Mail, Lock, Shield, Phone, Eye, EyeOff, MapPin, Briefcase, ChevronRight, CheckCircle2, Hammer, Search } from 'lucide-react';
 
 const Register = () => {
     const navigate = useNavigate();
+    const [step, setStep] = useState(1); // 1 or 2
     const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const isMobile = window.innerWidth <= 768;
 
     useEffect(() => {
@@ -21,7 +21,6 @@ const Register = () => {
         fullName: '',
         email: '',
         password: '',
-        confirmPassword: '',
         phone: '',
         role: 'technician',
         specialty: 'Informatique',
@@ -43,13 +42,9 @@ const Register = () => {
     };
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
         const finalEmail = isMobile ? `${formData.username.toLowerCase().trim()}@samatechnicien.dummy` : formData.email;
         const finalPassword = isMobile ? `PIN_${formData.pinCode}_SamaTech221` : formData.password;
-
-        if (!isMobile) {
-            if (formData.password !== formData.confirmPassword) return alert('Les mots de passe ne correspondent pas.');
-        }
 
         try {
             let imageUrl = null;
@@ -90,113 +85,168 @@ const Register = () => {
         }
     };
 
-    const InputField = ({ icon: Icon, label, ...props }) => (
-        <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: '700', fontSize: '0.85rem', color: '#1e293b', marginLeft: '4px' }}>{label}</label>
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <Icon size={18} style={{ position: 'absolute', left: '1rem', color: '#64748b' }} />
-                <input {...props} style={{ width: '100%', padding: '0.85rem 1rem 0.85rem 2.8rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: '#f8fafc', fontSize: '0.95rem', outline: 'none', transition: 'all 0.3s' }} 
-                       onFocus={(e) => { e.target.style.borderColor = '#10b981'; e.target.style.background = '#fff'; }}
-                       onBlur={(e) => { e.target.style.borderColor = '#f1f5f9'; e.target.style.background = '#f8fafc'; }} />
-            </div>
-        </div>
-    );
-
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', padding: '1rem', background: '#0c2b1a' }}>
-            {/* Soft decorative circles */}
-            <div style={{ position: 'fixed', top: '-10%', right: '-10%', width: '400px', height: '400px', borderRadius: '50%', background: 'radial-gradient(circle, #10b98120 0%, transparent 70%)', pointerEvents: 'none' }} />
-            <div style={{ position: 'fixed', bottom: '-10%', left: '-10%', width: '300px', height: '300px', borderRadius: '50%', background: 'radial-gradient(circle, #f59e0b10 0%, transparent 70%)', pointerEvents: 'none' }} />
+        <div style={{ 
+            minHeight: '100vh', 
+            background: `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.85)), url('/tech-bg.png')`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            padding: '1.5rem',
+            color: '#fff',
+            fontFamily: "'Outfit', sans-serif"
+        }}>
+            {/* Steps Progress */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '2rem', marginTop: '1rem' }}>
+                <div style={{ width: '40px', height: '6px', borderRadius: '10px', background: step >= 1 ? '#10b981' : 'rgba(255,255,255,0.3)' }} />
+                <div style={{ width: '40px', height: '6px', borderRadius: '10px', background: step >= 2 ? '#10b981' : 'rgba(255,255,255,0.3)' }} />
+            </div>
 
-            <div style={{ width: '100%', maxWidth: '440px', padding: '2.5rem 1.75rem', borderRadius: '40px', backgroundColor: 'rgba(255, 255, 255, 0.98)', backdropFilter: 'blur(10px)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', margin: '2rem 0', position: 'relative' }}>
-                
-                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                    <div style={{ padding: '4px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', width: '70px', height: '70px', borderRadius: '24px', margin: '0 auto 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: '0 10px 20px rgba(16, 185, 129, 0.3)' }}>
-                        <User size={35} strokeWidth={2.5} />
+            <div style={{ width: '100%', maxWidth: '440px' }}>
+                <h1 style={{ fontSize: '2.4rem', fontWeight: '900', marginBottom: '0.2rem', letterSpacing: '-1px' }}>Inscription</h1>
+                <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1rem', marginBottom: '2rem', fontWeight: '500' }}>Créez votre compte SamaTechnicien</p>
+
+                {step === 1 ? (
+                    <div style={{ animation: 'fadeIn 0.4s ease' }}>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: '800', marginBottom: '1.5rem' }}>Je souhaite...</h3>
+                        
+                        <div style={{ display: 'flex', gap: '1rem', marginBottom: '2.5rem' }}>
+                            {/* Role Client */}
+                            <button 
+                                onClick={() => setFormData({ ...formData, role: 'client' })}
+                                style={{ 
+                                    flex: 1, height: '140px', borderRadius: '25px', 
+                                    border: `2px solid ${formData.role === 'client' ? '#10b981' : 'rgba(255,255,255,0.2)'}`,
+                                    background: formData.role === 'client' ? '#10b981' : 'rgba(255,255,255,0.1)',
+                                    backdropFilter: 'blur(10px)', color: '#fff', cursor: 'pointer',
+                                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                                    transition: 'all 0.3s ease'
+                                }}
+                            >
+                                <Search size={32} />
+                                <span style={{ fontWeight: '700', fontSize: '1rem' }}>Client</span>
+                            </button>
+
+                            {/* Role Travailleur/Technicien */}
+                            <button 
+                                onClick={() => setFormData({ ...formData, role: 'technician' })}
+                                style={{ 
+                                    flex: 1, height: '140px', borderRadius: '25px', 
+                                    border: `2px solid ${formData.role === 'technician' ? '#10b981' : 'rgba(255,255,255,0.2)'}`,
+                                    background: formData.role === 'technician' ? '#10b981' : 'rgba(255,255,255,0.1)',
+                                    backdropFilter: 'blur(10px)', color: '#fff', cursor: 'pointer',
+                                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                                    transition: 'all 0.3s ease'
+                                }}
+                            >
+                                <Hammer size={32} />
+                                <span style={{ fontWeight: '700', fontSize: '1rem' }}>Travailleur</span>
+                            </button>
+                        </div>
+
+                        <div style={{ marginBottom: '2rem' }}>
+                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#10b981', background: '#0b2416', width: 'fit-content', padding: '2px 8px', borderRadius: '6px', transform: 'translateY(10px) translateX(15px)', zIndex: 1, position: 'relative' }}>Téléphone</label>
+                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                <Phone size={20} style={{ position: 'absolute', left: '1.2rem', color: '#10b981' }} />
+                                <input 
+                                    type="tel" name="phone" value={formData.phone} onChange={handleChange}
+                                    style={{ width: '100%', padding: '1.2rem 1.2rem 1.2rem 3.2rem', borderRadius: '20px', border: '2px solid #10b981', background: 'transparent', color: '#fff', fontSize: '1.1rem', outline: 'none' }}
+                                    placeholder="+221 77 000 00 00"
+                                />
+                                <div style={{ position: 'absolute', right: '1rem', background: '#10b98120', color: '#10b981', padding: '4px 10px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: '800' }}>Valide ✓</div>
+                            </div>
+                        </div>
+
+                        <button 
+                            onClick={() => {
+                                if (formData.phone.length < 8) return alert("Veuillez entrer un numéro valide.");
+                                setStep(2);
+                            }}
+                            style={{ 
+                                width: '100%', padding: '1.2rem', borderRadius: '22px', border: 'none', 
+                                background: '#10b981', color: '#fff', fontWeight: '900', fontSize: '1.2rem', cursor: 'pointer',
+                                boxShadow: '0 10px 20px rgba(16, 185, 129, 0.3)'
+                            }}
+                        >
+                            Continuer
+                        </button>
                     </div>
-                    <h2 style={{ fontSize: '2rem', fontWeight: '900', color: '#0f172a', letterSpacing: '-1px' }}>Rejoignez-nous</h2>
-                    <p style={{ color: '#64748b', fontSize: '0.95rem', fontWeight: '500' }}>{isMobile ? 'Création de compte instantanée' : 'Démarrez votre aventure aujourd\'hui'}</p>
-                </div>
-
-                <form onSubmit={handleSubmit}>
-                    <InputField icon={User} label="Nom Complet" type="text" name="fullName" required value={formData.fullName} onChange={handleChange} placeholder="Moussa Diop" />
-
-                    {!isMobile && <InputField icon={Mail} label="Email" type="email" name="email" required value={formData.email} onChange={handleChange} placeholder="moussa@mail.com" />}
-
-                    <InputField icon={Phone} label="Téléphone" type="tel" name="phone" required value={formData.phone} onChange={handleChange} placeholder="+221 ..." />
-
-                    <div style={{ display: 'flex', gap: '1rem' }}>
-                        <div style={{ flex: 1 }}>
-                            <InputField icon={Briefcase} label="Identifiant" type="text" name="username" required value={formData.username} onChange={handleChange} placeholder="moussa221" />
+                ) : (
+                    /* Step 2 */
+                    <div style={{ animation: 'fadeIn 0.4s ease' }}>
+                        <div style={{ marginBottom: '1.2rem' }}>
+                             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)' }}>Nom Complet</label>
+                             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                <User size={18} style={{ position: 'absolute', left: '1rem', color: '#10b981' }} />
+                                <input type="text" name="fullName" required value={formData.fullName} onChange={handleChange} style={{ width: '100%', padding: '1rem 1rem 1rem 2.8rem', borderRadius: '20px', border: '2px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(5px)', color: '#fff', outline: 'none' }} placeholder="Moussa Diop" />
+                             </div>
                         </div>
-                        <div style={{ width: '100px' }}>
-                             <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: '700', fontSize: '0.85rem', color: '#1e293b' }}>PIN</label>
-                             <input type="text" maxLength="4" required value={formData.pinCode} onChange={(e) => setFormData({ ...formData, pinCode: e.target.value.replace(/\D/g, '').slice(0, 4) })} style={{ width: '100%', padding: '0.85rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: '#f8fafc', outline: 'none', textAlign: 'center', fontWeight: '900', fontSize: '1.2rem', letterSpacing: '2px' }} placeholder="0000" />
+
+                        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.2rem' }}>
+                            <div style={{ flex: 1 }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)' }}>Identifiant</label>
+                                <input type="text" name="username" required value={formData.username} onChange={handleChange} style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.1)', color: '#fff', outline: 'none' }} placeholder="@moussa" />
+                            </div>
+                            <div style={{ width: '100px' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)' }}>PIN</label>
+                                <input type="text" maxLength="4" required value={formData.pinCode} onChange={(e) => setFormData({ ...formData, pinCode: e.target.value.replace(/\D/g, '').slice(0, 4) })} style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.1)', color: '#fff', outline: 'none', textAlign: 'center', fontWeight: '900', letterSpacing: '4px' }} placeholder="0000" />
+                            </div>
+                        </div>
+
+                        {formData.role === 'technician' && (
+                            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.2rem' }}>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)' }}>Ville</label>
+                                    <input type="text" name="city" value={formData.city} onChange={handleChange} style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.1)', color: '#fff', outline: 'none' }} placeholder="Dakar" />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)' }}>Quartier</label>
+                                    <input type="text" name="district" value={formData.district} onChange={handleChange} style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.1)', color: '#fff', outline: 'none' }} placeholder="Parcelles" />
+                                </div>
+                            </div>
+                        )}
+
+                        {!isMobile && (
+                            <div style={{ marginBottom: '1.2rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)' }}>Email</label>
+                                <input type="email" name="email" value={formData.email} onChange={handleChange} style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.1)', color: '#fff', outline: 'none' }} placeholder="votre@mail.com" />
+                            </div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '15px', marginTop: '1.5rem' }}>
+                            <button 
+                                onClick={() => setStep(1)}
+                                style={{ flex: 1, padding: '1.2rem', borderRadius: '22px', border: '2px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#fff', fontWeight: '700', cursor: 'pointer' }}
+                            >
+                                Retour
+                            </button>
+                            <button 
+                                onClick={handleSubmit}
+                                style={{ flex: 2, padding: '1.2rem', borderRadius: '22px', border: 'none', background: '#10b981', color: '#fff', fontWeight: '900', fontSize: '1.2rem', cursor: 'pointer', boxShadow: '0 10px 20px rgba(16, 185, 129, 0.3)' }}
+                            >
+                                Terminer
+                            </button>
                         </div>
                     </div>
+                )}
 
-                    {!isMobile && (
-                        <div style={{ display: 'flex', gap: '0.75rem' }}>
-                            <div style={{ flex: 1 }}>
-                                <InputField icon={Lock} label="Mot de passe" type="password" name="password" required value={formData.password} onChange={handleChange} placeholder="••••••••" />
-                            </div>
-                            <div style={{ flex: 1 }}>
-                                <InputField icon={Shield} label="Confirmation" type="password" name="confirmPassword" required value={formData.confirmPassword} onChange={handleChange} placeholder="••••••••" />
-                            </div>
-                        </div>
-                    )}
+                <p style={{ textAlign: 'center', marginTop: '2.5rem', fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', lineHeight: '1.5' }}>
+                    En vous inscrivant, vous acceptez nos <span style={{ color: '#fff', textDecoration: 'underline' }}>Conditions Générales</span> et la <span style={{ color: '#fff', textDecoration: 'underline' }}>Politique de Confidentialité</span>.
+                </p>
 
-                    {formData.role === 'technician' && (
-                        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
-                            <div style={{ flex: 1 }}>
-                                <InputField icon={MapPin} label="Ville" type="text" name="city" value={formData.city} onChange={handleChange} placeholder="Dakar" />
-                            </div>
-                            <div style={{ flex: 1 }}>
-                                <InputField icon={MapPin} label="Quartier" type="text" name="district" value={formData.district} onChange={handleChange} placeholder="Médina" />
-                            </div>
-                        </div>
-                    )}
-
-                    <div style={{ marginBottom: '1.5rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.6rem', fontWeight: '700', fontSize: '0.85rem', color: '#1e293b' }}>Votre profil :</label>
-                        <div style={{ display: 'flex', gap: '0.75rem', background: '#f1f5f9', padding: '6px', borderRadius: '20px' }}>
-                            {['technician', 'client'].map(r => (
-                                <button key={r} type="button" onClick={() => setFormData({ ...formData, role: r })} 
-                                        style={{ flex: 1, padding: '0.75rem', borderRadius: '15px', border: 'none', cursor: 'pointer', background: formData.role === r ? '#fff' : 'transparent', color: formData.role === r ? '#10b981' : '#64748b', fontWeight: '800', fontSize: '0.85rem', boxShadow: formData.role === r ? '0 4px 10px rgba(0,0,0,0.05)' : 'none', transition: 'all 0.3s' }}>
-                                    {r === 'technician' ? 'Technicien' : 'Client'}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {formData.role === 'technician' && (
-                        <div style={{ marginBottom: '1.25rem' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.85rem' }}>Spécialité</label>
-                            <select name="specialty" value={formData.specialty} onChange={handleChange} style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: '#f8fafc', outline: 'none', cursor: 'pointer', fontWeight: '600' }}>
-                                <option value="Informatique">Informatique</option>
-                                <option value="Reparateur telephone">Réparateur téléphone</option>
-                                <option value="Mécanicien">Mécanicien</option>
-                                <option value="Plombier">Plombier</option>
-                                <option value="Autre">Autre</option>
-                            </select>
-                            {formData.specialty === 'Autre' && (
-                                <input type="text" name="otherSpecialty" required value={formData.otherSpecialty} onChange={handleChange} style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: '20px', border: '2px solid #10b981', background: '#fff', outline: 'none', marginTop: '0.75rem' }} placeholder="Ex: Électricien, Carreleur..." />
-                            )}
-                        </div>
-                    )}
-
-                    <button type="submit" style={{ width: '100%', padding: '1.1rem', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', borderRadius: '22px', fontWeight: '900', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 10px 25px rgba(16, 185, 129, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'transform 0.2s' }}
-                            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.98)'}
-                            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}>
-                        Créer mon compte
-                        <ChevronRight size={20} />
-                    </button>
-                </form>
-
-                <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.95rem', color: '#64748b', fontWeight: '600' }}>
-                    Déjà inscrit ? <Link to="/login" style={{ color: '#10b981', fontWeight: '900', textDecoration: 'none', marginLeft: '5px' }}>Connexion</Link>
+                <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '1.05rem', color: '#fff', fontWeight: '700' }}>
+                    Déjà un compte ? <Link to="/login" style={{ color: '#fff', textDecoration: 'none', borderBottom: '2px solid #10b981', paddingBottom: '2px', marginLeft: '8px' }}>Connexion</Link>
                 </p>
             </div>
+
+            <style>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+            `}</style>
         </div>
     );
 };
