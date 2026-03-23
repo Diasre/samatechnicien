@@ -184,17 +184,34 @@ const Register = () => {
                     </div>
 
                     {formData.role === 'technician' && (
-                        <div style={{ marginBottom: '1rem' }}>
-                            <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.8rem' }}>Spécialité</label>
-                            <select name="specialty" value={formData.specialty} onChange={handleChange} style={{ width: '100%', padding: '0.7rem', borderRadius: '12px', border: '2px solid #eef2f1', outline: 'none' }}>
-                                <option value="Informatique">Informatique</option>
-                                <option value="Reparateur telephone">Réparateur téléphone</option>
-                                <option value="Mécanicien">Mécanicien</option>
-                                <option value="Plombier">Plombier</option>
-                                <option value="Menuisier">Menuisier</option>
-                                <option value="Autre">Autre</option>
-                            </select>
-                        </div>
+                        <>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.8rem' }}>Spécialité</label>
+                                <select name="specialty" value={formData.specialty} onChange={handleChange} style={{ width: '100%', padding: '0.7rem', borderRadius: '12px', border: '2px solid #eef2f1', outline: 'none' }}>
+                                    <option value="Informatique">Informatique</option>
+                                    <option value="Reparateur telephone">Réparateur téléphone</option>
+                                    <option value="Mécanicien">Mécanicien</option>
+                                    <option value="Plombier">Plombier</option>
+                                    <option value="Menuisier">Menuisier</option>
+                                    <option value="Autre">Autre</option>
+                                </select>
+                            </div>
+
+                            {formData.specialty === 'Autre' && (
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.8rem' }}>Précisez votre métier</label>
+                                    <input 
+                                        type="text" 
+                                        name="otherSpecialty" 
+                                        required 
+                                        value={formData.otherSpecialty} 
+                                        onChange={handleChange} 
+                                        style={{ width: '100%', padding: '0.7rem', borderRadius: '12px', border: '2px solid #eef2f1', outline: 'none' }} 
+                                        placeholder="Ex: Électricien, Carreleur..." 
+                                    />
+                                </div>
+                            )}
+                        </>
                     )}
 
                     <button type="submit" style={{ width: '100%', padding: '1rem', background: '#10b981', color: '#fff', border: 'none', borderRadius: '15px', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer', boxShadow: '0 10px 15px rgba(16, 185, 129, 0.3)' }}>
