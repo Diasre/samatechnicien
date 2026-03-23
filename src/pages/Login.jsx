@@ -109,7 +109,8 @@ const Login = () => {
     return (
         <div style={{ 
             minHeight: '100vh', 
-            background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+            background: `linear-gradient(rgba(255,255,255,0.4), rgba(255,255,255,0.6)), url('/light-bg.png')`,
+            backgroundSize: 'cover', backgroundPosition: 'center',
             display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1.5rem', color: '#1e293b', fontFamily: "'Outfit', sans-serif"
         }}>
             {/* Header Icon */}
