@@ -8,9 +8,10 @@ const Login = () => {
     const [password, setPassword] = useState('');
     const [username, setUsername] = useState('');
     const [pinCode, setPinCode] = useState('');
-    const [loginMethod, setLoginMethod] = useState('email'); // 'email' or 'pin'
+    const [loginMethod, setLoginMethod] = useState(window.innerWidth <= 768 ? 'pin' : 'email'); // Default to PIN on mobile
     const [showPassword, setShowPassword] = useState(false);
     const [showResend, setShowResend] = useState(false);
+    const isMobile = window.innerWidth <= 768;
     const navigate = useNavigate();
 
     const performLoginLogic = async (loginId, loginCredential, isPinLogin = false) => {
@@ -108,15 +109,17 @@ const Login = () => {
                     <p style={{ color: '#666', fontSize: '0.9rem' }}>Choisissez votre mode d'accès</p>
                 </div>
 
-                {/* Toggle */}
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem', background: '#f1f5f9', padding: '4px', borderRadius: '15px' }}>
-                    <button onClick={() => setLoginMethod('email')} style={{ flex: 1, padding: '0.6rem', borderRadius: '12px', border: 'none', cursor: 'pointer', background: loginMethod === 'email' ? '#fff' : 'transparent', color: loginMethod === 'email' ? '#10b981' : '#64748b', fontWeight: 'bold' }}>
-                        Email
-                    </button>
-                    <button onClick={() => setLoginMethod('pin')} style={{ flex: 1, padding: '0.6rem', borderRadius: '12px', border: 'none', cursor: 'pointer', background: loginMethod === 'pin' ? '#fff' : 'transparent', color: loginMethod === 'pin' ? '#10b981' : '#64748b', fontWeight: 'bold' }}>
-                        Code PIN
-                    </button>
-                </div>
+                {/* Toggle - Hidden on Mobile */}
+                {!isMobile && (
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem', background: '#f1f5f9', padding: '4px', borderRadius: '15px' }}>
+                        <button onClick={() => setLoginMethod('email')} style={{ flex: 1, padding: '0.6rem', borderRadius: '12px', border: 'none', cursor: 'pointer', background: loginMethod === 'email' ? '#fff' : 'transparent', color: loginMethod === 'email' ? '#10b981' : '#64748b', fontWeight: 'bold' }}>
+                            Email
+                        </button>
+                        <button onClick={() => setLoginMethod('pin')} style={{ flex: 1, padding: '0.6rem', borderRadius: '12px', border: 'none', cursor: 'pointer', background: loginMethod === 'pin' ? '#fff' : 'transparent', color: loginMethod === 'pin' ? '#10b981' : '#64748b', fontWeight: 'bold' }}>
+                            Code PIN
+                        </button>
+                    </div>
+                )}
 
                 <form onSubmit={(e) => {
                     e.preventDefault();
