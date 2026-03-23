@@ -88,9 +88,7 @@ const Register = () => {
     return (
         <div style={{ 
             minHeight: '100vh', 
-            background: `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.85)), url('/tech-bg.png')`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
+            background: 'radial-gradient(circle at center, #1a4d2e 0%, #0c2b1a 100%)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
