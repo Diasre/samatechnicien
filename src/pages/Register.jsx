@@ -32,6 +32,8 @@ const Register = () => {
         otherSpecialty: '',
         city: '',
         district: '',
+        username: '',
+        pinCode: '',
         image: null // Store the file object, not the URL yet
     });
 
@@ -96,6 +98,8 @@ const Register = () => {
                 specialty: formData.role === 'technician'
                     ? (formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty)
                     : null,
+                username: formData.username.toLowerCase().trim(),
+                pin_code: formData.pinCode,
                 verification_code: null,
                 email_verified: false
             };
@@ -349,6 +353,44 @@ const Register = () => {
                             placeholder="+221 77 000 00 00"
                         />
                     </div>
+ 
+                     <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                         <div style={{ flex: 1 }}>
+                             <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: '600', color: '#333', fontSize: '0.85rem' }}>Identifiant mobile (@...)</label>
+                             <input
+                                 type="text"
+                                 name="username"
+                                 required
+                                 value={formData.username}
+                                 onChange={handleChange}
+                                 placeholder="ex: moussa221"
+                                 style={{
+                                     width: '100%', padding: '0.75rem 1rem', borderRadius: '15px',
+                                     border: '2px solid #eef2f1', backgroundColor: '#fcfdfd', fontSize: '0.9rem', outline: 'none'
+                                 }}
+                             />
+                         </div>
+                         <div style={{ width: '100px' }}>
+                             <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: '600', color: '#333', fontSize: '0.85rem' }}>Code PIN</label>
+                             <input
+                                 type="text"
+                                 name="pinCode"
+                                 maxLength="4"
+                                 required
+                                 value={formData.pinCode}
+                                 onChange={(e) => {
+                                     const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                                     setFormData({ ...formData, pinCode: val });
+                                 }}
+                                 placeholder="1234"
+                                 style={{
+                                     width: '100%', padding: '0.75rem 0.5rem', borderRadius: '15px',
+                                     border: '2px solid #eef2f1', backgroundColor: '#fcfdfd', fontSize: '0.9rem', outline: 'none',
+                                     textAlign: 'center', letterSpacing: '4px'
+                                 }}
+                             />
+                         </div>
+                     </div>
 
                     {/* Password */}
                     <div style={{ marginBottom: '0.75rem' }}>
