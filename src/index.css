@@ -370,3 +370,37 @@ p {
     /* Le garde toujours au-dessus du reste */
   }
 }
+
+/* 📱 Mobile Navigation (Bottom Tab Bar) */
+@media (min-width: 769px) {
+  .mobile-only-nav {
+    display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .desktop-menu {
+    display: none !important;
+  }
+  
+  .navbar-container {
+    justify-content: center !important;
+  }
+  
+  .nav-logo {
+    height: 38px !important;
+  }
+  
+  /* Masquer le menu hamburger classique (on utilise maintenant la barre du bas) */
+  .mobile-menu-btn {
+    display: none !important;
+  }
+
+  main {
+    padding-bottom: 100px !important;
+  }
+  
+  footer {
+    display: none !important; /* On cache le footer sur mobile car la barre du bas remplit ce rôle */
+  }
+}
