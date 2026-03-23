@@ -93,13 +93,14 @@ const Login = () => {
             type="button"
             onClick={() => handleNumberClick(num)}
             style={{ 
-                width: '65px', height: '65px', borderRadius: '50%', border: '2px solid rgba(255,255,255,0.4)', 
-                background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', color: '#fff', 
+                width: '65px', height: '65px', borderRadius: '50%', border: '2px solid #f1f5f9', 
+                background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', color: '#1e293b', 
                 fontSize: '1.5rem', fontWeight: '800', cursor: 'pointer', display: 'flex', 
-                alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s'
+                alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
+                boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
             }}
-            onMouseDown={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
-            onMouseUp={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+            onMouseDown={(e) => { e.currentTarget.style.background = '#10b981'; e.currentTarget.style.color = '#fff'; }}
+            onMouseUp={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.8)'; e.currentTarget.style.color = '#1e293b'; }}
         >
             {num}
         </button>
@@ -108,16 +109,15 @@ const Login = () => {
     return (
         <div style={{ 
             minHeight: '100vh', 
-            background: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.8)), url('/login-bg.png')`,
-            backgroundSize: 'cover', backgroundPosition: 'center',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1.5rem', color: '#fff', fontFamily: "'Outfit', sans-serif"
+            background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1.5rem', color: '#1e293b', fontFamily: "'Outfit', sans-serif"
         }}>
             {/* Header Icon */}
             <div style={{ width: '60px', height: '60px', background: '#10b981', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem', marginTop: '1rem', boxShadow: '0 10px 20px rgba(16, 185, 129, 0.3)' }}>
-                <Lock size={30} strokeWidth={2.5} />
+                <Lock size={30} strokeWidth={2.5} color="#fff" />
             </div>
 
-            <h1 style={{ fontSize: '2.2rem', fontWeight: '900', marginBottom: '2rem', letterSpacing: '-1px' }}>Connexion</h1>
+            <h1 style={{ fontSize: '2.2rem', fontWeight: '900', marginBottom: '2rem', letterSpacing: '-1px', color: '#1e293b' }}>Connexion</h1>
 
             <div style={{ width: '100%', maxWidth: '380px' }}>
                 
@@ -125,13 +125,13 @@ const Login = () => {
                 <div style={{ display: 'flex', gap: '10px', marginBottom: '2rem' }}>
                     <button 
                         onClick={() => setRole('client')}
-                        style={{ flex: 1, padding: '0.8rem', borderRadius: '18px', border: `2px solid ${role === 'client' ? '#10b981' : 'rgba(255,255,255,0.2)'}`, background: role === 'client' ? '#10b981' : 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', color: '#fff', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: '0.3s' }}
+                        style={{ flex: 1, padding: '0.8rem', borderRadius: '18px', border: `2px solid ${role === 'client' ? '#10b981' : 'rgba(255,255,255,0.8)'}`, background: role === 'client' ? '#10b981' : 'rgba(255,255,255,0.7)', backdropFilter: 'blur(10px)', color: role === 'client' ? '#fff' : '#1e293b', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: '0.3s', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}
                     >
                         <User size={18} /> Client
                     </button>
                     <button 
                         onClick={() => setRole('technician')}
-                        style={{ flex: 1, padding: '0.8rem', borderRadius: '18px', border: `2px solid ${role === 'technician' ? '#10b981' : 'rgba(255,255,255,0.2)'}`, background: role === 'technician' ? '#10b981' : 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', color: '#fff', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: '0.3s' }}
+                        style={{ flex: 1, padding: '0.8rem', borderRadius: '18px', border: `2px solid ${role === 'technician' ? '#10b981' : 'rgba(255,255,255,0.8)'}`, background: role === 'technician' ? '#10b981' : 'rgba(255,255,255,0.7)', backdropFilter: 'blur(10px)', color: role === 'technician' ? '#fff' : '#1e293b', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: '0.3s', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}
                     >
                         <Briefcase size={18} /> Technicien
                     </button>
@@ -140,21 +140,21 @@ const Login = () => {
                 {isMobile ? (
                     /* Mobile PIN Login */
                     <div style={{ animation: 'fadeIn 0.5s ease' }}>
-                        <div style={{ position: 'relative', borderBottom: '2px solid rgba(255,255,255,0.4)', marginBottom: '2.5rem', paddingBottom: '0.8rem' }}>
-                            <Phone size={20} style={{ position: 'absolute', left: '0', color: 'rgba(255,255,255,0.6)' }} />
+                        <div style={{ position: 'relative', borderBottom: '2px solid #10b981', marginBottom: '2.5rem', paddingBottom: '0.8rem' }}>
+                            <Phone size={20} style={{ position: 'absolute', left: '0', color: '#10b981' }} />
                             <input 
                                 type="tel" value={phone} 
                                 onChange={(e) => setPhone(e.target.value)}
-                                style={{ width: '100%', paddingLeft: '2.5rem', background: 'transparent', border: 'none', color: '#fff', fontSize: '1.2rem', outline: 'none' }}
+                                style={{ width: '100%', paddingLeft: '2.5rem', background: 'transparent', border: 'none', color: '#1e293b', fontSize: '1.2rem', outline: 'none' }}
                                 placeholder="Téléphone"
                             />
                         </div>
 
                         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                            <p style={{ fontSize: '0.9rem', fontWeight: '700', marginBottom: '1rem', color: 'rgba(255,255,255,0.8)' }}>Code</p>
+                            <p style={{ fontSize: '0.9rem', fontWeight: '700', marginBottom: '1rem', color: '#64748b' }}>Code PIN</p>
                             <div style={{ display: 'flex', justifyContent: 'center', gap: '15px' }}>
                                 {[...Array(4)].map((_, i) => (
-                                    <div key={i} style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid #fff', background: pin.length > i ? '#fff' : 'transparent', transition: 'all 0.2s' }} />
+                                    <div key={i} style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid #10b981', background: pin.length > i ? '#10b981' : 'transparent', transition: 'all 0.2s' }} />
                                 ))}
                             </div>
                         </div>
@@ -167,7 +167,7 @@ const Login = () => {
                             <div /> {/* Placeholder for alignment matching Jobalma layout */}
                             <button 
                                 onClick={handleDelete}
-                                style={{ width: '65px', height: '65px', borderRadius: '50%', border: 'none', background: 'transparent', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                style={{ width: '65px', height: '65px', borderRadius: '50%', border: 'none', background: 'transparent', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                             >
                                 <Delete size={28} />
                             </button>
@@ -177,11 +177,11 @@ const Login = () => {
                     /* Desktop Email Login */
                     <form onSubmit={(e) => { e.preventDefault(); performLoginLogic(); }}>
                         <div style={{ marginBottom: '1rem' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700' }}>Email</label>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', color: '#1e293b' }}>Email</label>
                             <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} style={{ width: '100%', padding: '1rem', borderRadius: '15px', border: '2px solid #f1f5f9', outline: 'none', background: '#fff', color: '#333' }} placeholder="votre@mail.com" />
                         </div>
                         <div style={{ marginBottom: '1.5rem' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700' }}>Mot de passe</label>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', color: '#1e293b' }}>Mot de passe</label>
                             <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} style={{ width: '100%', padding: '1rem', borderRadius: '15px', border: '2px solid #f1f5f9', outline: 'none', background: '#fff', color: '#333' }} placeholder="••••••••" />
                         </div>
                         <button type="submit" style={{ width: '100%', padding: '1.2rem', background: '#10b981', color: '#fff', border: 'none', borderRadius: '20px', fontWeight: '900', fontSize: '1.1rem', cursor: 'pointer' }}>
@@ -191,9 +191,9 @@ const Login = () => {
                 )}
 
                 <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-                    <p style={{ fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer', marginBottom: '1rem' }}>Mot de passe oublié ?</p>
-                    <p style={{ fontSize: '0.95rem', color: 'rgba(255,255,255,0.7)', fontWeight: '600' }}>
-                        Pas encore de compte ? <Link to="/register" style={{ color: '#fff', fontWeight: '900', textDecoration: 'none', borderBottom: '2px solid #10b981' }}>Inscription</Link>
+                    <p style={{ fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer', marginBottom: '1rem', color: '#10b981' }}>Mot de passe oublié ?</p>
+                    <p style={{ fontSize: '0.95rem', color: '#64748b', fontWeight: '600' }}>
+                        Pas encore de compte ? <Link to="/register" style={{ color: '#10b981', fontWeight: '900', textDecoration: 'none', borderBottom: '2px solid #10b981' }}>Inscription</Link>
                     </p>
                 </div>
 
