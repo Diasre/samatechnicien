@@ -403,4 +403,12 @@ p {
   footer {
     display: none !important; /* On cache le footer sur mobile car la barre du bas remplit ce rôle */
   }
+
+  /* Cache le chatbot sur mobile */
+  #bp-webchat-container, 
+  .bp-widget-widget, 
+  .bp-widget-container, 
+  iframe#bp-webchat { 
+    display: none !important; 
+  }
 }
