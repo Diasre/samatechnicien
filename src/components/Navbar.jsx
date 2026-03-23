@@ -65,12 +65,9 @@ const Navbar = () => {
                     <Link to="/technicians" className={`nav-link ${isActive('/technicians')}`}>Trouver un technicien</Link>
                     <Link to="/marketplace" className={`nav-link ${isActive('/marketplace')}`}>Boutique des techniciens</Link>
                     {user?.role === 'technician' && (
-                        <>
-                            <Link to="/expert-dashboard" className={`nav-link ${isActive('/expert-dashboard')}`} style={{ color: 'var(--primary-color)', fontWeight: '600' }}>Mon profil</Link>
-                            <Link to="/forum" className={`nav-link ${isActive('/forum')}`} style={{ color: 'var(--primary-color)', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <MessageSquare size={16} /> Communauté
-                            </Link>
-                        </>
+                        <Link to="/forum" className={`nav-link ${isActive('/forum')}`} style={{ color: 'var(--primary-color)', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <MessageSquare size={16} /> Communauté
+                        </Link>
                     )}
                 </div>
 
@@ -89,28 +86,17 @@ const Navbar = () => {
                             )}
                         </Link>
 
-                        {isLoggedIn && (
-                            <Link to="/chat" style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center', position: 'relative' }} title="Mes Messages">
-                                <MessageCircle size={18} />
-                            </Link>
-                        )}
-
                         {isLoggedIn ? (
-                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                                <Link to="/profile" style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center' }} title="Paramètres">
-                                    <Settings size={18} />
-                                </Link>
-                                <button
-                                    onClick={() => {
-                                        localStorage.removeItem('user');
-                                        window.location.href = '/';
-                                    }}
-                                    className="btn btn-outline"
-                                    style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', borderColor: '#eee', color: '#666' }}
-                                >
-                                    Deconnexion
-                                </button>
-                            </div>
+                            <button
+                                onClick={() => {
+                                    localStorage.removeItem('user');
+                                    window.location.href = '/';
+                                }}
+                                className="btn btn-outline"
+                                style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', borderColor: '#eee', color: '#666' }}
+                            >
+                                Deconnexion
+                            </button>
                         ) : (
                             <Link to="/login" className="btn btn-primary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>
                                 IN
@@ -139,12 +125,9 @@ const Navbar = () => {
                 <Link to="/technicians" onClick={toggleMenu} className={`nav-link ${isActive('/technicians')}`} style={{ textDecoration: 'none', color: 'var(--text-primary)', fontSize: '1.25rem', fontWeight: '600' }}>Trouver un technicien</Link>
                 <Link to="/marketplace" onClick={toggleMenu} className={`nav-link ${isActive('/marketplace')}`} style={{ textDecoration: 'none', color: 'var(--text-primary)', fontSize: '1.25rem', fontWeight: '600' }}>Boutique des techniciens</Link>
                 {user?.role === 'technician' && (
-                    <>
-                        <Link to="/expert-dashboard" onClick={toggleMenu} className={`nav-link ${isActive('/expert-dashboard')}`} style={{ textDecoration: 'none', color: 'var(--primary-color)', fontSize: '1.25rem', fontWeight: '700' }}>Mon profil</Link>
-                        <Link to="/forum" onClick={toggleMenu} className={`nav-link ${isActive('/forum')}`} style={{ textDecoration: 'none', color: 'var(--primary-color)', fontSize: '1.25rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <MessageSquare size={20} /> Communauté
-                        </Link>
-                    </>
+                    <Link to="/forum" onClick={toggleMenu} className={`nav-link ${isActive('/forum')}`} style={{ textDecoration: 'none', color: 'var(--primary-color)', fontSize: '1.25rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <MessageSquare size={20} /> Communauté
+                    </Link>
                 )}
                 <hr style={{ border: 'none', borderTop: '1px solid #eee', width: '100%' }} />
                 {isLoggedIn && (

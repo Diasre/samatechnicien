@@ -18,8 +18,7 @@ const MobileNav = () => {
             label: isTechnician ? 'Publier' : 'Pros',
             highlight: true 
         },
-        { path: '/chat', icon: MessageCircle, label: 'Messages' },
-        { path: isTechnician ? '/expert-dashboard' : '/profile', icon: User, label: 'Profil' }
+        { path: '/chat', icon: MessageCircle, label: 'Messages' }
     ];
 
     return (
