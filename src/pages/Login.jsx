@@ -1,74 +1,70 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { Lock, Eye, EyeOff, Mail, User } from 'lucide-react';
+import { Lock, Eye, EyeOff, Mail, User, Phone, X, Delete, ChevronLeft } from 'lucide-react';
 
 const Login = () => {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [username, setUsername] = useState('');
-    const [pinCode, setPinCode] = useState('');
-    const [loginMethod, setLoginMethod] = useState(window.innerWidth <= 768 ? 'pin' : 'email'); // Default to PIN on mobile
-    const [showPassword, setShowPassword] = useState(false);
-    const [showResend, setShowResend] = useState(false);
     const isMobile = window.innerWidth <= 768;
     const navigate = useNavigate();
+    
+    // State
+    const [role, setRole] = useState('client');
+    const [phone, setPhone] = useState('');
+    const [pin, setPin] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [loginMethod, setLoginMethod] = useState(isMobile ? 'pin' : 'email');
+    const [showPassword, setShowPassword] = useState(false);
 
-    const performLoginLogic = async (loginId, loginCredential, isPinLogin = false) => {
+    useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            const parsedUser = JSON.parse(storedUser);
+            navigate(parsedUser.role === 'admin' ? '/dashboard' : '/');
+        }
+    }, [navigate]);
+
+    const handleNumberClick = (num) => {
+        if (pin.length < 4) setPin(prev => prev + num);
+    };
+
+    const handleDelete = () => {
+        setPin(prev => prev.slice(0, -1));
+    };
+
+    const performLoginLogic = async () => {
         try {
-            let authData = { user: null };
             let userData = null;
 
-            if (isPinLogin) {
-                // 🔐 LOGIN PAR CODE PIN
+            if (loginMethod === 'pin') {
+                // 🔐 LOGIN PAR TÉLÉPHONE + PIN
                 const { data, error: pinError } = await supabase
                     .from('users')
                     .select('*')
-                    .eq('username', loginId.toLowerCase().trim())
-                    .eq('pin_code', loginCredential)
+                    .eq('phone', phone.trim())
+                    .eq('pin_code', pin)
+                    .eq('role', role)
                     .single();
 
                 if (pinError || !data) {
-                    alert("Identifiant ou Code PIN incorrect.");
-                    return;
+                    return alert("Téléphone ou Code PIN incorrect pour ce profil.");
                 }
                 userData = data;
             } else {
-                // 🚀 LOGIN CLASSIQUE (Email + Password)
-                const { data, error: authError } = await supabase.auth.signInWithPassword({
-                    email: loginId,
-                    password: loginCredential
+                // 🚀 LOGIN CLASSIQUE
+                const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+                    email,
+                    password
                 });
-                authData = data;
 
-                if (authError) {
-                    if (authError.message.includes("Email not confirmed")) {
-                        alert("Email non confirmé. Vérifiez votre boîte de réception.");
-                        setShowResend(true);
-                        return;
-                    }
-                    // Continue to legacy check...
-                }
+                if (authError) return alert(authError.message);
 
-                const { data: dbUser, error: userError } = await supabase
-                    .from('users')
-                    .select('*')
-                    .ilike('email', loginId)
-                    .single();
-                
-                if (userError || !dbUser) {
-                    alert("Identifiants incorrects.");
-                    return;
-                }
+                const { data: dbUser } = await supabase.from('users').select('*').ilike('email', email).single();
                 userData = dbUser;
             }
 
-            if (userData.isblocked) {
-                alert('Votre compte est bloqué.');
-                return;
-            }
+            if (userData.isblocked) return alert('Votre compte est bloqué.');
 
-            // Normalisation pour le frontend
             const mappedUser = {
                 ...userData,
                 fullName: userData.fullname || userData.fullName,
@@ -85,87 +81,141 @@ const Login = () => {
         }
     };
 
-    const handleResend = async () => {
-        if (!email) return alert("Entrez votre email.");
-        const { error } = await supabase.auth.resend({ type: 'signup', email });
-        if (error) alert(error.message);
-        else alert("Email envoyé !");
-    };
+    // Auto-login on 4th PIN digit
+    useEffect(() => {
+        if (pin.length === 4 && loginMethod === 'pin' && phone.length >= 8) {
+            performLoginLogic();
+        }
+    }, [pin]);
+
+    const PinButton = ({ num }) => (
+        <button 
+            type="button"
+            onClick={() => handleNumberClick(num)}
+            style={{ 
+                width: '65px', height: '65px', borderRadius: '50%', border: '2px solid rgba(255,255,255,0.4)', 
+                background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', color: '#fff', 
+                fontSize: '1.5rem', fontWeight: '800', cursor: 'pointer', display: 'flex', 
+                alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s'
+            }}
+            onMouseDown={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
+            onMouseUp={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+        >
+            {num}
+        </button>
+    );
 
     return (
-        <div style={{
-            display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', padding: '1rem',
-            background: 'radial-gradient(circle at center, #1a4d2e 0%, #0c2b1a 100%)'
+        <div style={{ 
+            minHeight: '100vh', 
+            background: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.8)), url('/login-bg.png')`,
+            backgroundSize: 'cover', backgroundPosition: 'center',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1.5rem', color: '#fff', fontFamily: "'Outfit', sans-serif"
         }}>
-            <div style={{
-                width: '100%', maxWidth: '400px', padding: '2.5rem 2rem', borderRadius: '35px',
-                backgroundColor: '#fff', boxShadow: '0 20px 40px rgba(0,0,0,0.4)'
-            }}>
-                <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-                    <div style={{ width: '70px', height: '70px', background: '#10b981', borderRadius: '20px', margin: '0 auto 1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-                        <Lock size={32} />
-                    </div>
-                    <h2 style={{ fontSize: '1.8rem', fontWeight: '900', color: '#111' }}>Connexion</h2>
-                    <p style={{ color: '#666', fontSize: '0.9rem' }}>Choisissez votre mode d'accès</p>
+            {/* Header Icon */}
+            <div style={{ width: '60px', height: '60px', background: '#10b981', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem', marginTop: '1rem', boxShadow: '0 10px 20px rgba(16, 185, 129, 0.3)' }}>
+                <Lock size={30} strokeWidth={2.5} />
+            </div>
+
+            <h1 style={{ fontSize: '2.2rem', fontWeight: '900', marginBottom: '2rem', letterSpacing: '-1px' }}>Connexion</h1>
+
+            <div style={{ width: '100%', maxWidth: '380px' }}>
+                
+                {/* Role Switcher */}
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '2rem' }}>
+                    <button 
+                        onClick={() => setRole('client')}
+                        style={{ flex: 1, padding: '0.8rem', borderRadius: '18px', border: `2px solid ${role === 'client' ? '#10b981' : 'rgba(255,255,255,0.2)'}`, background: role === 'client' ? '#10b981' : 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', color: '#fff', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: '0.3s' }}
+                    >
+                        <User size={18} /> Client
+                    </button>
+                    <button 
+                        onClick={() => setRole('technician')}
+                        style={{ flex: 1, padding: '0.8rem', borderRadius: '18px', border: `2px solid ${role === 'technician' ? '#10b981' : 'rgba(255,255,255,0.2)'}`, background: role === 'technician' ? '#10b981' : 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', color: '#fff', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: '0.3s' }}
+                    >
+                        <Briefcase size={18} /> Technicien
+                    </button>
                 </div>
 
-                {/* Toggle - Hidden on Mobile */}
-                {!isMobile && (
-                    <div style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem', background: '#f1f5f9', padding: '4px', borderRadius: '15px' }}>
-                        <button onClick={() => setLoginMethod('email')} style={{ flex: 1, padding: '0.6rem', borderRadius: '12px', border: 'none', cursor: 'pointer', background: loginMethod === 'email' ? '#fff' : 'transparent', color: loginMethod === 'email' ? '#10b981' : '#64748b', fontWeight: 'bold' }}>
-                            Email
-                        </button>
-                        <button onClick={() => setLoginMethod('pin')} style={{ flex: 1, padding: '0.6rem', borderRadius: '12px', border: 'none', cursor: 'pointer', background: loginMethod === 'pin' ? '#fff' : 'transparent', color: loginMethod === 'pin' ? '#10b981' : '#64748b', fontWeight: 'bold' }}>
-                            Code PIN
-                        </button>
+                {isMobile ? (
+                    /* Mobile PIN Login */
+                    <div style={{ animation: 'fadeIn 0.5s ease' }}>
+                        <div style={{ position: 'relative', borderBottom: '2px solid rgba(255,255,255,0.4)', marginBottom: '2.5rem', paddingBottom: '0.8rem' }}>
+                            <Phone size={20} style={{ position: 'absolute', left: '0', color: 'rgba(255,255,255,0.6)' }} />
+                            <input 
+                                type="tel" value={phone} 
+                                onChange={(e) => setPhone(e.target.value)}
+                                style={{ width: '100%', paddingLeft: '2.5rem', background: 'transparent', border: 'none', color: '#fff', fontSize: '1.2rem', outline: 'none' }}
+                                placeholder="Téléphone"
+                            />
+                        </div>
+
+                        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                            <p style={{ fontSize: '0.9rem', fontWeight: '700', marginBottom: '1rem', color: 'rgba(255,255,255,0.8)' }}>Code</p>
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: '15px' }}>
+                                {[...Array(4)].map((_, i) => (
+                                    <div key={i} style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid #fff', background: pin.length > i ? '#fff' : 'transparent', transition: 'all 0.2s' }} />
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* PIN Pad */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', placeItems: 'center', marginBottom: '2rem' }}>
+                            {[1, 7, 5, 0, 6, 9, 4, 3, 8, 2].map(num => (
+                                <PinButton key={num} num={num} />
+                            ))}
+                            <div /> {/* Placeholder for alignment matching Jobalma layout */}
+                            <button 
+                                onClick={handleDelete}
+                                style={{ width: '65px', height: '65px', borderRadius: '50%', border: 'none', background: 'transparent', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                            >
+                                <Delete size={28} />
+                            </button>
+                        </div>
                     </div>
+                ) : (
+                    /* Desktop Email Login */
+                    <form onSubmit={(e) => { e.preventDefault(); performLoginLogic(); }}>
+                        <div style={{ marginBottom: '1rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700' }}>Email</label>
+                            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} style={{ width: '100%', padding: '1rem', borderRadius: '15px', border: '2px solid #f1f5f9', outline: 'none', background: '#fff', color: '#333' }} placeholder="votre@mail.com" />
+                        </div>
+                        <div style={{ marginBottom: '1.5rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700' }}>Mot de passe</label>
+                            <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} style={{ width: '100%', padding: '1rem', borderRadius: '15px', border: '2px solid #f1f5f9', outline: 'none', background: '#fff', color: '#333' }} placeholder="••••••••" />
+                        </div>
+                        <button type="submit" style={{ width: '100%', padding: '1.2rem', background: '#10b981', color: '#fff', border: 'none', borderRadius: '20px', fontWeight: '900', fontSize: '1.1rem', cursor: 'pointer' }}>
+                            Se connecter
+                        </button>
+                    </form>
                 )}
 
-                <form onSubmit={(e) => {
-                    e.preventDefault();
-                    if (loginMethod === 'email') performLoginLogic(email, password, false);
-                    else performLoginLogic(username, pinCode, true);
-                }}>
-                    {loginMethod === 'email' ? (
-                        <>
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: '600', fontSize: '0.85rem' }}>Email</label>
-                                <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} style={{ width: '100%', padding: '0.8rem', borderRadius: '15px', border: '2px solid #eef2f1', outline: 'none' }} placeholder="moussa@mail.com" />
-                            </div>
-                            <div style={{ marginBottom: '1.5rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: '600', fontSize: '0.85rem' }}>Mot de passe</label>
-                                <div style={{ position: 'relative' }}>
-                                    <input type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} style={{ width: '100%', padding: '0.8rem', borderRadius: '15px', border: '2px solid #eef2f1', outline: 'none' }} placeholder="••••••••" />
-                                    <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8' }}>
-                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                    </button>
-                                </div>
-                            </div>
-                        </>
-                    ) : (
-                        <>
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: '600', fontSize: '0.85rem' }}>Identifiant mobile (@...)</label>
-                                <input type="text" required value={username} onChange={(e) => setUsername(e.target.value)} style={{ width: '100%', padding: '0.8rem', borderRadius: '15px', border: '2px solid #eef2f1', outline: 'none' }} placeholder="ex: moussa221" />
-                            </div>
-                            <div style={{ marginBottom: '1.5rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: '600', fontSize: '0.85rem' }}>Code PIN (4 chiffres)</label>
-                                <input type="password" maxLength="4" required value={pinCode} onChange={(e) => setPinCode(e.target.value.replace(/\D/g, '').slice(0, 4))} style={{ width: '100%', padding: '0.8rem', borderRadius: '15px', border: '2px solid #eef2f1', fontSize: '1.5rem', textAlign: 'center', letterSpacing: '10px', outline: 'none' }} placeholder="XXXX" />
-                            </div>
-                        </>
-                    )}
+                <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+                    <p style={{ fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer', marginBottom: '1rem' }}>Mot de passe oublié ?</p>
+                    <p style={{ fontSize: '0.95rem', color: 'rgba(255,255,255,0.7)', fontWeight: '600' }}>
+                        Pas encore de compte ? <Link to="/register" style={{ color: '#fff', fontWeight: '900', textDecoration: 'none', borderBottom: '2px solid #10b981' }}>Inscription</Link>
+                    </p>
+                </div>
 
-                    <button type="submit" style={{ width: '100%', padding: '1rem', background: '#10b981', color: '#fff', border: 'none', borderRadius: '15px', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer', boxShadow: '0 10px 15px rgba(16, 185, 129, 0.3)' }}>
-                        Se connecter
-                    </button>
-                </form>
-
-                <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.9rem', color: '#666' }}>
-                    Pas de compte ? <Link to="/register" style={{ color: '#10b981', fontWeight: 'bold', textDecoration: 'none' }}>S'inscrire</Link>
-                </p>
             </div>
+
+            {/* Icons mapping needed for role switcher */}
+            <style>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+            `}</style>
         </div>
     );
 };
+
+// Generic briefcase icon since lucide might skip it in some builds
+const Briefcase = ({ size, ...props }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+    </svg>
+);
 
 export default Login;
