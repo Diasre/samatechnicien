@@ -37,16 +37,16 @@ const Login = () => {
                 if (password.length < 4) return alert("Veuillez entrer votre mot de passe.");
 
                 // Recherche dans la table users par téléphone + mot de passe
-                const { data: userRecord, error: findError } = await supabase
+                const { data: userRecords, error: findError } = await supabase
                     .from('users')
                     .select('*')
                     .eq('phone', phoneClean)
                     .eq('password', password)
-                    .single();
+                    .limit(1);
 
-                if (userRecord) {
-                    userData = userRecord;
-                    setRole(userRecord.role);
+                if (userRecords && userRecords.length > 0) {
+                    userData = userRecords[0];
+                    setRole(userRecords[0].role);
                 } else {
                     // 🛡️ FALLBACK: Authentification Supabase par mail dummy ou email réel
                     const vEmail = `${phoneClean}@samatechnicien.dummy`;
@@ -59,17 +59,18 @@ const Login = () => {
 
                     if (!authResult?.user) {
                         // On tente avec l'email si on en trouve un dans la base
-                        const { data: dbUser } = await supabase.from('users').select('email').eq('phone', phoneClean).single();
+                        const { data: dbUsers } = await supabase.from('users').select('email, id').eq('phone', phoneClean).limit(1);
+                        const dbUser = dbUsers && dbUsers.length > 0 ? dbUsers[0] : null;
                         if (dbUser?.email) {
                             const { data: retry } = await supabase.auth.signInWithPassword({
                                 email: dbUser.email,
                                 password: finalPassword
                             });
-                            userData = (await supabase.from('users').select('*').eq('id', retry.user.id).single()).data;
+                            userData = retry?.user ? (await supabase.from('users').select('*').eq('id', retry.user.id).limit(1)).data?.[0] : null;
                         }
                     } else if (authResult.user) {
-                        const { data: sync } = await supabase.from('users').select('*').eq('id', authResult.user.id).single();
-                        userData = sync;
+                        const { data: syncData } = await supabase.from('users').select('*').eq('id', authResult.user.id).limit(1);
+                        userData = syncData && syncData.length > 0 ? syncData[0] : null;
                     }
                 }
 
