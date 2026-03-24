@@ -29,7 +29,8 @@ const Register = () => {
         district: '',
         username: '',
         pinCode: '',
-        image: null
+        image: null,
+        acceptedTerms: false
     });
 
     const handleChange = (e) => {
@@ -43,6 +44,10 @@ const Register = () => {
 
     const handleSubmit = async (e) => {
         if (e) e.preventDefault();
+        
+        if (!formData.acceptedTerms) {
+            return alert("Veuillez accepter les conditions générales pour continuer.");
+        }
         const finalEmail = isMobile ? `${formData.username.toLowerCase().trim()}@samatechnicien.dummy` : formData.email;
         const finalPassword = isMobile ? `PIN_${formData.pinCode}_SamaTech221` : formData.password;
 
@@ -208,13 +213,21 @@ const Register = () => {
                                 </div>
                             </div>
                         )}
-
-                        {!isMobile && (
-                            <div style={{ marginBottom: '1.2rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b' }}>Email</label>
-                                <input type="email" name="email" value={formData.email} onChange={handleChange} style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: 'rgba(255,255,255,0.8)', color: '#1e293b', outline: 'none' }} placeholder="votre@mail.com" />
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '1.5rem', cursor: 'pointer' }} onClick={() => setFormData({ ...formData, acceptedTerms: !formData.acceptedTerms })}>
+                            <div style={{ 
+                                width: '24px', height: '24px', borderRadius: '8px', 
+                                border: `2px solid ${formData.acceptedTerms ? '#10b981' : '#cbd5e1'}`,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: formData.acceptedTerms ? '#10b981' : 'transparent',
+                                transition: 'all 0.2s ease'
+                            }}>
+                                {formData.acceptedTerms && <CheckCircle2 size={16} color="#fff" />}
                             </div>
-                        )}
+                            <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>
+                                J'accepte les <Link to="/terms" style={{ color: '#10b981', fontWeight: '700' }}>Conditions Générales</Link> et la <Link to="/terms" style={{ color: '#10b981', fontWeight: '700' }}>Politique de Confidentialité</Link>
+                            </span>
+                        </div>
 
                         <div style={{ display: 'flex', gap: '15px', marginTop: '1.5rem' }}>
                             <button 
