@@ -99,8 +99,9 @@ const Register = () => {
                     role: formData.role,
                     city: formData.city,
                     district: formData.district,
-                    username: formData.phone.trim(), // On utilise le numéro comme identifiant par défaut
-                    pin_code: formData.pinCode,
+                    username: formData.phone.trim(), 
+                    pin_code: formData.pinCode, // Pour l'iPhone
+                    password: formData.pinCode, // Pour la visibilité dans ta table (comme sur la photo)
                     email: finalEmail,
                     specialty: formData.role === 'technician' ? (formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty) : null,
                     image: imageUrl,
