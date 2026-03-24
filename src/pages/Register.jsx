@@ -112,6 +112,7 @@ const Register = () => {
 
                 if (dbError) {
                     console.error('Database sync error (Upsert):', dbError.message);
+                    return alert("Erreur Base: " + dbError.message);
                 }
             }
 
