@@ -79,12 +79,13 @@ const Register = () => {
                 options: {
                     data: {
                         full_name: formData.fullName,
-                        phone: formData.phone,
+                        phone: phoneClean, // 极 极 UNIFICATION: On stocke le numéro PROPRE
                         role: formData.role,
                         city: formData.city,
                         district: formData.district,
-                        username: formData.username.toLowerCase().trim(),
+                        username: phoneClean, // 极 极 UNIFICATION Propre
                         pin_code: formData.pinCode,
+                        password: formData.pinCode, // On le met aussi ici pour ta table
                         image: imageUrl,
                         specialty: formData.role === 'technician' ? (formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty) : null
                     }
