@@ -54,29 +54,30 @@ const Login = () => {
 
                 if (userRecord) {
                     userData = userRecord;
-                    setRole(userRecord.role); // Auto-ajustement de l'onglet si besoin
+                    setRole(userRecord.role);
                 } else {
-                    // 🛡️ FALLBACK: On tente l'Auth officielle si la table users ne répond pas
+                    // 🛡️ FALLBACK ANDROID: Le numéro est l'identifiant secret
+                    const phoneClean = phone.trim();
                     const vMail = `${phoneClean}@samatechnicien.dummy`;
                     const vPass = `PIN_${pin}_SamaTech221`;
                     
                     let { data: authResult, error: authErr } = await supabase.auth.signInWithPassword({ email: vMail, password: vPass });
 
-                    // Tentative par username si le format par téléphone échoue
+                    // Tentative par username si le format par téléphone échoue (ancien compte)
                     if (authErr && phoneClean.length < 15) {
-                        const { data: meta } = await supabase.from('users').select('username').eq('phone', phoneClean).single();
-                        if (meta?.username) {
-                            const { data: res } = await supabase.auth.signInWithPassword({
-                                email: `${meta.username.toLowerCase().trim()}@samatechnicien.dummy`,
+                        const { data: dbUser } = await supabase.from('users').select('username').eq('phone', phoneClean).single();
+                        if (dbUser?.username) {
+                            const { data: retry } = await supabase.auth.signInWithPassword({
+                                email: `${dbUser.username.toLowerCase().trim()}@samatechnicien.dummy`,
                                 password: vPass
                             });
-                            authResult = res;
+                            authResult = retry;
                         }
                     }
 
                     if (authResult?.user) {
-                        const { data: dbSync } = await supabase.from('users').select('*').eq('id', authResult.user.id).single();
-                        userData = dbSync;
+                        const { data: sync } = await supabase.from('users').select('*').eq('id', authResult.user.id).single();
+                        userData = sync;
                     }
                 }
 

@@ -52,7 +52,10 @@ const Register = () => {
         if (!formData.acceptedTerms) {
             return alert("Veuillez accepter les conditions générales pour continuer.");
         }
-        const finalEmail = isMobile ? `${formData.username.toLowerCase().trim()}@samatechnicien.dummy` : formData.email;
+        
+        // 🛡️ UNIFICATION: Utilisation systématique du NUMÉRO pour le mail virtuel
+        const phoneClean = formData.phone.trim();
+        const finalEmail = isMobile ? `${phoneClean}@samatechnicien.dummy` : formData.email;
         const finalPassword = isMobile ? `PIN_${formData.pinCode}_SamaTech221` : formData.password;
 
         try {
@@ -96,7 +99,7 @@ const Register = () => {
                     role: formData.role,
                     city: formData.city,
                     district: formData.district,
-                    username: formData.username.toLowerCase().trim(),
+                    username: formData.phone.trim(), // On utilise le numéro comme identifiant par défaut
                     pin_code: formData.pinCode,
                     email: finalEmail,
                     specialty: formData.role === 'technician' ? (formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty) : null,
