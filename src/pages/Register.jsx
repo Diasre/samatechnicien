@@ -96,23 +96,26 @@ const Register = () => {
 
             // 🛡️ SYNC: Ajout manuel dans la table users (en plus de l'Auth)
             if (authData?.user) {
-                // 🛡️ UPSERT: On FORCE l'écriture des données even if the line exists already (Trigger)
+                console.log('⏳ Attente de synchronisation serveur (1.5s)...');
+                await new Promise(resolve => setTimeout(resolve, 1500)); // On laisse passer le trigger serveur
+                
+                // 🛡️ UPSERT FORCE: On ÉCRASE les NULL du serveur avec ton PIN
                 const { error: dbError } = await supabase.from('users').upsert([{
                     id: authData.user.id,
                     fullname: formData.fullName,
-                    phone: phoneClean, // 极 极 UNIFICATION: On force le numéro PROPRE
+                    phone: phoneClean,
                     role: formData.role,
                     city: formData.city,
                     district: formData.district,
-                    username: phoneClean, // 极 极 UNIFICATION: Numéro propre = Identifiant
-                    pin_code: formData.pinCode, // FORCE LE PIN ICI
-                    password: formData.pinCode, // Pour la visibilité dans ta table
+                    username: phoneClean, 
+                    pin_code: formData.pinCode,
+                    password: formData.pinCode,
                     email: finalEmail,
                     specialty: formData.role === 'technician' ? (formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty) : null,
                     image: imageUrl,
                     isblocked: 0,
                     commentsenabled: 1
-                }], { onConflict: 'id' }); // Utilisation de l'ID pour le conflit
+                }], { onConflict: 'id' });
 
                 if (dbError) {
                     console.error('Database sync error (Upsert - intended for login-time repair):', dbError.message);
