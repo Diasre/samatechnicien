@@ -271,7 +271,7 @@ const ExpertDashboard = () => {
                 {!editMode && (
                     <div style={{ display: 'flex', gap: '0.8rem' }}>
                         <Link to="/technicians" className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', fontWeight: 'bold', borderRadius: '12px' }}>
-                            <Users size={18} /> Trouver un technicien
+                            <Users size={18} /> Trouver un collègue
                         </Link>
                         <button className="btn btn-primary" onClick={() => setEditMode(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', borderRadius: '12px' }}>
                             <Settings size={18} /> Paramètres
