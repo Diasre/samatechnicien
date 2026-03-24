@@ -95,15 +95,15 @@ const Register = () => {
 
             // 🛡️ SYNC: Ajout manuel dans la table users (en plus de l'Auth)
             if (authData?.user) {
-                // 🛡️ UPSERT: On FORCE l'écriture des données même si la ligne existe déjà (Trigger)
+                // 🛡️ UPSERT: On FORCE l'écriture des données even if the line exists already (Trigger)
                 const { error: dbError } = await supabase.from('users').upsert([{
                     id: authData.user.id,
                     fullname: formData.fullName,
-                    phone: formData.phone.trim(),
+                    phone: phoneClean, // 极 极 UNIFICATION: On force le numéro PROPRE
                     role: formData.role,
                     city: formData.city,
                     district: formData.district,
-                    username: formData.phone.trim(), 
+                    username: phoneClean, // 极 极 UNIFICATION: Numéro propre = Identifiant
                     pin_code: formData.pinCode, // FORCE LE PIN ICI
                     password: formData.pinCode, // Pour la visibilité dans ta table
                     email: finalEmail,
@@ -131,11 +131,11 @@ const Register = () => {
                     const { error: upErr } = await supabase.from('users').upsert([{
                         id: authData.user.id,
                         fullname: formData.fullName,
-                        phone: phoneClean,
+                        phone: phoneClean, // On utilise le numéro propre !
                         role: formData.role,
                         city: formData.city,
                         district: formData.district,
-                        username: phoneClean, 
+                        username: phoneClean, // Indispensable pour Diaspora/Dias
                         pin_code: formData.pinCode,
                         password: formData.pinCode,
                         email: finalEmail,
