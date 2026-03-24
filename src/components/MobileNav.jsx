@@ -4,7 +4,15 @@ import { Home, ShoppingBag, PlusSquare, MessageCircle, User, Users } from 'lucid
 
 const MobileNav = () => {
     const location = useLocation();
-    const user = JSON.parse(localStorage.getItem('user'));
+    
+    let user = null;
+    try {
+        const stored = localStorage.getItem('user');
+        if (stored) user = JSON.parse(stored);
+    } catch (e) {
+        console.error('Mobile storage blocked:', e);
+    }
+    
     const isTechnician = user?.role === 'technician';
 
     const isActive = (path) => location.pathname === path;

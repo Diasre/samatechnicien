@@ -10,8 +10,14 @@ const Navbar = () => {
 
     React.useEffect(() => {
         const updateCount = () => {
-            const cart = JSON.parse(localStorage.getItem('cart')) || [];
-            setCartCount(cart.length);
+            try {
+                const storedCart = localStorage.getItem('cart');
+                const cart = storedCart ? JSON.parse(storedCart) : [];
+                setCartCount(cart.length);
+            } catch (e) {
+                console.error('Cart access blocked:', e);
+                setCartCount(0);
+            }
         };
         updateCount();
         window.addEventListener('cartUpdated', updateCount);
@@ -23,7 +29,14 @@ const Navbar = () => {
     const isActive = (path) => location.pathname === path ? 'active-link' : '';
 
     const path = location.pathname.toLowerCase().replace(/\/$/, '') || '/';
-    const user = JSON.parse(localStorage.getItem('user'));
+    
+    let user = null;
+    try {
+        const stored = localStorage.getItem('user');
+        if (stored) user = JSON.parse(stored);
+    } catch (e) {
+        console.error('User session access denied:', e);
+    }
     const isLoggedIn = !!user;
 
     // It's strictly an entry page if you're not logged in, OR if you're on login/register
