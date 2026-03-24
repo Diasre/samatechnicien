@@ -113,11 +113,41 @@ const Register = () => {
 
                 if (dbError) {
                     console.error('Database sync error (Upsert - intended for login-time repair):', dbError.message);
-                    // On ne bloque plus l'utilisateur ici car Login.jsx s'occupera de la réparation magique !
                 }
             }
 
-            alert(isMobile ? `Bienvenue ${formData.fullName} ! Connectez-vous maintenant pour activer votre profil.` : "Inscription réussie ! Connectez-vous pour continuer.");
+            // 🛡️ AUTO-LOGIN (Mobile ONLY): Forcer la connexion pour activer le profil immédiatement !
+            if (isMobile) {
+                console.log('🚄 Auto-Login en cours pour activation...');
+                const { error: loginError } = await supabase.auth.signInWithPassword({
+                    email: finalEmail,
+                    password: finalPassword
+                });
+                
+                if (!loginError) {
+                    // On retente l'upsert avec les DROITS de connexion !
+                    await supabase.from('users').upsert([{
+                        id: authData.user.id,
+                        fullname: formData.fullName,
+                        phone: phoneClean,
+                        role: formData.role,
+                        city: formData.city,
+                        district: formData.district,
+                        username: phoneClean, 
+                        pin_code: formData.pinCode,
+                        password: formData.pinCode,
+                        email: finalEmail,
+                        isblocked: 0,
+                        commentsenabled: 1
+                    }], { onConflict: 'id' });
+                    
+                    alert(`Bienvenue ${formData.fullName} ! Votre profil est activé.`);
+                    navigate('/expert-dashboard'); // On les envoie direct au dashboard !
+                    return;
+                }
+            }
+
+            alert("Inscription réussie ! Connectez-vous pour continuer.");
             navigate('/login');
         } catch (error) {
             console.error('Registration error:', error);
