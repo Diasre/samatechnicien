@@ -190,7 +190,9 @@ const Login = () => {
                 </div>
 
                 <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-                    <p style={{ fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer', marginBottom: '1rem', color: '#10b981' }}>Mot de passe oublié ?</p>
+                    <Link to="/forgot-password" style={{ display: 'block', fontSize: '0.95rem', fontWeight: '700', textDecoration: 'none', marginBottom: '1rem', color: '#10b981' }}>
+                        Mot de passe oublié ?
+                    </Link>
                     <p style={{ fontSize: '0.95rem', color: '#64748b', fontWeight: '600' }}>
                         Pas encore de compte ? <Link to="/register" style={{ color: '#10b981', fontWeight: '900', textDecoration: 'none', borderBottom: '2px solid #10b981' }}>Inscription</Link>
                     </p>
