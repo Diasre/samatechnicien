@@ -92,26 +92,26 @@ const Register = () => {
 
             // 🛡️ SYNC: Ajout manuel dans la table users (en plus de l'Auth)
             if (authData?.user) {
-                const { error: dbError } = await supabase.from('users').insert([{
+                // 🛡️ UPSERT: On FORCE l'écriture des données même si la ligne existe déjà (Trigger)
+                const { error: dbError } = await supabase.from('users').upsert([{
                     id: authData.user.id,
                     fullname: formData.fullName,
-                    phone: formData.phone,
+                    phone: formData.phone.trim(),
                     role: formData.role,
                     city: formData.city,
                     district: formData.district,
                     username: formData.phone.trim(), 
-                    pin_code: formData.pinCode, // Pour l'iPhone
-                    password: formData.pinCode, // Pour la visibilité dans ta table (comme sur la photo)
+                    pin_code: formData.pinCode, // FORCE LE PIN ICI
+                    password: formData.pinCode, // Pour la visibilité dans ta table
                     email: finalEmail,
                     specialty: formData.role === 'technician' ? (formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty) : null,
                     image: imageUrl,
                     isblocked: 0,
                     commentsenabled: 1
-                }]);
+                }], { onConflict: 'id' }); // Utilisation de l'ID pour le conflit
 
                 if (dbError) {
-                    console.error('Database sync error:', dbError.message);
-                    // On ne bloque pas l'inscription si c'est déjà fait par un trigger
+                    console.error('Database sync error (Upsert):', dbError.message);
                 }
             }
 
