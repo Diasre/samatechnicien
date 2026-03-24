@@ -19,11 +19,12 @@ const MobileNav = () => {
 
     const navItems = [
         { path: '/', icon: Home, label: 'Accueil' },
+        { path: '/technicians', icon: Users, label: 'Pros' },
         { path: '/marketplace', icon: ShoppingBag, label: 'Boutique' },
         { 
             path: isTechnician ? '/expert-dashboard' : '/register', 
             icon: PlusSquare, 
-            label: isTechnician ? 'Publier' : 'Pros',
+            label: isTechnician ? 'Publier' : 'Compte',
             highlight: true 
         },
     ];

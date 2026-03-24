@@ -18,7 +18,13 @@ const Login = () => {
             const storedUser = localStorage.getItem('user');
             if (storedUser) {
                 const parsedUser = JSON.parse(storedUser);
-                navigate(parsedUser.role === 'admin' ? '/dashboard' : '/');
+                if (parsedUser.role === 'admin') {
+                    navigate('/dashboard');
+                } else if (parsedUser.role === 'technician') {
+                    navigate('/expert-dashboard');
+                } else {
+                    navigate('/');
+                }
             }
         } catch (e) {
             console.error('LocalStorage access denied:', e);
@@ -95,7 +101,14 @@ const Login = () => {
             };
 
             localStorage.setItem('user', JSON.stringify(mappedUser));
-            navigate(mappedUser.role === 'admin' ? '/dashboard' : '/');
+            
+            if (mappedUser.role === 'admin') {
+                navigate('/dashboard');
+            } else if (mappedUser.role === 'technician') {
+                navigate('/expert-dashboard');
+            } else {
+                navigate('/');
+            }
 
         } catch (error) {
             console.error('Login error:', error);

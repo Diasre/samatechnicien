@@ -85,7 +85,7 @@ const LandingPage = () => {
                         opacity: '0',
                         animation: 'fadeInUp 0.8s ease-out 0.6s forwards'
                     }}>
-                        <Link to="/register" className="btn" style={{
+                        <Link to="/technicians" className="btn" style={{
                             backgroundColor: 'white',
                             color: 'var(--primary-color)',
                             fontWeight: 'bold',
@@ -94,7 +94,8 @@ const LandingPage = () => {
                             boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
                             animation: 'pulse-green 2s infinite',
                             display: 'flex',
-                            alignItems: 'center'
+                            alignItems: 'center',
+                            textDecoration: 'none'
                         }}>
                             Trouver un réparateur <ArrowRight size={20} style={{ marginLeft: '8px' }} />
                         </Link>

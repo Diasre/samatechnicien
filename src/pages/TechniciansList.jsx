@@ -17,80 +17,91 @@ const TechniciansList = () => {
             setLoading(true);
             setErrorMsg(null);
 
-            // Safety timeout: if after 7s it's still loading, show an error
+            // Safety timeout: if after 10s it's still loading, show an error
             const timer = setTimeout(() => {
                 setLoading(false);
-                setErrorMsg("Le serveur est trop long à répondre. Vérifiez votre connexion ou si le projet Supabase est actif (non suspendu).");
-            }, 7000);
+                setErrorMsg("Délai d'attente dépassé. Vérifiez votre connexion.");
+            }, 10000);
 
             try {
-                console.log("Fetching technicians and reviews...");
-                // Fetch both in parallel for better performance
-                const [techsRes, reviewsRes] = await Promise.all([
-                    supabase.from('users').select('*').eq('role', 'technician'),
-                    supabase.from('reviews').select('*') // Select all to safely find technician ID column
-                ]);
+                console.log("🔍 Fetching technicians...");
+                
+                // Fetch techs and optionally reviews
+                console.log("📡 Envoi de la requête Supabase...");
+                
+                const { data, error: techsError } = await supabase
+                    .from('users')
+                    .select('*')
+                    .in('role', ['technician', 'technicien', 'expert', 'Expert', 'Technicien']);
+
+                if (techsError) {
+                    console.error("❌ Supabase Error:", techsError);
+                    throw techsError;
+                }
+
+                // Attempt to fetch reviews stats (wrap in separate try to not break everything)
+                let reviewsData = [];
+                try {
+                    const { data: revs } = await supabase.from('reviews').select('technicianId, rating, technicianid, technician_id');
+                    if (revs) reviewsData = revs;
+                } catch (e) {
+                    console.warn("Avis non disponibles, affichage sans notes.");
+                }
 
                 clearTimeout(timer);
 
-                if (techsRes.error) {
-                    console.error("Supabase Error (Techs):", techsRes.error);
-                    throw techsRes.error;
-                }
-                
-                const data = techsRes.data;
-                const reviewsData = reviewsRes.data;
-                console.log("Data received:", { techsCount: data?.length, reviewsCount: reviewsData?.length });
-
-                if (data) {
-                    // Aggregate stats safely handling case-sensitivity
+                if (data && Array.isArray(data)) {
+                    console.log(`✅ Found ${data.length} potential technicians.`);
+                    
+                    // Stats aggregation
                     const stats = {};
-                    if (reviewsData) {
-                        reviewsData.forEach(r => {
-                            // Try common variants of the technician ID column name
-                            const tId = r.technicianid || r.technicianId || r.technician_id;
-                            if (tId) {
-                                if (!stats[tId]) stats[tId] = { count: 0, sum: 0 };
-                                stats[tId].count++;
-                                stats[tId].sum += r.rating;
-                            }
-                        });
-                    }
+                    reviewsData.forEach(r => {
+                        const tId = r.technicianid || r.technicianId || r.technician_id;
+                        if (tId) {
+                            if (!stats[tId]) stats[tId] = { count: 0, sum: 0 };
+                            stats[tId].count++;
+                            stats[tId].sum += (Number(r.rating) || 0);
+                        }
+                    });
 
-                    // Map real users to technician format
+                    // Mapping
                     const realTechs = data.map(user => {
-                        const userStats = stats[user.id] || { count: 0, sum: 0 };
-                        const avgRating = userStats.count > 0 ? (userStats.sum / userStats.count) : (user.rating || 0);
+                        const userId = user.id;
+                        const userStats = stats[userId] || { count: 0, sum: 0 };
+                        const avgRating = userStats.count > 0 ? (userStats.sum / userStats.count) : (Number(user.rating) || 0);
 
                         return {
-                            id: user.id,
-                            name: user.fullname || user.fullName || 'Technicien',
-                            specialty: user.specialty || 'Nouveau',
+                            id: userId,
+                            name: user.fullname || user.fullName || user.username || 'Technicien',
+                            specialty: user.specialty || 'Service',
                             rating: avgRating,
                             reviews_count: userStats.count,
                             city: user.city || 'Dakar',
                             district: user.district || '-',
                             phone: user.phone || null,
-                            image: user.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullname || user.fullName || 'Tech')}&background=random&color=fff&size=200`,
-                            description: user.description || 'Technicien professionnel référencé.',
-                            isBlocked: (user.isblocked !== undefined ? user.isblocked : user.isBlocked) === 1,
+                            image: user.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullname || user.fullName || 'T')}&background=random&color=fff&size=200`,
+                            description: user.description || 'Expert professionnel disponible sur la plateforme.',
+                            isBlocked: (user.isblocked == 1 || user.isBlocked == 1 || user.is_blocked === true),
                             availability: user.availability || 'available'
                         };
                     });
 
-                    // Sort by availability first, then rating
+                    // Safe Sort
                     realTechs.sort((a, b) => {
                         if (a.availability === 'available' && b.availability !== 'available') return -1;
                         if (a.availability !== 'available' && b.availability === 'available') return 1;
-                        return b.rating - a.rating;
+                        return (b.rating || 0) - (a.rating || 0);
                     });
                     
                     setAllTechnicians(realTechs);
+                } else {
+                    console.warn("No data returned from users table for role technician.");
+                    setAllTechnicians([]);
                 }
             } catch (error) {
                 clearTimeout(timer);
-                console.error("Critical error fetching technicians:", error);
-                setErrorMsg(error.message || "Impossible de charger les techniciens.");
+                console.error("Critical fetch error:", error);
+                setErrorMsg(error.message || "Impossible de charger les données.");
             } finally {
                 setLoading(false);
             }
@@ -226,7 +237,9 @@ const TechniciansList = () => {
 
             {/* List */}
             {loading ? (
-                <div style={{ textAlign: 'center', padding: '3rem' }}>Chargement des techniciens...</div>
+                <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
+                    <div className="animate-pulse">Chargement des techniciens...</div>
+                </div>
             ) : errorMsg ? (
                 <div className="container" style={{ padding: '1rem', textAlign: 'center' }}>
                     <div className="card" style={{ padding: '2rem', border: '1px solid #ffc107', backgroundColor: '#fff8e1' }}>
@@ -238,7 +251,7 @@ const TechniciansList = () => {
                                 Réessayer
                             </button>
                             <button className="btn btn-outline" onClick={() => {
-                                setAllTechnicians(mockTechnicians);
+                                setAllTechnicians(technicians);
                                 setErrorMsg(null);
                                 setLoading(false);
                             }}>
@@ -252,7 +265,20 @@ const TechniciansList = () => {
                 </div>
             ) : filteredTechnicians.length === 0 ? (
                 <div className="card" style={{ padding: '2rem', textAlign: 'center', backgroundColor: '#f8f9fa' }}>
-                    <p style={{ color: '#666' }}>Aucun technicien trouvé pour cette recherche ou spécialité.</p>
+                    <p style={{ color: '#666', marginBottom: '1rem' }}>Aucun technicien trouvé pour cette recherche ou spécialité.</p>
+                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                        <button className="btn btn-outline" onClick={() => window.location.reload()}>
+                            Actualiser
+                        </button>
+                        <button className="btn btn-secondary" onClick={async () => {
+                            setLoading(true);
+                            const { data } = await supabase.from('users').select('fullname, role').limit(5);
+                            alert("Diagnostic Base (5 derniers utils): \n" + (data?.map(u => `${u.fullname} (${u.role})`).join('\n') || "Aucun utilisateur trouvé"));
+                            setLoading(false);
+                        }}>
+                             Vérifier la base
+                        </button>
+                    </div>
                 </div>
             ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '0.4rem' }}>

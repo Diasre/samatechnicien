@@ -75,7 +75,13 @@ const Navbar = () => {
                 {/* Desktop Menu */}
                 <div className="desktop-menu" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <Link to="/" className={`nav-link ${isActive('/')}`}>Accueil</Link>
-                    <Link to="/register" className={`nav-link ${isActive('/register')}`}>Trouver un technicien</Link>
+                    <Link 
+                        to="/technicians" 
+                        className={`nav-link ${isActive('/technicians')}`}
+                        style={{ textDecoration: 'none' }}
+                    >
+                        Trouver un technicien
+                    </Link>
                     <Link to="/marketplace" className={`nav-link ${isActive('/marketplace')}`}>Boutique des techniciens</Link>
                     {user?.role === 'technician' && (
                         <Link to="/forum" className={`nav-link ${isActive('/forum')}`} style={{ color: 'var(--primary-color)', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -135,7 +141,7 @@ const Navbar = () => {
             {/* Mobile Navigation Drawer */}
             <div className={`mobile-nav ${isOpen ? 'open' : ''}`} style={{ display: 'flex' }}>
                 <Link to="/" onClick={toggleMenu} className={`nav-link ${isActive('/')}`} style={{ textDecoration: 'none', color: 'var(--text-primary)', fontSize: '1.25rem', fontWeight: '600' }}>Accueil</Link>
-                <Link to="/register" onClick={toggleMenu} className={`nav-link ${isActive('/register')}`} style={{ textDecoration: 'none', color: 'var(--text-primary)', fontSize: '1.25rem', fontWeight: '600' }}>Trouver un technicien</Link>
+                <Link to="/technicians" onClick={toggleMenu} className={`nav-link ${isActive('/technicians')}`} style={{ textDecoration: 'none', color: 'var(--text-primary)', fontSize: '1.25rem', fontWeight: '600' }}>Trouver un technicien</Link>
                 <Link to="/marketplace" onClick={toggleMenu} className={`nav-link ${isActive('/marketplace')}`} style={{ textDecoration: 'none', color: 'var(--text-primary)', fontSize: '1.25rem', fontWeight: '600' }}>Boutique des techniciens</Link>
                 {user?.role === 'technician' && (
                     <Link to="/forum" onClick={toggleMenu} className={`nav-link ${isActive('/forum')}`} style={{ textDecoration: 'none', color: 'var(--primary-color)', fontSize: '1.25rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

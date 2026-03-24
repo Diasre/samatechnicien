@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import API_URL from '../config';
 import { supabase } from '../supabaseClient';
-import { User, Settings, Star, MessageSquare, Phone, MapPin, CheckCircle, Save, ArrowLeft, Share2, Flag, ShoppingBag } from 'lucide-react';
+import { User, Users, Settings, Star, MessageSquare, Phone, MapPin, CheckCircle, Save, ArrowLeft, Share2, Flag, ShoppingBag } from 'lucide-react';
 import WelcomeOverlay from '../components/WelcomeOverlay';
 
 const ExpertDashboard = () => {
@@ -263,15 +263,20 @@ const ExpertDashboard = () => {
         <div className="container animate-fade-in" style={{ padding: '1.5rem 1rem' }}>
             <WelcomeOverlay userName={techData.fullName} duration={2000} />
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
                     <h1 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>Mon profil</h1>
                     <p style={{ fontSize: '0.85rem', color: '#666' }}>Gérez votre profil et suivez vos performances.</p>
                 </div>
                 {!editMode && (
-                    <button className="btn btn-primary" onClick={() => setEditMode(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem' }}>
-                        <Settings size={16} /> Paramètres
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.8rem' }}>
+                        <Link to="/technicians" className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', fontWeight: 'bold', borderRadius: '12px' }}>
+                            <Users size={18} /> Trouver un technicien
+                        </Link>
+                        <button className="btn btn-primary" onClick={() => setEditMode(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', borderRadius: '12px' }}>
+                            <Settings size={18} /> Paramètres
+                        </button>
+                    </div>
                 )}
             </div>
 
