@@ -45,6 +45,9 @@ const Register = () => {
         if (file) setFormData({ ...formData, image: file });
     };
 
+    const [otpCode, setOtpCode] = useState('');
+    const [loading, setLoading] = useState(false);
+
     const handleSubmit = async (e) => {
         if (e) e.preventDefault();
         
@@ -52,16 +55,16 @@ const Register = () => {
             return alert("Veuillez accepter les conditions générales pour continuer.");
         }
         
-        // 🛡️ UNIFICATION: Utilisation systématique du NUMÉRO pour le mail virtuel
-        // 🛡️ UNIFICATION ANDROID: Nettoyage du numéro (retrait espaces, +221, etc.)
-        const phoneClean = formData.phone.replace(/\s+/g, '').replace(/^\+221/, '').replace(/^\+/, '');
-        // 🛡️ UNIFICATION FORCÉE : On priorise le téléphone pour le TEST WEB et Mobile
-        const usePhoneOnly = isMobile || (formData.phone && formData.phone.length >= 8);
-        const finalEmail = usePhoneOnly ? `${phoneClean}@samatechnicien.dummy` : (formData.email || `${phoneClean}@samatechnicien.dummy`);
-        // 🛡️ Supabase requiert 6 caractères minimum, on pad donc le mot de passe de 4 chiffres en ajoutant "00" en arrière-plan
+        setLoading(true);
+
+        // 🛡️ UNIFICATION: Nettoyage et formatage pour Twilio (+221 obligatoire)
+        const phoneClean = formData.phone.replace(/\D/g, '').replace(/^221/, '').replace(/^00/, '');
+        const fullPhone = `+221${phoneClean}`;
+        const finalEmail = `${phoneClean}@samatechnicien.dummy`;
         const finalPassword = formData.password.length === 4 ? formData.password + "00" : formData.password;
 
         try {
+            // 1. UPLOAD IMAGE (si technicien)
             let imageUrl = null;
             if (formData.role === 'technician' && formData.image) {
                 const fileExt = formData.image.name.split('.').pop();
@@ -73,32 +76,62 @@ const Register = () => {
                 }
             }
 
-            const { data: authData, error: authError } = await supabase.auth.signUp({
-                email: finalEmail,
+            // 2. INSCRIPTION PAR TÉLÉPHONE (Déclenche le SMS Twilio)
+            const { error: authError } = await supabase.auth.signUp({
+                phone: fullPhone,
                 password: finalPassword,
                 options: {
                     data: {
                         full_name: formData.fullName,
-                        phone: phoneClean, // 极 极 UNIFICATION: On stocke le numéro PROPRE
+                        phone: phoneClean,
                         role: formData.role,
                         city: formData.city,
                         district: formData.district,
-                        username: phoneClean, // 极 极 UNIFICATION Propre
-                        password: formData.password, // On le met aussi ici pour ta table
+                        username: phoneClean,
+                        password: formData.password,
                         image: imageUrl,
                         specialty: formData.role === 'technician' ? (formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty) : null
                     }
                 }
             });
 
-            if (authError) return alert("Erreur: " + authError.message);
+            if (authError) {
+                setLoading(false);
+                return alert("Erreur: " + authError.message);
+            }
 
-            // 🛡️ SYNC: Création/Mise à jour dans la table users
-            if (authData?.user) {
-                console.log('⏳ Synchronisation du profil...');
-                
+            // Passage à l'étape du code SMS
+            setStep(3);
+            setLoading(false);
+        } catch (error) {
+            setLoading(false);
+            console.error('Registration error:', error);
+            alert('Erreur lors de l\'initialisation de l\'inscription.');
+        }
+    };
+
+    const handleVerifyOtp = async (e) => {
+        if (e) e.preventDefault();
+        if (otpCode.length !== 6) return alert("Veuillez entrer le code à 6 chiffres.");
+
+        setLoading(true);
+        const phoneClean = formData.phone.replace(/\D/g, '').replace(/^221/, '').replace(/^00/, '');
+        const fullPhone = `+221${phoneClean}`;
+
+        try {
+            // 1. Vérification du SMS OTP
+            const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+                phone: fullPhone,
+                token: otpCode,
+                type: 'signup'
+            });
+
+            if (verifyError) throw verifyError;
+
+            // 2. Synchronisation finale avec la table users
+            if (verifyData?.user) {
                 const profileData = {
-                    id: authData.user.id,
+                    id: verifyData.user.id,
                     fullname: formData.fullName,
                     phone: phoneClean,
                     role: formData.role,
@@ -106,50 +139,25 @@ const Register = () => {
                     district: formData.district,
                     username: phoneClean, 
                     password: formData.password,
-                    email: finalEmail,
+                    email: `${phoneClean}@samatechnicien.dummy`,
                     specialty: formData.role === 'technician' ? (formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty) : null,
-                    image: imageUrl,
+                    image: verifyData.user.user_metadata.image,
                     isblocked: 0,
                     commentsenabled: 1
                 };
 
-                // On utilise upsert (Update or Insert) pour être sûr que la ligne existe
-                const { error: dbError } = await supabase
-                    .from('users')
-                    .upsert(profileData, { onConflict: 'id' });
-
-                if (dbError) {
-                    console.error('Erreur de création de profil:', dbError.message);
-                    // Si échec RLS, on tente au moins de stocker localement pour le prochain login
-                    const mappedUser = { ...profileData, fullName: profileData.fullname };
-                    localStorage.setItem('user', JSON.stringify(mappedUser));
-                }
-            }
-
-            // 🚄 Mode Auto-Login pour une expérience fluide
-            if (usePhoneOnly) {
-                const { error: loginError } = await supabase.auth.signInWithPassword({
-                    email: finalEmail,
-                    password: finalPassword
-                });
+                await supabase.from('users').upsert(profileData, { onConflict: 'id' });
                 
-                if (!loginError) {
-                    // On revérifie le profil une dernière fois
-                    const { data: finalProfile } = await supabase.from('users').select('*').eq('id', authData.user.id).single();
-                    if (finalProfile) {
-                        localStorage.setItem('user', JSON.stringify(finalProfile));
-                    }
-                    alert(`Bienvenue ${formData.fullName} !`);
-                    navigate(formData.role === 'technician' ? '/expert-dashboard' : '/');
-                    return;
-                }
+                // Stockage local
+                localStorage.setItem('user', JSON.stringify({ ...profileData, fullName: profileData.fullname }));
+                
+                alert(`Bienvenue ${formData.fullName} ! Votre compte est validé.`);
+                navigate(formData.role === 'technician' ? '/expert-dashboard' : '/');
             }
-
-            alert("Inscription réussie ! Connectez-vous pour continuer.");
-            navigate('/login');
         } catch (error) {
-            console.error('Registration error:', error);
-            alert('Erreur lors de l\'inscription.');
+            alert("Code incorrect ou expiré : " + error.message);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -242,8 +250,7 @@ const Register = () => {
                             Continuer
                         </button>
                     </div>
-                ) : (
-                    /* Step 2 */
+                ) : step === 2 ? (
                     <div style={{ animation: 'fadeIn 0.4s ease' }}>
                         <div style={{ marginBottom: '1.2rem' }}>
                              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b' }}>Nom Complet</label>
@@ -320,12 +327,52 @@ const Register = () => {
                                 Retour
                             </button>
                             <button 
+                                disabled={loading}
                                 onClick={handleSubmit}
                                 style={{ flex: 2, padding: '1.2rem', borderRadius: '22px', border: 'none', background: '#10b981', color: '#fff', fontWeight: '900', fontSize: '1.2rem', cursor: 'pointer', boxShadow: '0 10px 20px rgba(16, 185, 129, 0.3)' }}
                             >
-                                Terminer
+                                {loading ? 'Envoi...' : 'Terminer'}
                             </button>
                         </div>
+                    </div>
+                ) : (
+                    <div style={{ animation: 'fadeIn 0.4s ease' }}>
+                        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                            <div style={{ display: 'inline-flex', padding: '1rem', backgroundColor: '#3b82f620', borderRadius: '20px', color: '#3b82f6', marginBottom: '1rem' }}>
+                                <CheckCircle2 size={40} />
+                            </div>
+                            <h3 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#1e293b' }}>Vérifiez vos messages</h3>
+                            <p style={{ color: '#64748b', fontSize: '0.9rem' }}>Un code à 6 chiffres a été envoyé au <b>+221 {formData.phone}</b></p>
+                        </div>
+
+                        <div style={{ marginBottom: '2rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b', textAlign: 'center' }}>Code de confirmation</label>
+                            <input 
+                                type="text" maxLength="6" inputMode="numeric" value={otpCode} 
+                                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                                style={{ width: '100%', padding: '1.2rem', borderRadius: '20px', border: '2px solid #10b981', background: '#f8fafc', color: '#10b981', fontSize: '2rem', textAlign: 'center', fontWeight: '900', letterSpacing: '8px', outline: 'none' }} 
+                                placeholder="000000"
+                            />
+                        </div>
+
+                        <button 
+                            disabled={loading}
+                            onClick={handleVerifyOtp}
+                            style={{ 
+                                width: '100%', padding: '1.2rem', borderRadius: '22px', border: 'none', 
+                                background: '#10b981', color: '#fff', fontWeight: '900', fontSize: '1.2rem', cursor: 'pointer',
+                                boxShadow: '0 10px 20px rgba(16, 185, 129, 0.3)'
+                            }}
+                        >
+                            {loading ? 'Vérification...' : 'Valider mon compte'}
+                        </button>
+
+                        <button 
+                            onClick={() => setStep(2)}
+                            style={{ width: '100%', background: 'none', border: 'none', color: '#64748b', marginTop: '1.5rem', cursor: 'pointer', fontWeight: '600' }}
+                        >
+                            Retour / Modifier les infos
+                        </button>
                     </div>
                 )}
 
