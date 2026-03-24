@@ -41,64 +41,47 @@ const Login = () => {
             let userData = null;
 
             if (loginMethod === 'pin') {
-                // 🔐 LOGIN PAR TÉLÉPHONE + PIN
-                let { data, error: pinError } = await supabase
+                // 🔐 LOGIN PAR TÉLÉPHONE + PIN (Omni-détection intégrée)
+                const phoneClean = phone.trim();
+                
+                // Recherche globale sans filtre de rôle pour être sûr de trouver l'utilisateur
+                const { data: userRecord, error: findError } = await supabase
                     .from('users')
                     .select('*')
-                    .eq('phone', phone.trim())
+                    .eq('phone', phoneClean)
                     .eq('pin_code', pin)
-                    .eq('role', role)
                     .single();
 
-                // 🕵️‍♂️ OMNI-RECHERCHE: Si non trouvé avec l'onglet actuel, on cherche sans filtre de rôle
-                if (pinError || !data) {
-                    const { data: globalUser } = await supabase
-                        .from('users')
-                        .select('*')
-                        .eq('phone', phone.trim())
-                        .eq('pin_code', pin)
-                        .single();
+                if (userRecord) {
+                    userData = userRecord;
+                    setRole(userRecord.role); // Auto-ajustement de l'onglet si besoin
+                } else {
+                    // 🛡️ FALLBACK: On tente l'Auth officielle si la table users ne répond pas
+                    const vMail = `${phoneClean}@samatechnicien.dummy`;
+                    const vPass = `PIN_${pin}_SamaTech221`;
                     
-                    if (globalUser) {
-                        data = globalUser;
-                        pinError = null;
-                        // On met à jour le rôle localement pour la suite
-                        setRole(globalUser.role);
+                    let { data: authResult, error: authErr } = await supabase.auth.signInWithPassword({ email: vMail, password: vPass });
+
+                    // Tentative par username si le format par téléphone échoue
+                    if (authErr && phoneClean.length < 15) {
+                        const { data: meta } = await supabase.from('users').select('username').eq('phone', phoneClean).single();
+                        if (meta?.username) {
+                            const { data: res } = await supabase.auth.signInWithPassword({
+                                email: `${meta.username.toLowerCase().trim()}@samatechnicien.dummy`,
+                                password: vPass
+                            });
+                            authResult = res;
+                        }
+                    }
+
+                    if (authResult?.user) {
+                        const { data: dbSync } = await supabase.from('users').select('*').eq('id', authResult.user.id).single();
+                        userData = dbSync;
                     }
                 }
 
-                if (pinError || !data) {
-                    // 🛡️ FALLBACK FINAL: Tentative d'Auth officielle
-                    console.log('🔄 PIN table lookup failed, trying official Auth fallback...');
-                    const virtualEmail = `${phone.trim()}@samatechnicien.dummy`; // Try phone first
-                    const virtualPass = `PIN_${pin}_SamaTech221`;
-                    
-                    const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
-                        email: virtualEmail,
-                        password: virtualPass
-                    });
-
-                    // Try username mapping if phone-email fails
-                    if (authErr && phone.length < 15) {
-                        const { data: userByPhone } = await supabase.from('users').select('username').eq('phone', phone.trim()).single();
-                        if (userByPhone?.username) {
-                            const { data: authRetry, error: retryErr } = await supabase.auth.signInWithPassword({
-                                email: `${userByPhone.username.toLowerCase().trim()}@samatechnicien.dummy`,
-                                password: virtualPass
-                            });
-                            if (!retryErr && authRetry.user) {
-                                userData = await supabase.from('users').select('*').eq('id', authRetry.user.id).single().then(res => res.data);
-                            }
-                        }
-                    } else if (!authErr && authData.user) {
-                        userData = await supabase.from('users').select('*').eq('id', authData.user.id).single().then(res => res.data);
-                    }
-
-                    if (!userData) {
-                        return alert("Téléphone ou Code PIN incorrect pour ce profil.");
-                    }
-                } else {
-                    userData = data;
+                if (!userData) {
+                    return alert("Identifiants incorrects. Vérifiez votre numéro ou votre PIN.");
                 }
             } else {
                 // 🚀 LOGIN CLASSIQUE (Email + Pass)
