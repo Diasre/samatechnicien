@@ -27,9 +27,21 @@ const ForgotPassword = () => {
             if (dbError) throw new Error("Erreur base de données.");
 
             if (data && data.length > 0) {
-                setUserInfo(data[0]);
+                const foundUser = data[0];
+                const generatedToken = Math.floor(1000 + Math.random() * 9000).toString();
+                
+                // On sauve le token en base immédiatement
+                const { error: updateError } = await supabase
+                    .from('users')
+                    .update({ recovery_code: generatedToken })
+                    .eq('id', foundUser.id);
+
+                if (updateError) throw new Error("Erreur technique de préparation.");
+
+                setUserInfo(foundUser);
+                setValidationToken(generatedToken); // On le pré-remplit ou on le garde pour WhatsApp
                 setStep(2);
-                setMessage("Compte trouvé ! Veuillez maintenant saisir le Code de Validation reçu sur WhatsApp.");
+                setMessage(`Prêt ! Envoyez le code par WhatsApp pour valider votre identité.`);
             } else {
                 setError(`Aucun compte n'a été trouvé pour le numéro ${phoneClean}.`);
             }
@@ -134,19 +146,39 @@ const ForgotPassword = () => {
                             />
                         </div>
                         
-                        <a 
-                            href={`https://wa.me/221778599649?text=${encodeURIComponent(`Bonjour SamaTechnicien, je suis ${userInfo.fullname} (${userInfo.phone}). Merci de me donner mon code de validation pour mon compte.`)}`}
-                            target="_blank" rel="noopener noreferrer" 
-                            style={{ display: 'block', textAlign: 'center', color: '#25D366', fontWeight: 'bold', textDecoration: 'none', fontSize: '0.85rem', marginBottom: '1.5rem' }}
-                        >
-                            Obtenir mon code sur WhatsApp →
-                        </a>
-
+                        <div style={{ padding: '1.5rem', backgroundColor: '#f0f4f8', borderRadius: '15px', marginBottom: '1.5rem', textAlign: 'center' }}>
+                            <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1rem' }}>
+                                Voici votre code de validation :
+                            </p>
+                            <div style={{ fontSize: '2.5rem', fontWeight: '900', color: '#805ad5', letterSpacing: '8px', marginBottom: '1.5rem' }}>
+                                {validationToken}
+                            </div>
+                            
+                            <a 
+                                href={`https://wa.me/221778599649?text=${encodeURIComponent(`Bonjour SamaTechnicien, je suis ${userInfo.fullname} (${userInfo.phone}). Mon code de validation est : ${validationToken}`)}`}
+                                target="_blank" rel="noopener noreferrer" 
+                                className="btn"
+                                style={{ width: '100%', padding: '1.1rem', backgroundColor: '#25D366', color: 'white', fontWeight: '900', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', textDecoration: 'none', boxShadow: '0 8px 15px rgba(37, 211, 102, 0.2)' }}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                                Envoyer par WhatsApp
+                            </a>
+                        </div>
+                        
+                        <div style={{ marginBottom: '1.5rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: '700', color: '#1e293b', fontSize: '0.85rem', textAlign: 'left' }}>Saisissez le code PIN souhaité (4 chiffres)</label>
+                            <input
+                                type="password" maxLength="4" value={newPin} onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
+                                style={{ width: '100%', padding: '0.9rem', borderRadius: '12px', border: '2px solid #f1f5f9', fontSize: '1rem', textAlign: 'center', fontWeight: '900', letterSpacing: '4px' }}
+                                placeholder="****" required
+                            />
+                        </div>
+                        
                         <button type="submit" disabled={loading} style={{ width: '100%', padding: '1.1rem', backgroundColor: '#10b981', color: 'white', fontWeight: '900', borderRadius: '15px', border: 'none', cursor: 'pointer' }}>
                             {loading ? 'Mise à jour...' : 'Mettre à jour mon PIN'}
                         </button>
                         
-                        <button onClick={() => setStep(1)} style={{ display: 'block', width: '100%', background: 'none', border: 'none', color: '#64748b', fontSize: '0.8rem', marginTop: '1rem', cursor: 'pointer' }}>
+                        <button onClick={() => setStep(1)} type="button" style={{ display: 'block', width: '100%', background: 'none', border: 'none', color: '#64748b', fontSize: '0.8rem', marginTop: '1rem', cursor: 'pointer' }}>
                             Annuler et changer de numéro
                         </button>
                     </form>
