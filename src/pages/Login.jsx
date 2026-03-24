@@ -84,6 +84,26 @@ const Login = () => {
                 if (!userData) {
                     return alert("Identifiants incorrects. Vérifiez votre numéro ou votre PIN.");
                 }
+
+                // 🛡️ AUTO-REPAIR: Si les données sont manquantes dans la table users, on répare le profil
+                if (userData && (!userData.pin_code || !userData.username)) {
+                    console.log('🩹 Profil incomplet détecté, lancement de la réparation automatique...');
+                    const { error: repairErr } = await supabase
+                        .from('users')
+                        .update({ 
+                            pin_code: pin || userData.pin_code, // On utilise le PIN que l'utilisateur vient d'entrer
+                            password: pin || userData.pin_code, // Visibilité base (comme sur ton image)
+                            username: userData.phone || userData.username 
+                        })
+                        .eq('id', userData.id);
+                    
+                    if (!repairErr) {
+                         console.log('✅ Profil réparé avec succès !');
+                         // On rafraîchit les données locales pour que tout soit à jour
+                         userData.pin_code = pin || userData.pin_code;
+                         userData.password = pin || userData.pin_code;
+                    }
+                }
             } else {
                 // 🚀 LOGIN CLASSIQUE (Email + Pass)
                 const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
