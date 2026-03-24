@@ -116,7 +116,7 @@ const Register = () => {
                 }
             }
 
-            alert(isMobile ? `Bienvenue ${formData.fullName} !` : "Inscription réussie !");
+            alert(isMobile ? `Bienvenue ${formData.fullName} ! Connectez-vous maintenant pour activer votre profil.` : "Inscription réussie ! Connectez-vous pour continuer.");
             navigate('/login');
         } catch (error) {
             console.error('Registration error:', error);

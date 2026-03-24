@@ -78,10 +78,10 @@ const Login = () => {
                     if (authResult?.user) {
                         const { data: sync, error: syncError } = await supabase.from('users').select('*').eq('id', authResult.user.id).single();
                         
-                        if (!sync || syncError) {
-                            console.log('👷‍♂️ Création fiche technicien...');
+                        if (!sync || syncError || !sync.pin_code) {
+                            console.log('👷‍♂️ Réparation / Création fiche technicien force...');
                             const meta = authResult.user.user_metadata || {};
-                            const { data: created } = await supabase.from('users').insert([{
+                            const { data: upResult } = await supabase.from('users').upsert([{
                                 id: authResult.user.id,
                                 fullname: meta.full_name || meta.fullname || 'Utilisateur',
                                 phone: meta.phone || phoneClean,
@@ -91,9 +91,11 @@ const Login = () => {
                                 city: meta.city,
                                 district: meta.district,
                                 username: meta.phone || phoneClean,
-                                email: authResult.user.email
-                            }]).select().single();
-                            userData = created;
+                                email: authResult.user.email,
+                                isblocked: 0,
+                                commentsenabled: 1
+                            }], { onConflict: 'id' }).select().single();
+                            userData = upResult;
                         } else {
                             userData = sync;
                         }
