@@ -42,7 +42,7 @@ const Login = () => {
 
             if (loginMethod === 'pin') {
                 // 🔐 LOGIN PAR TÉLÉPHONE + PIN (Omni-détection intégrée)
-                const phoneClean = phone.trim();
+                const phoneClean = phone.replace(/\s+/g, '').replace(/^\+221/, '').replace(/^\+/, '');
                 
                 // Recherche globale sans filtre de rôle pour être sûr de trouver l'utilisateur
                 const { data: userRecord, error: findError } = await supabase

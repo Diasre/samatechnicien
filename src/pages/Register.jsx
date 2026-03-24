@@ -54,7 +54,8 @@ const Register = () => {
         }
         
         // 🛡️ UNIFICATION: Utilisation systématique du NUMÉRO pour le mail virtuel
-        const phoneClean = formData.phone.trim();
+        // 🛡️ UNIFICATION ANDROID: Nettoyage du numéro (retrait espaces, +221, etc.)
+        const phoneClean = formData.phone.replace(/\s+/g, '').replace(/^\+221/, '').replace(/^\+/, '');
         const finalEmail = isMobile ? `${phoneClean}@samatechnicien.dummy` : formData.email;
         const finalPassword = isMobile ? `PIN_${formData.pinCode}_SamaTech221` : formData.password;
 
