@@ -7,7 +7,13 @@ import WelcomeOverlay from '../components/WelcomeOverlay';
 import LandingPage from './LandingPage';
 
 const Home = () => {
-    const user = JSON.parse(localStorage.getItem('user'));
+    let user = null;
+    try {
+        const stored = localStorage.getItem('user');
+        if (stored) user = JSON.parse(stored);
+    } catch (e) {
+        console.error('LocalStorage access blocked:', e);
+    }
     const isLoggedIn = !!user;
 
     // Logged-in Home View

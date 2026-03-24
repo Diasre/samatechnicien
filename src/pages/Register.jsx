@@ -10,10 +10,14 @@ const Register = () => {
     const isMobile = window.innerWidth <= 768;
 
     useEffect(() => {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-            const parsedUser = JSON.parse(storedUser);
-            navigate(parsedUser.role === 'admin' ? '/dashboard' : '/');
+        try {
+            const storedUser = localStorage.getItem('user');
+            if (storedUser) {
+                const parsedUser = JSON.parse(storedUser);
+                navigate(parsedUser.role === 'admin' ? '/dashboard' : '/');
+            }
+        } catch (e) {
+            console.error('LocalStorage access denied:', e);
         }
     }, [navigate]);
 
