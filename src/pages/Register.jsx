@@ -228,7 +228,15 @@ const Register = () => {
                         <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.2rem' }}>
                             <div style={{ flex: 1 }}>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b' }}>Identifiant</label>
-                                <input type="text" name="username" required value={formData.username} onChange={handleChange} style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: 'rgba(255,255,255,0.8)', color: '#1e293b', outline: 'none' }} placeholder="@moussa" />
+                                <input 
+                                    type="text" 
+                                    name="username" 
+                                    required 
+                                    value={formData.phone} // On force l'utilisation du téléphone ici !
+                                    readOnly={isMobile} // Empêche de taper autre chose sur mobile
+                                    style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid #10b981', background: isMobile ? '#f1f5f9' : 'rgba(255,255,255,0.8)', color: '#1e293b', outline: 'none' }} 
+                                    placeholder="automatique" 
+                                />
                             </div>
                             <div style={{ width: '100px' }}>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b' }}>PIN</label>
