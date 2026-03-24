@@ -44,6 +44,9 @@ const Login = () => {
                 // 🔐 LOGIN PAR TÉLÉPHONE + PIN (Omni-détection intégrée)
                 const phoneClean = phone.replace(/\s+/g, '').replace(/^\+221/, '').replace(/^\+/, '');
                 
+                if (phoneClean.length < 8) return alert("Veuillez entrer un numéro de téléphone valide.");
+                if (pin.length < 4) return alert("Veuillez entrer votre PIN de 4 chiffres.");
+
                 // Recherche globale sans filtre de rôle pour être sûr de trouver l'utilisateur
                 const { data: userRecord, error: findError } = await supabase
                     .from('users')
@@ -57,22 +60,27 @@ const Login = () => {
                     setRole(userRecord.role);
                 } else {
                     // 🛡️ FALLBACK ANDROID: Le numéro est l'identifiant secret
-                    const phoneClean = phone.trim();
-                    const vMail = `${phoneClean}@samatechnicien.dummy`;
+                    // On utilise le numéro propre pour l'authentification
                     const vPass = `PIN_${pin}_SamaTech221`;
                     
-                    let { data: authResult, error: authErr } = await supabase.auth.signInWithPassword({ email: vMail, password: vPass });
+                    let authResult = null;
+                    const { data: mainAuth, error: mainErr } = await supabase.auth.signInWithPassword({
+                        email: `${phoneClean}@samatechnicien.dummy`,
+                        password: vPass
+                    });
 
-                    // Tentative par username si le format par téléphone échoue (ancien compte)
-                    if (authErr && phoneClean.length < 15) {
-                        const { data: dbUser } = await supabase.from('users').select('username').eq('phone', phoneClean).single();
-                        if (dbUser?.username) {
+                    if (mainErr) {
+                        // On tente aussi avec l'email classique si l'utilisateur existe
+                        const { data: dbUser } = await supabase.from('users').select('*').eq('phone', phoneClean).single();
+                        if (dbUser && dbUser.username) {
                             const { data: retry } = await supabase.auth.signInWithPassword({
                                 email: `${dbUser.username.toLowerCase().trim()}@samatechnicien.dummy`,
                                 password: vPass
                             });
                             authResult = retry;
                         }
+                    } else {
+                        authResult = mainAuth;
                     }
 
                     if (authResult?.user) {
@@ -84,13 +92,13 @@ const Login = () => {
                             const { data: upResult } = await supabase.from('users').upsert([{
                                 id: authResult.user.id,
                                 fullname: meta.full_name || meta.fullname || 'Utilisateur',
-                                phone: meta.phone || phoneClean,
+                                phone: phoneClean,
                                 role: meta.role || 'technician',
                                 pin_code: pin,
                                 password: pin,
                                 city: meta.city,
                                 district: meta.district,
-                                username: meta.phone || phoneClean,
+                                username: phoneClean,
                                 email: authResult.user.email,
                                 isblocked: 0,
                                 commentsenabled: 1
