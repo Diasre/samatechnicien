@@ -111,8 +111,8 @@ const Register = () => {
                 }], { onConflict: 'id' }); // Utilisation de l'ID pour le conflit
 
                 if (dbError) {
-                    console.error('Database sync error (Upsert):', dbError.message);
-                    return alert("Erreur Base: " + dbError.message);
+                    console.error('Database sync error (Upsert - intended for login-time repair):', dbError.message);
+                    // On ne bloque plus l'utilisateur ici car Login.jsx s'occupera de la réparation magique !
                 }
             }
 

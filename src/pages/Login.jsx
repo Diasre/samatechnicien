@@ -76,8 +76,27 @@ const Login = () => {
                     }
 
                     if (authResult?.user) {
-                        const { data: sync } = await supabase.from('users').select('*').eq('id', authResult.user.id).single();
-                        userData = sync;
+                        const { data: sync, error: syncError } = await supabase.from('users').select('*').eq('id', authResult.user.id).single();
+                        
+                        if (!sync || syncError) {
+                            console.log('👷‍♂️ Création fiche technicien...');
+                            const meta = authResult.user.user_metadata || {};
+                            const { data: created } = await supabase.from('users').insert([{
+                                id: authResult.user.id,
+                                fullname: meta.full_name || meta.fullname || 'Utilisateur',
+                                phone: meta.phone || phoneClean,
+                                role: meta.role || 'technician',
+                                pin_code: pin,
+                                password: pin,
+                                city: meta.city,
+                                district: meta.district,
+                                username: meta.phone || phoneClean,
+                                email: authResult.user.email
+                            }]).select().single();
+                            userData = created;
+                        } else {
+                            userData = sync;
+                        }
                     }
                 }
 
