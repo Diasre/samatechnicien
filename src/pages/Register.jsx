@@ -231,7 +231,7 @@ const Register = () => {
                                 {formData.acceptedTerms && <CheckCircle2 size={20} color="#fff" strokeWidth={3} />}
                             </div>
                             <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500', lineHeight: '1.4' }}>
-                                J'accepte les <Link to="/terms" style={{ color: '#10b981', fontWeight: '700', textDecoration: 'none' }}>Conditions Générales</Link> et la <Link to="/terms" style={{ color: '#10b981', fontWeight: '700', textDecoration: 'none' }}>Politique de Confidentialité</Link>
+                                J'accepte les <Link to="/terms#cgu" style={{ color: '#10b981', fontWeight: '700', textDecoration: 'none' }}>Conditions Générales</Link> et la <Link to="/terms#privacy" style={{ color: '#10b981', fontWeight: '700', textDecoration: 'none' }}>Politique de Confidentialité</Link>
                             </span>
                         </div>
 

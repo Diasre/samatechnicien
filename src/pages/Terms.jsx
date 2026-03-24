@@ -1,8 +1,20 @@
 import React from 'react';
 import { ArrowLeft, Shield, FileText, Lock, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
 
 const Terms = () => {
+    useEffect(() => {
+        const hash = window.location.hash;
+        if (hash) {
+            const element = document.querySelector(hash);
+            if (element) {
+                setTimeout(() => {
+                    element.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+            }
+        }
+    }, []);
     return (
         <div className="container" style={{ padding: '1rem', backgroundColor: '#f8fafc' }}>
             <Link to={-1} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem', textDecoration: 'none', color: '#64748b', fontSize: '0.9rem' }}>
@@ -29,7 +41,7 @@ const Terms = () => {
                     </div>
                 </div>
 
-                <section style={{ marginBottom: '2.5rem' }}>
+                <section id="cgu" style={{ marginBottom: '2.5rem' }}>
                     <h3 style={{ borderBottom: '2px solid #e2e8f0', paddingBottom: '0.5rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <FileText size={20} color="var(--primary-color)" /> PARTIE I : CGU
                     </h3>
@@ -60,7 +72,7 @@ const Terms = () => {
                     </p>
                 </section>
 
-                <section style={{ marginBottom: '2rem' }}>
+                <section id="privacy" style={{ marginBottom: '2rem' }}>
                     <h3 style={{ borderBottom: '2px solid #e2e8f0', paddingBottom: '0.5rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <Lock size={20} color="#059669" /> PARTIE II : CONFIDENTIALITÉ
                     </h3>
