@@ -208,6 +208,27 @@ const Dashboard = () => {
         }
     };
 
+    const handleGenerateRecoveryCode = async (user) => {
+        const newCode = Math.floor(1000 + Math.random() * 9000).toString();
+        
+        if (!window.confirm(`Générer un code de récupération pour ${user.fullName} ?\nLe code sera : ${newCode}`)) return;
+
+        try {
+            const { error } = await supabase
+                .from('users')
+                .update({ recovery_code: newCode })
+                .eq('id', user.id);
+
+            if (error) throw error;
+            alert(`Code généré avec succès ! Donnez-le à ${user.fullName} sur WhatsApp : ${newCode}`);
+            fetchTechnicians();
+            fetchClients();
+        } catch (error) {
+            console.error(error);
+            alert('Erreur: ' + error.message);
+        }
+    };
+
     const handlePasswordChange = async (userId, userName, isClient = true) => {
         const promptMsg = isClient
             ? `Entrez le nouveau mot de passe pour le client ${userName} (Min 8 car, 1 Maj, 1 Chiffre) :`
@@ -427,6 +448,14 @@ const Dashboard = () => {
                                                 <td style={{ padding: '0.75rem' }}>{tech.city}</td>
                                                 <td style={{ padding: '0.75rem', textAlign: 'center' }}>
                                                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                                                        <button 
+                                                            className="btn btn-outline" 
+                                                            style={{ padding: '0.3rem', borderRadius: '4px', color: '#805ad5' }} 
+                                                            onClick={() => handleGenerateRecoveryCode(tech)} 
+                                                            title="Générer Code Secret de Récupération"
+                                                        >
+                                                            <Lock size={14} fill={tech.recovery_code ? '#805ad530' : 'none'} />
+                                                        </button>
                                                         <button className="btn btn-outline" style={{ padding: '0.3rem', borderRadius: '4px' }} onClick={() => handleEdit(tech)} title="Modifier profil"><Edit size={14} /></button>
                                                         <button
                                                             className="btn btn-outline"
@@ -492,12 +521,20 @@ const Dashboard = () => {
                                                     <td style={{ padding: '0.75rem', textAlign: 'center' }}>
                                                         <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
                                                             <button
-                                                                className="btn btn-outline"
-                                                                style={{ padding: '0.4rem 0.6rem', fontSize: '0.7rem' }}
-                                                                onClick={() => handlePasswordChange(client.id, client.fullName, true)}
-                                                            >
-                                                                Mot de passe
-                                                            </button>
+                                                                 className="btn btn-outline"
+                                                                 style={{ padding: '0.4rem 0.6rem', fontSize: '0.7rem' }}
+                                                                 onClick={() => handlePasswordChange(client.id, client.fullName, true)}
+                                                             >
+                                                                 Mot de passe
+                                                             </button>
+                                                             <button
+                                                                 className="btn btn-outline"
+                                                                 style={{ padding: '0.3rem', borderRadius: '4px', color: '#805ad5' }}
+                                                                 onClick={() => handleGenerateRecoveryCode(client)}
+                                                                 title="Générer Code de Récupération"
+                                                             >
+                                                                 <Lock size={14} fill={client.recovery_code ? '#805ad530' : 'none'} />
+                                                             </button>
                                                             <button
                                                                 className="btn btn-outline"
                                                                 style={{ padding: '0.3rem', borderRadius: '4px', color: client.isBlocked ? '#38a169' : '#e53e3e' }}
