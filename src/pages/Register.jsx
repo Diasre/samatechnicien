@@ -86,6 +86,31 @@ const Register = () => {
             });
 
             if (authError) return alert("Erreur: " + authError.message);
+
+            // 🛡️ SYNC: Ajout manuel dans la table users (en plus de l'Auth)
+            if (authData?.user) {
+                const { error: dbError } = await supabase.from('users').insert([{
+                    id: authData.user.id,
+                    fullname: formData.fullName,
+                    phone: formData.phone,
+                    role: formData.role,
+                    city: formData.city,
+                    district: formData.district,
+                    username: formData.username.toLowerCase().trim(),
+                    pin_code: formData.pinCode,
+                    email: finalEmail,
+                    specialty: formData.role === 'technician' ? (formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty) : null,
+                    image: imageUrl,
+                    isblocked: 0,
+                    commentsenabled: 1
+                }]);
+
+                if (dbError) {
+                    console.error('Database sync error:', dbError.message);
+                    // On ne bloque pas l'inscription si c'est déjà fait par un trigger
+                }
+            }
+
             alert(isMobile ? `Bienvenue ${formData.fullName} !` : "Inscription réussie !");
             navigate('/login');
         } catch (error) {
