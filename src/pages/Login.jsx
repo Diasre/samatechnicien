@@ -42,7 +42,7 @@ const Login = () => {
 
             if (loginMethod === 'pin') {
                 // 🔐 LOGIN PAR TÉLÉPHONE + PIN
-                const { data, error: pinError } = await supabase
+                let { data, error: pinError } = await supabase
                     .from('users')
                     .select('*')
                     .eq('phone', phone.trim())
@@ -50,8 +50,25 @@ const Login = () => {
                     .eq('role', role)
                     .single();
 
+                // 🕵️‍♂️ OMNI-RECHERCHE: Si non trouvé avec l'onglet actuel, on cherche sans filtre de rôle
                 if (pinError || !data) {
-                    // 🛡️ FALLBACK: Tentative d'Auth officielle si la table users est incomplète
+                    const { data: globalUser } = await supabase
+                        .from('users')
+                        .select('*')
+                        .eq('phone', phone.trim())
+                        .eq('pin_code', pin)
+                        .single();
+                    
+                    if (globalUser) {
+                        data = globalUser;
+                        pinError = null;
+                        // On met à jour le rôle localement pour la suite
+                        setRole(globalUser.role);
+                    }
+                }
+
+                if (pinError || !data) {
+                    // 🛡️ FALLBACK FINAL: Tentative d'Auth officielle
                     console.log('🔄 PIN table lookup failed, trying official Auth fallback...');
                     const virtualEmail = `${phone.trim()}@samatechnicien.dummy`; // Try phone first
                     const virtualPass = `PIN_${pin}_SamaTech221`;
