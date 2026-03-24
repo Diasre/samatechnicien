@@ -432,7 +432,7 @@ const Dashboard = () => {
                                                             className="btn btn-outline"
                                                             style={{ padding: '0.3rem', borderRadius: '4px' }}
                                                             onClick={() => handlePasswordChange(tech.id, tech.fullName, false)}
-                                                            title="Changer le PIN"
+                                                            title="Modifier le mot de passe"
                                                         >
                                                             <Lock size={14} />
                                                         </button>
@@ -496,7 +496,7 @@ const Dashboard = () => {
                                                                 style={{ padding: '0.4rem 0.6rem', fontSize: '0.7rem' }}
                                                                 onClick={() => handlePasswordChange(client.id, client.fullName, true)}
                                                             >
-                                                                Code PIN
+                                                                Mot de passe
                                                             </button>
                                                             <button
                                                                 className="btn btn-outline"

@@ -169,11 +169,11 @@ const TechniciansList = () => {
     };
 
     const handlePasswordChange = async (techId) => {
-        const newPassword = window.prompt("Entrez le nouveau Code PIN (4 chiffres) pour ce technicien :");
+        const newPassword = window.prompt("Entrez le nouveau mot de passe pour ce technicien (minimum 4 caractères) :");
 
         if (newPassword && newPassword.trim() !== "") {
-            if (!/^\d{4}$/.test(newPassword.trim())) {
-                alert("Le PIN doit être composé de exactement 4 chiffres.");
+            if (newPassword.trim().length < 4) {
+                alert("Le mot de passe doit contenir au moins 4 caractères.");
                 return;
             }
 
@@ -185,7 +185,7 @@ const TechniciansList = () => {
 
                 if (error) throw error;
 
-                alert('Le Code PIN a été mis à jour avec succès.');
+                alert('Le mot de passe a été mis à jour avec succès.');
             } catch (error) {
                 console.error(error);
                 alert('Erreur lors de la mise à jour: ' + error.message);

@@ -10,10 +10,7 @@ const Login = () => {
     // State
     const [role, setRole] = useState('client');
     const [phone, setPhone] = useState('');
-    const [pin, setPin] = useState('');
-    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [loginMethod, setLoginMethod] = useState(isMobile ? 'pin' : 'email');
     const [showPassword, setShowPassword] = useState(false);
 
     useEffect(() => {
@@ -28,123 +25,58 @@ const Login = () => {
         }
     }, [navigate]);
 
-    const handleNumberClick = (num) => {
-        if (pin.length < 4) setPin(prev => prev + num);
-    };
-
-    const handleDelete = () => {
-        setPin(prev => prev.slice(0, -1));
-    };
+    // Fonctions supprimées car PIN pad retiré
 
     const performLoginLogic = async () => {
         try {
             let userData = null;
 
-            if (loginMethod === 'pin') {
-                // 🔐 LOGIN PAR TÉLÉPHONE + PIN (Omni-détection intégrée)
                 const phoneClean = phone.replace(/\s+/g, '').replace(/^\+221/, '').replace(/^\+/, '');
                 
                 if (phoneClean.length < 8) return alert("Veuillez entrer un numéro de téléphone valide.");
-                if (pin.length < 4) return alert("Veuillez entrer votre PIN de 4 chiffres.");
+                if (password.length < 4) return alert("Veuillez entrer votre mot de passe.");
 
-                // Recherche globale sans filtre de rôle pour être sûr de trouver l'utilisateur
+                // Recherche dans la table users par téléphone + mot de passe
                 const { data: userRecord, error: findError } = await supabase
                     .from('users')
                     .select('*')
                     .eq('phone', phoneClean)
-                    .eq('pin_code', pin)
+                    .eq('password', password)
                     .single();
 
                 if (userRecord) {
                     userData = userRecord;
                     setRole(userRecord.role);
                 } else {
-                    // 🛡️ FALLBACK ANDROID: Le numéro est l'identifiant secret
-                    // On utilise le numéro propre pour l'authentification
-                    const vPass = `PIN_${pin}_SamaTech221`;
+                    // 🛡️ FALLBACK: Authentification Supabase par mail dummy ou email réel
+                    const vEmail = `${phoneClean}@samatechnicien.dummy`;
                     
-                    let authResult = null;
-                    const { data: mainAuth, error: mainErr } = await supabase.auth.signInWithPassword({
-                        email: `${phoneClean}@samatechnicien.dummy`,
-                        password: vPass
+                    const { data: authResult, error: mainErr } = await supabase.auth.signInWithPassword({
+                        email: vEmail,
+                        password: password
                     });
 
-                    if (mainErr) {
-                        // On tente aussi avec l'email classique si l'utilisateur existe
-                        const { data: dbUser } = await supabase.from('users').select('*').eq('phone', phoneClean).single();
-                        if (dbUser && dbUser.username) {
+                    if (!authResult?.user) {
+                        // On tente avec l'email si on en trouve un dans la base
+                        const { data: dbUser } = await supabase.from('users').select('email').eq('phone', phoneClean).single();
+                        if (dbUser?.email) {
                             const { data: retry } = await supabase.auth.signInWithPassword({
-                                email: `${dbUser.username.toLowerCase().trim()}@samatechnicien.dummy`,
-                                password: vPass
+                                email: dbUser.email,
+                                password: password
                             });
-                            authResult = retry;
+                            userData = (await supabase.from('users').select('*').eq('id', retry.user.id).single()).data;
                         }
-                    } else {
-                        authResult = mainAuth;
-                    }
-
-                    if (authResult?.user) {
-                        const { data: sync, error: syncError } = await supabase.from('users').select('*').eq('id', authResult.user.id).single();
-                        
-                        if (!sync || syncError || !sync.pin_code) {
-                            console.log('👷‍♂️ Réparation / Création fiche technicien force...');
-                            const meta = authResult.user.user_metadata || {};
-                            const { data: upResult } = await supabase.from('users').upsert([{
-                                id: authResult.user.id,
-                                fullname: meta.full_name || meta.fullname || 'Utilisateur',
-                                phone: phoneClean,
-                                role: meta.role || 'technician',
-                                pin_code: pin,
-                                password: pin,
-                                city: meta.city,
-                                district: meta.district,
-                                username: phoneClean,
-                                email: authResult.user.email,
-                                isblocked: 0,
-                                commentsenabled: 1
-                            }], { onConflict: 'id' }).select().single();
-                            userData = upResult;
-                        } else {
-                            userData = sync;
-                        }
+                    } else if (authResult.user) {
+                        const { data: sync } = await supabase.from('users').select('*').eq('id', authResult.user.id).single();
+                        userData = sync;
                     }
                 }
 
                 if (!userData) {
-                    return alert("Identifiants incorrects. Vérifiez votre numéro ou votre PIN.");
+                    return alert("Identifiants incorrects. Vérifiez votre numéro ou votre mot de passe.");
                 }
 
-                // 🛡️ AUTO-REPAIR: Si les données sont manquantes dans la table users, on répare le profil
-                if (userData && (!userData.pin_code || !userData.username)) {
-                    console.log('🩹 Profil incomplet détecté, lancement de la réparation automatique...');
-                    const { error: repairErr } = await supabase
-                        .from('users')
-                        .update({ 
-                            pin_code: pin || userData.pin_code, // On utilise le PIN que l'utilisateur vient d'entrer
-                            password: pin || userData.pin_code, // Visibilité base (comme sur ton image)
-                            username: userData.phone || userData.username 
-                        })
-                        .eq('id', userData.id);
-                    
-                    if (!repairErr) {
-                         console.log('✅ Profil réparé avec succès !');
-                         // On rafraîchit les données locales pour que tout soit à jour
-                         userData.pin_code = pin || userData.pin_code;
-                         userData.password = pin || userData.pin_code;
-                    }
-                }
-            } else {
-                // 🚀 LOGIN CLASSIQUE (Email + Pass)
-                const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-                    email,
-                    password
-                });
-
-                if (authError) return alert(authError.message);
-
-                const { data: dbUser } = await supabase.from('users').select('*').eq('id', authData.user.id).single();
-                userData = dbUser;
-            }
+            // Logic unifyied above
 
             if (userData.isblocked) return alert('Votre compte est bloqué.');
 
@@ -164,30 +96,7 @@ const Login = () => {
         }
     };
 
-    // Auto-login on 4th PIN digit
-    useEffect(() => {
-        if (pin.length === 4 && loginMethod === 'pin' && phone.length >= 8) {
-            performLoginLogic();
-        }
-    }, [pin]);
-
-    const PinButton = ({ num }) => (
-        <button 
-            type="button"
-            onClick={() => handleNumberClick(num)}
-            style={{ 
-                width: '65px', height: '65px', borderRadius: '50%', border: '2px solid #f1f5f9', 
-                background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', color: '#1e293b', 
-                fontSize: '1.5rem', fontWeight: '800', cursor: 'pointer', display: 'flex', 
-                alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
-                boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
-            }}
-            onMouseDown={(e) => { e.currentTarget.style.background = '#10b981'; e.currentTarget.style.color = '#fff'; }}
-            onMouseUp={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.8)'; e.currentTarget.style.color = '#1e293b'; }}
-        >
-            {num}
-        </button>
-    );
+    // Logique de connexion unifiée
 
     return (
         <div style={{ 
@@ -221,59 +130,38 @@ const Login = () => {
                     </button>
                 </div>
 
-                {/* 🛡️ TEST WEB: On l'active temporairement pour ton test sur l'ordinateur ! */}
-                {true ? (
-                    /* Mobile PIN Login */
-                    <div style={{ animation: 'fadeIn 0.5s ease' }}>
-                        <div style={{ position: 'relative', borderBottom: '2px solid #10b981', marginBottom: '2.5rem', paddingBottom: '0.8rem' }}>
-                            <Phone size={20} style={{ position: 'absolute', left: '0', color: '#10b981' }} />
-                            <input 
-                                type="tel" value={phone} 
-                                onChange={(e) => setPhone(e.target.value)}
-                                style={{ width: '100%', paddingLeft: '2.5rem', background: 'transparent', border: 'none', color: '#1e293b', fontSize: '1.2rem', outline: 'none' }}
-                                placeholder="Téléphone"
-                            />
-                        </div>
-
-                        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                            <p style={{ fontSize: '0.9rem', fontWeight: '700', marginBottom: '1rem', color: '#64748b' }}>Code PIN</p>
-                            <div style={{ display: 'flex', justifyContent: 'center', gap: '15px' }}>
-                                {[...Array(4)].map((_, i) => (
-                                    <div key={i} style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid #10b981', background: pin.length > i ? '#10b981' : 'transparent', transition: 'all 0.2s' }} />
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* PIN Pad */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', placeItems: 'center', marginBottom: '2rem' }}>
-                            {[1, 7, 5, 0, 6, 9, 4, 3, 8, 2].map(num => (
-                                <PinButton key={num} num={num} />
-                            ))}
-                            <div /> {/* Placeholder for alignment matching Jobalma layout */}
-                            <button 
-                                onClick={handleDelete}
-                                style={{ width: '65px', height: '65px', borderRadius: '50%', border: 'none', background: 'transparent', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                            >
-                                <Delete size={28} />
-                            </button>
-                        </div>
+                <div style={{ animation: 'fadeIn 0.5s ease' }}>
+                    <div style={{ position: 'relative', borderBottom: '2px solid #10b981', marginBottom: '2rem', paddingBottom: '0.8rem' }}>
+                        <Phone size={20} style={{ position: 'absolute', left: '0', color: '#10b981' }} />
+                        <input 
+                            type="tel" value={phone} 
+                            onChange={(e) => setPhone(e.target.value)}
+                            style={{ width: '100%', paddingLeft: '2.5rem', background: 'transparent', border: 'none', color: '#1e293b', fontSize: '1.2rem', outline: 'none' }}
+                            placeholder="77 000 00 00"
+                        />
                     </div>
-                ) : (
-                    /* Desktop Email Login */
-                    <form onSubmit={(e) => { e.preventDefault(); performLoginLogic(); }}>
-                        <div style={{ marginBottom: '1rem' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', color: '#1e293b' }}>Email</label>
-                            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} style={{ width: '100%', padding: '1rem', borderRadius: '15px', border: '2px solid #f1f5f9', outline: 'none', background: '#fff', color: '#333' }} placeholder="votre@mail.com" />
-                        </div>
-                        <div style={{ marginBottom: '1.5rem' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', color: '#1e293b' }}>Mot de passe</label>
-                            <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} style={{ width: '100%', padding: '1rem', borderRadius: '15px', border: '2px solid #f1f5f9', outline: 'none', background: '#fff', color: '#333' }} placeholder="••••••••" />
-                        </div>
-                        <button type="submit" style={{ width: '100%', padding: '1.2rem', background: '#10b981', color: '#fff', border: 'none', borderRadius: '20px', fontWeight: '900', fontSize: '1.1rem', cursor: 'pointer' }}>
-                            Se connecter
+
+                    <div style={{ position: 'relative', borderBottom: '2px solid #10b981', marginBottom: '2.5rem', paddingBottom: '0.8rem' }}>
+                        <Lock size={20} style={{ position: 'absolute', left: '0', color: '#10b981' }} />
+                        <input 
+                            type={showPassword ? "text" : "password"} 
+                            value={password} 
+                            onChange={(e) => setPassword(e.target.value)}
+                            style={{ width: '100%', paddingLeft: '2.5rem', background: 'transparent', border: 'none', color: '#1e293b', fontSize: '1.2rem', outline: 'none' }}
+                            placeholder="Mot de passe"
+                        />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '0', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
+                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
-                    </form>
-                )}
+                    </div>
+
+                    <button 
+                        onClick={performLoginLogic}
+                        style={{ width: '100%', padding: '1.2rem', background: '#10b981', color: '#fff', border: 'none', borderRadius: '20px', fontWeight: '900', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 10px 20px rgba(16, 185, 129, 0.2)' }}
+                    >
+                        Se connecter
+                    </button>
+                </div>
 
                 <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
                     <p style={{ fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer', marginBottom: '1rem', color: '#10b981' }}>Mot de passe oublié ?</p>

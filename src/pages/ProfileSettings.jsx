@@ -104,12 +104,7 @@ const ProfileSettings = () => {
             return;
         }
 
-        // Validation Email (Gmail/Outlook/Yahoo/Hotmail/iCloud)
-        const emailRegex = /^[a-zA-Z0-9._-]+@(gmail\.com|outlook\.com|yahoo\.com|yahoo\.fr|hotmail\.com|hotmail\.fr|icloud\.com)$/i;
-        if (formData.email && !emailRegex.test(formData.email)) {
-            alert("Donner une email valide (Gmail, Outlook, Yahoo, Hotmail, iCloud)");
-            return;
-        }
+        // Validation Email (Masquée ou auto-gérée)
 
         // Politique de sécurité du mot de passe
         if (formData.password) {
@@ -383,30 +378,16 @@ const ProfileSettings = () => {
                         />
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                        <div style={{ marginBottom: '1.25rem' }}>
-                            <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>Email</label>
-                            <input
-                                type="email"
-                                name="email"
-                                value={formData.email}
-                                onChange={handleInputChange}
-                                required
-                                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ddd' }}
-                            />
-                        </div>
                         <div style={{ marginBottom: '1.25rem' }}>
                             <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>Téléphone</label>
                             <input
                                 type="text"
                                 name="phone"
                                 value={formData.phone}
-                                onChange={handleInputChange}
-                                placeholder="ex: 77 123 45 67"
-                                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ddd' }}
+                                readOnly={true}
+                                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ddd', backgroundColor: '#f5f5f5' }}
                             />
                         </div>
-                    </div>
 
                     {/* Technician Specific Fields */}
                     {user.role === 'technician' && (

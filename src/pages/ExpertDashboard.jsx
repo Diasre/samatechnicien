@@ -514,13 +514,7 @@ const ExpertDashboard = () => {
                                     />
                                 </div>
 
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem' }}>Email</label>
-                                    <input
-                                        type="email" name="email" value={formData.email} onChange={handleInputChange}
-                                        style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem' }}
-                                    />
-                                </div>
+
 
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.4rem', color: '#856404' }}>Mot de passe actuel (requis pour modification)</label>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { User, Mail, Lock, Shield, Phone, Eye, EyeOff, MapPin, Briefcase, ChevronRight, CheckCircle2, Hammer, Search } from 'lucide-react';
+import { User, Lock, Phone, Eye, EyeOff, MapPin, CheckCircle2, Hammer, Search } from 'lucide-react';
 
 const Register = () => {
     const navigate = useNavigate();
@@ -32,7 +32,6 @@ const Register = () => {
         city: '',
         district: '',
         username: '',
-        pinCode: '',
         image: null,
         acceptedTerms: false
     });
@@ -58,8 +57,8 @@ const Register = () => {
         const phoneClean = formData.phone.replace(/\s+/g, '').replace(/^\+221/, '').replace(/^\+/, '');
         // 🛡️ UNIFICATION FORCÉE : On priorise le téléphone pour le TEST WEB et Mobile
         const usePhoneOnly = isMobile || (formData.phone && formData.phone.length >= 8);
-        const finalEmail = usePhoneOnly ? `${phoneClean}@samatechnicien.dummy` : formData.email;
-        const finalPassword = usePhoneOnly ? `PIN_${formData.pinCode}_SamaTech221` : formData.password;
+        const finalEmail = usePhoneOnly ? `${phoneClean}@samatechnicien.dummy` : (formData.email || `${phoneClean}@samatechnicien.dummy`);
+        const finalPassword = formData.password;
 
         try {
             let imageUrl = null;
@@ -84,8 +83,7 @@ const Register = () => {
                         city: formData.city,
                         district: formData.district,
                         username: phoneClean, // 极 极 UNIFICATION Propre
-                        pin_code: formData.pinCode,
-                        password: formData.pinCode, // On le met aussi ici pour ta table
+                        password: formData.password, // On le met aussi ici pour ta table
                         image: imageUrl,
                         specialty: formData.role === 'technician' ? (formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty) : null
                     }
@@ -99,7 +97,7 @@ const Register = () => {
                 console.log('⏳ Attente de synchronisation serveur (1.5s)...');
                 await new Promise(resolve => setTimeout(resolve, 1500)); // On laisse passer le trigger serveur
                 
-                // 🛡️ UPSERT FORCE: On ÉCRASE les NULL du serveur avec ton PIN
+                // 🛡️ UPSERT: On synchronise les données utilisateur avec la base
                 const { error: dbError } = await supabase.from('users').upsert([{
                     id: authData.user.id,
                     fullname: formData.fullName,
@@ -108,8 +106,7 @@ const Register = () => {
                     city: formData.city,
                     district: formData.district,
                     username: phoneClean, 
-                    pin_code: formData.pinCode,
-                    password: formData.pinCode,
+                    password: formData.password,
                     email: finalEmail,
                     specialty: formData.role === 'technician' ? (formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty) : null,
                     image: imageUrl,
@@ -140,8 +137,7 @@ const Register = () => {
                         city: formData.city,
                         district: formData.district,
                         username: phoneClean, // Indispensable pour Diaspora/Dias
-                        pin_code: formData.pinCode,
-                        password: formData.pinCode,
+                        password: formData.password,
                         email: finalEmail,
                         isblocked: 0,
                         commentsenabled: 1
@@ -265,25 +261,6 @@ const Register = () => {
                              </div>
                         </div>
 
-                        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.2rem' }}>
-                            <div style={{ flex: 1 }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b' }}>Identifiant</label>
-                                <input 
-                                    type="text" 
-                                    name="username" 
-                                    required 
-                                    value={formData.phone} // On force l'utilisation du téléphone ici !
-                                    readOnly={isMobile} // Empêche de taper autre chose sur mobile
-                                    style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid #10b981', background: isMobile ? '#f1f5f9' : 'rgba(255,255,255,0.8)', color: '#1e293b', outline: 'none' }} 
-                                    placeholder="automatique" 
-                                />
-                            </div>
-                            <div style={{ width: '100px' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b' }}>PIN</label>
-                                <input type="text" maxLength="4" required value={formData.pinCode} onChange={(e) => setFormData({ ...formData, pinCode: e.target.value.replace(/\D/g, '').slice(0, 4) })} style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: 'rgba(255,255,255,0.8)', color: '#1e293b', outline: 'none', textAlign: 'center', fontWeight: '900', letterSpacing: '4px' }} placeholder="0000" />
-                            </div>
-                        </div>
-
                         {formData.role === 'technician' && (
                             <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.2rem' }}>
                                 <div style={{ flex: 1 }}>
@@ -297,27 +274,24 @@ const Register = () => {
                             </div>
                         )}
 
-                        {!isMobile && (
-                            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.2rem' }}>
-                                <div style={{ flex: 1 }}>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b' }}>Email (Optionnel si numéro)</label>
-                                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                                        <Mail size={18} style={{ position: 'absolute', left: '1rem', color: '#10b981' }} />
-                                        <input type="email" name="email" value={formData.email} onChange={handleChange} style={{ width: '100%', padding: '1rem 1rem 1rem 2.8rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: 'rgba(255,255,255,0.8)', color: '#1e293b', outline: 'none' }} placeholder="exemple@mail.com" />
-                                    </div>
-                                </div>
-                                <div style={{ flex: 1 }}>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b' }}>Mot de passe (Optionnel)</label>
-                                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                                        <Lock size={18} style={{ position: 'absolute', left: '1rem', color: '#10b981' }} />
-                                        <input type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange} style={{ width: '100%', padding: '1rem 1rem 1rem 2.8rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: 'rgba(255,255,255,0.8)', color: '#1e293b', outline: 'none' }} placeholder="••••••••" />
-                                        <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '1rem', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
-                                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                        </button>
-                                    </div>
-                                </div>
+                        <div style={{ marginBottom: '1.2rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#10b981' }}>Mot de passe</label>
+                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                <Lock size={18} style={{ position: 'absolute', left: '1rem', color: '#10b981' }} />
+                                <input 
+                                    type={showPassword ? "text" : "password"} 
+                                    name="password" 
+                                    required
+                                    value={formData.password} 
+                                    onChange={handleChange} 
+                                    style={{ width: '100%', padding: '1.2rem 1rem 1.2rem 2.8rem', borderRadius: '20px', border: '2px solid #10b981', background: 'rgba(255,255,255,0.8)', color: '#1e293b', outline: 'none' }} 
+                                    placeholder="Minimum 6 caractères" 
+                                />
+                                <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '1rem', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
                             </div>
-                        )}
+                        </div>
                         
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '1.5rem' }}>
                             <div 
