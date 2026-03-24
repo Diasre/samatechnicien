@@ -28,7 +28,7 @@ const Home = () => {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', maxWidth: '360px', margin: '0 auto', width: '100%' }}>
-                    <Link to="/technicians" className="card" style={{ textDecoration: 'none', padding: '0.5rem', transition: 'transform 0.2s', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', aspectRatio: '1 / 1', borderRadius: '50%' }}>
+                    <Link to="/register" className="card" style={{ textDecoration: 'none', padding: '0.5rem', transition: 'transform 0.2s', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', aspectRatio: '1 / 1', borderRadius: '50%' }}>
                         <div style={{ backgroundColor: 'var(--primary-color)', color: 'white', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.4rem' }}>
                             <ShieldCheck size={18} />
                         </div>
