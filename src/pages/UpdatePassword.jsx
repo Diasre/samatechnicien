@@ -31,16 +31,17 @@ const UpdatePassword = () => {
             return;
         }
 
-        if (password.length < 6) {
-            setError("Le mot de passe doit contenir au moins 6 caractères.");
+        if (password.length !== 4) {
+            setError("Le code secret doit contenir exactement 4 chiffres.");
             return;
         }
 
         setLoading(true);
 
         try {
+            const finalPassword = password + "00";
             const { error } = await supabase.auth.updateUser({
-                password: password
+                password: finalPassword
             });
 
             if (error) throw error;
@@ -90,11 +91,18 @@ const UpdatePassword = () => {
                         <input
                             type="password"
                             value={password}
-                            onChange={(e) => setPassword(e.target.value)}
+                            maxLength="4"
+                            inputMode="numeric"
+                            pattern="\d*"
+                            onChange={(e) => {
+                                const val = e.target.value.replace(/\D/g, '');
+                                setPassword(val);
+                            }}
                             style={{
                                 width: '100%', padding: '0.8rem', borderRadius: '8px',
-                                border: '1px solid #ddd', fontSize: '1rem'
+                                border: '1px solid #ddd', fontSize: '1rem', letterSpacing: password ? '4px' : 'normal', fontWeight: 'bold'
                             }}
+                            placeholder="Ex: 1234"
                             required
                         />
                     </div>
@@ -104,11 +112,18 @@ const UpdatePassword = () => {
                         <input
                             type="password"
                             value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            maxLength="4"
+                            inputMode="numeric"
+                            pattern="\d*"
+                            onChange={(e) => {
+                                const val = e.target.value.replace(/\D/g, '');
+                                setConfirmPassword(val);
+                            }}
                             style={{
                                 width: '100%', padding: '0.8rem', borderRadius: '8px',
-                                border: '1px solid #ddd', fontSize: '1rem'
+                                border: '1px solid #ddd', fontSize: '1rem', letterSpacing: confirmPassword ? '4px' : 'normal', fontWeight: 'bold'
                             }}
+                            placeholder="Confirmer"
                             required
                         />
                     </div>

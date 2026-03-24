@@ -58,7 +58,8 @@ const Register = () => {
         // 🛡️ UNIFICATION FORCÉE : On priorise le téléphone pour le TEST WEB et Mobile
         const usePhoneOnly = isMobile || (formData.phone && formData.phone.length >= 8);
         const finalEmail = usePhoneOnly ? `${phoneClean}@samatechnicien.dummy` : (formData.email || `${phoneClean}@samatechnicien.dummy`);
-        const finalPassword = formData.password;
+        // 🛡️ Supabase requiert 6 caractères minimum, on pad donc le mot de passe de 4 chiffres en ajoutant "00" en arrière-plan
+        const finalPassword = formData.password.length === 4 ? formData.password + "00" : formData.password;
 
         try {
             let imageUrl = null;
@@ -275,17 +276,23 @@ const Register = () => {
                         )}
 
                         <div style={{ marginBottom: '1.2rem' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#10b981' }}>Mot de passe</label>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#10b981' }}>Code secret (4 chiffres)</label>
                             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                                 <Lock size={18} style={{ position: 'absolute', left: '1rem', color: '#10b981' }} />
                                 <input 
                                     type={showPassword ? "text" : "password"} 
                                     name="password" 
                                     required
+                                    maxLength="4"
+                                    inputMode="numeric"
+                                    pattern="\d*"
                                     value={formData.password} 
-                                    onChange={handleChange} 
-                                    style={{ width: '100%', padding: '1.2rem 1rem 1.2rem 2.8rem', borderRadius: '20px', border: '2px solid #10b981', background: 'rgba(255,255,255,0.8)', color: '#1e293b', outline: 'none' }} 
-                                    placeholder="Minimum 6 caractères" 
+                                    onChange={(e) => {
+                                        const val = e.target.value.replace(/\D/g, ''); // Uniquement des chiffres
+                                        setFormData({ ...formData, password: val });
+                                    }} 
+                                    style={{ width: '100%', padding: '1.2rem 1rem 1.2rem 2.8rem', borderRadius: '20px', border: '2px solid #10b981', background: 'rgba(255,255,255,0.8)', color: '#1e293b', outline: 'none', letterSpacing: formData.password ? '4px' : 'normal', fontWeight: '700' }} 
+                                    placeholder="Ex: 1234" 
                                 />
                                 <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '1rem', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
                                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}

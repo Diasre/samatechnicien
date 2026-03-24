@@ -106,11 +106,11 @@ const ProfileSettings = () => {
 
         // Validation Email (Masquée ou auto-gérée)
 
-        // Politique de sécurité du mot de passe
+        // Politique de sécurité du mot de passe (Code PIN 4 chiffres)
         if (formData.password) {
-            const passwordRegex = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/;
-            if (!passwordRegex.test(formData.password)) {
-                alert('Le nouveau mot de passe doit contenir au moins 8 caractères, une majuscule et un chiffre.');
+            if (formData.password.length !== 4 || !/^\d{4}$/.test(formData.password)) {
+                alert('Le nouveau code secret doit contenir exactement 4 chiffres.');
+                setIsSaving(false);
                 return;
             }
         }
@@ -203,7 +203,7 @@ const ProfileSettings = () => {
             // 4. Update Password (Supabase Auth)
             if (formData.password) {
                 const { error: authError } = await supabase.auth.updateUser({
-                    password: formData.password
+                    password: formData.password + "00"
                 });
                 if (authError) throw authError;
             }
@@ -505,29 +505,41 @@ const ProfileSettings = () => {
 
                         <div style={{ marginBottom: '1.25rem' }}>
                             <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
-                                Nouveau mot de passe (8 car. min, 1 maj, 1 chiffre)
+                                Nouveau code secret (4 chiffres)
                             </label>
                             <input
                                 type="password"
                                 name="password"
+                                maxLength="4"
+                                inputMode="numeric"
+                                pattern="\d*"
                                 value={formData.password}
-                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                placeholder="Votre nouveau mot de passe"
-                                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ddd' }}
+                                onChange={(e) => {
+                                    const val = e.target.value.replace(/\D/g, '');
+                                    setFormData({ ...formData, password: val });
+                                }}
+                                placeholder="Nouveau code"
+                                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ddd', letterSpacing: formData.password ? '4px' : 'normal', fontWeight: 'bold' }}
                             />
                         </div>
 
                         <div style={{ marginBottom: '1.25rem' }}>
                             <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
-                                Confirmer le nouveau mot de passe
+                                Confirmer le nouveau code
                             </label>
                             <input
                                 type="password"
                                 name="confirmPassword"
+                                maxLength="4"
+                                inputMode="numeric"
+                                pattern="\d*"
                                 value={formData.confirmPassword}
-                                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                                placeholder="Confirmer le mot de passe"
-                                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ddd' }}
+                                onChange={(e) => {
+                                    const val = e.target.value.replace(/\D/g, '');
+                                    setFormData({ ...formData, confirmPassword: val });
+                                }}
+                                placeholder="Confirmer"
+                                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ddd', letterSpacing: formData.confirmPassword ? '4px' : 'normal', fontWeight: 'bold' }}
                             />
                         </div>
                     </div>

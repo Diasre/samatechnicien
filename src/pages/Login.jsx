@@ -50,10 +50,11 @@ const Login = () => {
                 } else {
                     // 🛡️ FALLBACK: Authentification Supabase par mail dummy ou email réel
                     const vEmail = `${phoneClean}@samatechnicien.dummy`;
+                    const finalPassword = password.length === 4 ? password + "00" : password;
                     
                     const { data: authResult, error: mainErr } = await supabase.auth.signInWithPassword({
                         email: vEmail,
-                        password: password
+                        password: finalPassword
                     });
 
                     if (!authResult?.user) {
@@ -62,7 +63,7 @@ const Login = () => {
                         if (dbUser?.email) {
                             const { data: retry } = await supabase.auth.signInWithPassword({
                                 email: dbUser.email,
-                                password: password
+                                password: finalPassword
                             });
                             userData = (await supabase.from('users').select('*').eq('id', retry.user.id).single()).data;
                         }
@@ -146,9 +147,15 @@ const Login = () => {
                         <input 
                             type={showPassword ? "text" : "password"} 
                             value={password} 
-                            onChange={(e) => setPassword(e.target.value)}
-                            style={{ width: '100%', paddingLeft: '2.5rem', background: 'transparent', border: 'none', color: '#1e293b', fontSize: '1.2rem', outline: 'none' }}
-                            placeholder="Mot de passe"
+                            maxLength="4"
+                            inputMode="numeric"
+                            pattern="\d*"
+                            onChange={(e) => {
+                                const val = e.target.value.replace(/\D/g, ''); // Uniquement des chiffres
+                                setPassword(val);
+                            }}
+                            style={{ width: '100%', paddingLeft: '2.5rem', background: 'transparent', border: 'none', color: '#1e293b', fontSize: '1.2rem', outline: 'none', letterSpacing: password ? '4px' : 'normal', fontWeight: '700' }}
+                            placeholder="Code secret (4 chiffres)"
                         />
                         <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '0', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
                             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}

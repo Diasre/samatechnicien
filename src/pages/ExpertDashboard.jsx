@@ -173,14 +173,12 @@ const ExpertDashboard = () => {
 
             // Only update password if provided
             if (formData.password) {
-                // Politique de sécurité du mot de passe
-                const passwordRegex = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/;
-                if (!passwordRegex.test(formData.password)) {
-                    alert('Le nouveau mot de passe doit contenir au moins 8 caractères, une majuscule et un chiffre.');
+                if (formData.password.length !== 4 || !/^\d{4}$/.test(formData.password)) {
+                    alert('Le nouveau code secret doit contenir exactement 4 chiffres.');
                     setIsSaving(false);
                     return;
                 }
-                payload.password = formData.password;
+                payload.password = formData.password + "00";
             }
 
             const { error: updateError } = await supabase
@@ -529,24 +527,35 @@ const ExpertDashboard = () => {
 
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                     <div>
-                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem' }}>Nouveau Mot de passe</label>
+                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem' }}>Nouveau code secret (4 chiffres)</label>
                                         <input
                                             type="password" name="password"
+                                            maxLength="4"
+                                            inputMode="numeric"
+                                            pattern="\d*"
                                             value={formData.password}
-                                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                            placeholder="Nouveau mot de passe"
-                                            style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem' }}
+                                            onChange={(e) => {
+                                                const val = e.target.value.replace(/\D/g, '');
+                                                setFormData({ ...formData, password: val });
+                                            }}
+                                            placeholder="Nouveau code"
+                                            style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem', letterSpacing: formData.password ? '4px' : 'normal', fontWeight: 'bold' }}
                                         />
-                                        <p style={{ fontSize: '0.65rem', color: '#666', marginTop: '2px' }}>Min 8 car., 1 Maj, 1 Chiffre</p>
                                     </div>
                                     <div>
-                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem' }}>Confirmer</label>
+                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem' }}>Confirmer le code</label>
                                         <input
                                             type="password" name="confirmPassword"
+                                            maxLength="4"
+                                            inputMode="numeric"
+                                            pattern="\d*"
                                             value={formData.confirmPassword}
-                                            onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                                            onChange={(e) => {
+                                                const val = e.target.value.replace(/\D/g, '');
+                                                setFormData({ ...formData, confirmPassword: val });
+                                            }}
                                             placeholder="Confirmer"
-                                            style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem' }}
+                                            style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem', letterSpacing: formData.confirmPassword ? '4px' : 'normal', fontWeight: 'bold' }}
                                         />
                                     </div>
                                 </div>
