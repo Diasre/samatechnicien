@@ -22,36 +22,38 @@ const ForgotPassword = () => {
         setGeneratedPin(null);
 
         try {
-            // Nettoyage complet
+            // Nettoyage complet (que les chiffres)
             const phoneClean = phone.replace(/\D/g, '').replace(/^221/, '').replace(/^00/, '');
             
-            // 1. On cherche l'utilisateur (on peut encore SELECT car c'est public)
-            const { data, error: dbError } = await supabase.from('users').select('*').eq('phone', phoneClean).limit(1);
+            // On tente de trouver le numéro sous toutes ses formes (avec ou sans espaces)
+            // On utilise .or() pour chercher le format brut ET le format avec espaces si possible
+            const { data, error: dbError } = await supabase
+                .from('users')
+                .select('*')
+                .or(`phone.eq.${phoneClean},phone.ilike.%${phoneClean}%`) 
+                .limit(1);
 
-            if (dbError) throw new Error("Erreur base de données.");
+            if (dbError) {
+                console.error("Erreur de base de données:", dbError);
+                throw new Error("Erreur de connexion à la base.");
+            }
 
             if (data && data.length > 0) {
                 const foundUser = data[0];
                 const newPIN = Math.floor(1000 + Math.random() * 9000).toString();
                 
-                // 2. MISE À JOUR SÉCURISÉE VIA LA FONCTION RPC (Bypasse RLS)
-                // On utilise la fonction reset_password_by_phone(phone, password)
-                const { error: rpcError } = await supabase.rpc('reset_password_by_phone', { 
-                    p_phone: phoneClean, 
+                const { error: updateError } = await supabase.rpc('reset_password_by_phone', { 
+                    p_phone: foundUser.phone, 
                     p_new_password: newPIN 
                 });
 
-                if (rpcError) {
-                    console.error("Erreur RPC:", rpcError);
-                    // On tente quand même en direct au cas où (fallback)
-                    await supabase.from('users').update({ password: newPIN }).eq('id', foundUser.id);
-                }
+                if (updateError) throw new Error("Erreur de mise à jour sécurisée.");
 
                 setGeneratedPin(newPIN);
                 setUserInfo(foundUser);
-                setMessage("Succès ! Votre nouveau code secret est activé.");
+                setMessage(`Succès ! Le code ${newPIN} est maintenant actif.`);
             } else {
-                setError(`Aucun compte trouvé pour le ${phoneClean}.`);
+                setError(`Aucun compte n'a été trouvé pour le numéro ${phoneClean}.`);
             }
         } catch (err) {
             setError(err.message);
