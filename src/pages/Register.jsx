@@ -118,8 +118,8 @@ const Register = () => {
                 }
             }
 
-            // 🛡️ AUTO-LOGIN (Mobile ONLY): Forcer la connexion pour activer le profil immédiatement !
-            if (isMobile) {
+            // 🛡️ AUTO-LOGIN (Mobile & TEST WEB): Forcer la connexion pour activer le profil immédiatement !
+            if (usePhoneOnly) {
                 console.log('🚄 Auto-Login en cours pour activation...');
                 const { error: loginError } = await supabase.auth.signInWithPassword({
                     email: finalEmail,
