@@ -93,13 +93,12 @@ const Register = () => {
 
             if (authError) return alert("Erreur: " + authError.message);
 
-            // 🛡️ SYNC: Ajout manuel dans la table users (en plus de l'Auth)
+            // 🛡️ SYNC: Création/Mise à jour dans la table users
             if (authData?.user) {
-                console.log('⏳ Attente de synchronisation serveur (1.5s)...');
-                await new Promise(resolve => setTimeout(resolve, 1500)); // On laisse passer le trigger serveur
+                console.log('⏳ Synchronisation du profil...');
                 
-                // 🛡️ UPDATE: On met à jour la ligne existante au lieu d'upsert (qui bloque via RLS)
-                const { error: dbError } = await supabase.from('users').update({
+                const profileData = {
+                    id: authData.user.id,
                     fullname: formData.fullName,
                     phone: phoneClean,
                     role: formData.role,
@@ -112,44 +111,36 @@ const Register = () => {
                     image: imageUrl,
                     isblocked: 0,
                     commentsenabled: 1
-                }).eq('id', authData.user.id);
+                };
+
+                // On utilise upsert (Update or Insert) pour être sûr que la ligne existe
+                const { error: dbError } = await supabase
+                    .from('users')
+                    .upsert(profileData, { onConflict: 'id' });
 
                 if (dbError) {
-                    console.error('Database sync error (Upsert - intended for login-time repair):', dbError.message);
+                    console.error('Erreur de création de profil:', dbError.message);
+                    // Si échec RLS, on tente au moins de stocker localement pour le prochain login
+                    const mappedUser = { ...profileData, fullName: profileData.fullname };
+                    localStorage.setItem('user', JSON.stringify(mappedUser));
                 }
             }
 
-            // 🛡️ AUTO-LOGIN (Mobile & TEST WEB): Forcer la connexion pour activer le profil immédiatement !
+            // 🚄 Mode Auto-Login pour une expérience fluide
             if (usePhoneOnly) {
-                console.log('🚄 Auto-Login en cours pour activation...');
                 const { error: loginError } = await supabase.auth.signInWithPassword({
                     email: finalEmail,
                     password: finalPassword
                 });
                 
                 if (!loginError) {
-                    // On retente l'update avec les DROITS de connexion !
-                    const { error: upErr } = await supabase.from('users').update({
-                        fullname: formData.fullName,
-                        phone: phoneClean, // On utilise le numéro propre !
-                        role: formData.role,
-                        city: formData.city,
-                        district: formData.district,
-                        username: phoneClean, // Indispensable pour Diaspora/Dias
-                        password: formData.password,
-                        email: finalEmail,
-                        specialty: formData.role === 'technician' ? (formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty) : null,
-                        image: imageUrl,
-                        isblocked: 0,
-                        commentsenabled: 1
-                    }).eq('id', authData.user.id);
-                    
-                    if (upErr) {
-                        alert(`Attention: Le compte est créé mais la fiche base de donnée n'a pas pu être synchronisée: ${upErr.message}`);
-                    } else {
-                        alert(`Bienvenue ${formData.fullName} ! Votre profil est activé et visible dans la base.`);
+                    // On revérifie le profil une dernière fois
+                    const { data: finalProfile } = await supabase.from('users').select('*').eq('id', authData.user.id).single();
+                    if (finalProfile) {
+                        localStorage.setItem('user', JSON.stringify(finalProfile));
                     }
-                    navigate('/expert-dashboard'); // On les envoie direct au dashboard !
+                    alert(`Bienvenue ${formData.fullName} !`);
+                    navigate(formData.role === 'technician' ? '/expert-dashboard' : '/');
                     return;
                 }
             }
