@@ -98,9 +98,8 @@ const Register = () => {
                 console.log('⏳ Attente de synchronisation serveur (1.5s)...');
                 await new Promise(resolve => setTimeout(resolve, 1500)); // On laisse passer le trigger serveur
                 
-                // 🛡️ UPSERT: On synchronise les données utilisateur avec la base
-                const { error: dbError } = await supabase.from('users').upsert([{
-                    id: authData.user.id,
+                // 🛡️ UPDATE: On met à jour la ligne existante au lieu d'upsert (qui bloque via RLS)
+                const { error: dbError } = await supabase.from('users').update({
                     fullname: formData.fullName,
                     phone: phoneClean,
                     role: formData.role,
@@ -113,7 +112,7 @@ const Register = () => {
                     image: imageUrl,
                     isblocked: 0,
                     commentsenabled: 1
-                }], { onConflict: 'id' });
+                }).eq('id', authData.user.id);
 
                 if (dbError) {
                     console.error('Database sync error (Upsert - intended for login-time repair):', dbError.message);
@@ -129,9 +128,8 @@ const Register = () => {
                 });
                 
                 if (!loginError) {
-                    // On retente l'upsert avec les DROITS de connexion !
-                    const { error: upErr } = await supabase.from('users').upsert([{
-                        id: authData.user.id,
+                    // On retente l'update avec les DROITS de connexion !
+                    const { error: upErr } = await supabase.from('users').update({
                         fullname: formData.fullName,
                         phone: phoneClean, // On utilise le numéro propre !
                         role: formData.role,
@@ -140,9 +138,11 @@ const Register = () => {
                         username: phoneClean, // Indispensable pour Diaspora/Dias
                         password: formData.password,
                         email: finalEmail,
+                        specialty: formData.role === 'technician' ? (formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty) : null,
+                        image: imageUrl,
                         isblocked: 0,
                         commentsenabled: 1
-                    }], { onConflict: 'id' });
+                    }).eq('id', authData.user.id);
                     
                     if (upErr) {
                         alert(`Attention: Le compte est créé mais la fiche base de donnée n'a pas pu être synchronisée: ${upErr.message}`);
