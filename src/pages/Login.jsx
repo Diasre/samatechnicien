@@ -213,7 +213,8 @@ const Login = () => {
                     </button>
                 </div>
 
-                {isMobile ? (
+                {/* 🛡️ TEST WEB: On l'active temporairement pour ton test sur l'ordinateur ! */}
+                {true ? (
                     /* Mobile PIN Login */
                     <div style={{ animation: 'fadeIn 0.5s ease' }}>
                         <div style={{ position: 'relative', borderBottom: '2px solid #10b981', marginBottom: '2.5rem', paddingBottom: '0.8rem' }}>
