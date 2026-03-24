@@ -51,11 +51,40 @@ const Login = () => {
                     .single();
 
                 if (pinError || !data) {
-                    return alert("Téléphone ou Code PIN incorrect pour ce profil.");
+                    // 🛡️ FALLBACK: Tentative d'Auth officielle si la table users est incomplète
+                    console.log('🔄 PIN table lookup failed, trying official Auth fallback...');
+                    const virtualEmail = `${phone.trim()}@samatechnicien.dummy`; // Try phone first
+                    const virtualPass = `PIN_${pin}_SamaTech221`;
+                    
+                    const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
+                        email: virtualEmail,
+                        password: virtualPass
+                    });
+
+                    // Try username mapping if phone-email fails
+                    if (authErr && phone.length < 15) {
+                        const { data: userByPhone } = await supabase.from('users').select('username').eq('phone', phone.trim()).single();
+                        if (userByPhone?.username) {
+                            const { data: authRetry, error: retryErr } = await supabase.auth.signInWithPassword({
+                                email: `${userByPhone.username.toLowerCase().trim()}@samatechnicien.dummy`,
+                                password: virtualPass
+                            });
+                            if (!retryErr && authRetry.user) {
+                                userData = await supabase.from('users').select('*').eq('id', authRetry.user.id).single().then(res => res.data);
+                            }
+                        }
+                    } else if (!authErr && authData.user) {
+                        userData = await supabase.from('users').select('*').eq('id', authData.user.id).single().then(res => res.data);
+                    }
+
+                    if (!userData) {
+                        return alert("Téléphone ou Code PIN incorrect pour ce profil.");
+                    }
+                } else {
+                    userData = data;
                 }
-                userData = data;
             } else {
-                // 🚀 LOGIN CLASSIQUE
+                // 🚀 LOGIN CLASSIQUE (Email + Pass)
                 const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
                     email,
                     password
@@ -63,7 +92,7 @@ const Login = () => {
 
                 if (authError) return alert(authError.message);
 
-                const { data: dbUser } = await supabase.from('users').select('*').ilike('email', email).single();
+                const { data: dbUser } = await supabase.from('users').select('*').eq('id', authData.user.id).single();
                 userData = dbUser;
             }
 
