@@ -146,28 +146,39 @@ const ForgotPassword = () => {
                     </form>
                 ) : (
                     <div style={{ animation: 'fadeIn 0.3s ease' }}>
-                        <div style={{ padding: '1.25rem', backgroundColor: '#e8f5e9', borderRadius: '20px', border: '1px solid #c8e6c9', marginBottom: '1.5rem', textAlign: 'center' }}>
+                        <div style={{ padding: '1.5rem', backgroundColor: '#e8f5e9', borderRadius: '25px', border: '2px solid #c8e6c9', marginBottom: '1.5rem', textAlign: 'center' }}>
                             <p style={{ fontSize: '0.9rem', color: '#2e7d32', marginBottom: '1rem', fontWeight: '600' }}>
-                                Bonjour <strong>{userInfo.fullname}</strong> ! Cliquez ci-dessous pour recevoir votre code PIN via WhatsApp.
+                                Bonjour <strong>{userInfo.fullname}</strong> ! Cliquez ci-dessous pour m'envoyer votre nouveau code secret par WhatsApp :
                             </p>
+                            
+                            {/* Generation d'un code PIN aleatoire */}
+                            {(() => {
+                                if (!window.generatedPIN) window.generatedPIN = Math.floor(1000 + Math.random() * 9000);
+                                return (
+                                    <div style={{ fontSize: '2.5rem', fontWeight: '900', color: '#10b981', background: 'white', display: 'inline-block', padding: '0.5rem 1.5rem', borderRadius: '15px', marginBottom: '1.5rem', letterSpacing: '8px' }}>
+                                        {window.generatedPIN}
+                                    </div>
+                                );
+                            })()}
+
                             <a 
-                                href={`https://wa.me/221778599649?text=${encodeURIComponent(`Bonjour SamaTechnicien, je suis ${userInfo.fullname} (${userInfo.phone}). J'ai oublié mon code secret 4 chiffres. Merci de me le renvoyer.`)}`}
+                                href={`https://wa.me/221778599649?text=${encodeURIComponent(`Bonjour SamaTechnicien, je suis ${userInfo.fullname} (${userInfo.phone}). Merci de réinitialiser mon compte avec ce nouveau code PIN : ${window.generatedPIN}`)}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="btn"
                                 style={{ 
-                                    width: '100%', padding: '1rem', backgroundColor: '#25D366', color: 'white', fontWeight: 'bold', borderRadius: '15px',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', textDecoration: 'none'
+                                    width: '100%', padding: '1.1rem', backgroundColor: '#25D366', color: 'white', fontWeight: '900', borderRadius: '18px',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', textDecoration: 'none', boxShadow: '0 8px 15px rgba(37, 211, 102, 0.2)'
                                 }}
                             >
-                                Obtenir mon code PIN
+                                Envoyer mon code par WhatsApp
                             </a>
                         </div>
                         <button 
-                            onClick={() => setUserInfo(null)}
-                            style={{ width: '100%', background: 'none', border: 'none', color: '#64748b', fontSize: '0.85rem', cursor: 'pointer', fontWeight: '600' }}
+                            onClick={() => { window.generatedPIN = null; setUserInfo(null); }}
+                            style={{ width: '100%', background: 'none', border: 'none', color: '#64748b', fontSize: '0.85rem', cursor: 'pointer', fontWeight: '700' }}
                         >
-                            Utiliser un autre numéro
+                            Changer le numéro
                         </button>
                     </div>
                 )}
