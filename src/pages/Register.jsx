@@ -214,18 +214,24 @@ const Register = () => {
                             </div>
                         )}
                         
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '1.5rem', cursor: 'pointer' }} onClick={() => setFormData({ ...formData, acceptedTerms: !formData.acceptedTerms })}>
-                            <div style={{ 
-                                width: '24px', height: '24px', borderRadius: '8px', 
-                                border: `2px solid ${formData.acceptedTerms ? '#10b981' : '#cbd5e1'}`,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                background: formData.acceptedTerms ? '#10b981' : 'transparent',
-                                transition: 'all 0.2s ease'
-                            }}>
-                                {formData.acceptedTerms && <CheckCircle2 size={16} color="#fff" />}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '1.5rem' }}>
+                            <div 
+                                onClick={() => setFormData({ ...formData, acceptedTerms: !formData.acceptedTerms })}
+                                style={{ 
+                                    width: '30px', height: '30px', borderRadius: '10px', 
+                                    border: `2.5px solid ${formData.acceptedTerms ? '#10b981' : '#cbd5e1'}`,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    background: formData.acceptedTerms ? '#10b981' : 'rgba(255,255,255,0.5)',
+                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    cursor: 'pointer',
+                                    flexShrink: 0,
+                                    boxShadow: formData.acceptedTerms ? '0 4px 10px rgba(16, 185, 129, 0.2)' : 'none'
+                                }}
+                            >
+                                {formData.acceptedTerms && <CheckCircle2 size={20} color="#fff" strokeWidth={3} />}
                             </div>
-                            <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>
-                                J'accepte les <Link to="/terms" style={{ color: '#10b981', fontWeight: '700' }}>Conditions Générales</Link> et la <Link to="/terms" style={{ color: '#10b981', fontWeight: '700' }}>Politique de Confidentialité</Link>
+                            <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500', lineHeight: '1.4' }}>
+                                J'accepte les <Link to="/terms" style={{ color: '#10b981', fontWeight: '700', textDecoration: 'none' }}>Conditions Générales</Link> et la <Link to="/terms" style={{ color: '#10b981', fontWeight: '700', textDecoration: 'none' }}>Politique de Confidentialité</Link>
                             </span>
                         </div>
 
