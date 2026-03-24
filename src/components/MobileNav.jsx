@@ -18,7 +18,6 @@ const MobileNav = () => {
             label: isTechnician ? 'Publier' : 'Pros',
             highlight: true 
         },
-        { path: '/chat', icon: MessageCircle, label: 'Messages' }
     ];
 
     return (
