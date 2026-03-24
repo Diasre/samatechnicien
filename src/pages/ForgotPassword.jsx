@@ -12,13 +12,17 @@ const ForgotPassword = () => {
     const [userInfo, setUserInfo] = useState(null);
 
     const handleCheckAccount = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
+        if (!phone || phone.length < 5) return setError("Veuillez entrer un numéro valide.");
+        
         setLoading(true);
         setError(null);
         setUserInfo(null);
 
         try {
-            const phoneClean = phone.replace(/\s+/g, '').replace(/^\+221/, '').replace(/^\+/, '');
+            // Nettoyage complet : que les chiffres !
+            const phoneClean = phone.replace(/\D/g, '').replace(/^221/, '').replace(/^00/, '');
+            console.log("Vérification pour :", phoneClean);
             
             // On cherche l'utilisateur par téléphone
             const { data, error: dbError } = await supabase
@@ -27,16 +31,19 @@ const ForgotPassword = () => {
                 .eq('phone', phoneClean)
                 .limit(1);
 
-            if (dbError) throw dbError;
+            if (dbError) {
+                console.error("Détails de l'erreur DB:", dbError);
+                throw new Error("L'accès à la base de données est limité. Veuillez réessayer.");
+            }
 
             if (data && data.length > 0) {
                 setUserInfo(data[0]);
-                setMessage(`Compte trouvé pour ${data[0].fullname}. Cliquez sur le bouton WhatsApp ci-dessous.`);
+                setMessage(`Compte trouvé pour ${data[0].fullname}.`);
             } else {
-                setError("Aucun compte trouvé avec ce numéro. Vérifiez le numéro ou inscrivez-vous.");
+                setError(`Désolé, aucun professionnel n'a été trouvé pour le numéro ${phoneClean}. Veuillez vérifier la saisie.`);
             }
         } catch (err) {
-            setError("Erreur lors de la vérification : " + err.message);
+            setError(err.message || "Une erreur est survenue lors de la vérification.");
         } finally {
             setLoading(false);
         }
