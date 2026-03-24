@@ -46,7 +46,6 @@ const Login = () => {
 
                 if (userRecords && userRecords.length > 0) {
                     userData = userRecords[0];
-                    setRole(userRecords[0].role);
                 } else {
                     // 🛡️ FALLBACK: Authentification Supabase par mail dummy ou email réel
                     const vEmail = `${phoneClean}@samatechnicien.dummy`;
@@ -76,6 +75,12 @@ const Login = () => {
 
                 if (!userData) {
                     return alert("Identifiants incorrects. Vérifiez votre numéro ou votre mot de passe.");
+                }
+
+                // 🛡️ VÉRIFICATION STRICTE DU RÔLE
+                if (userData.role !== role) {
+                    const expectedRole = userData.role === 'technician' ? 'Technicien' : 'Client';
+                    return alert(`Désolé, vous ne pouvez pas vous connecter en tant que ${role === 'technician' ? 'Technicien' : 'Client'}. Votre compte est enregistré en tant que ${expectedRole}. Veuillez changer d'onglet.`);
                 }
 
             // Logic unifyied above
