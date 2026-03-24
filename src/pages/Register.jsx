@@ -128,7 +128,7 @@ const Register = () => {
                 
                 if (!loginError) {
                     // On retente l'upsert avec les DROITS de connexion !
-                    await supabase.from('users').upsert([{
+                    const { error: upErr } = await supabase.from('users').upsert([{
                         id: authData.user.id,
                         fullname: formData.fullName,
                         phone: phoneClean,
@@ -143,7 +143,11 @@ const Register = () => {
                         commentsenabled: 1
                     }], { onConflict: 'id' });
                     
-                    alert(`Bienvenue ${formData.fullName} ! Votre profil est activé.`);
+                    if (upErr) {
+                        alert(`Attention: Le compte est créé mais la fiche base de donnée n'a pas pu être synchronisée: ${upErr.message}`);
+                    } else {
+                        alert(`Bienvenue ${formData.fullName} ! Votre profil est activé et visible dans la base.`);
+                    }
                     navigate('/expert-dashboard'); // On les envoie direct au dashboard !
                     return;
                 }
