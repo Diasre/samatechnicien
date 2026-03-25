@@ -76,13 +76,15 @@ const Register = () => {
                 }
             }
 
-            // 2. INSCRIPTION PAR TÉLÉPHONE (Déclenche le SMS Twilio)
+            // 2. INSCRIPTION DOUBLE (Téléphone pour Twilio + Email pour la DB)
             const { error: authError } = await supabase.auth.signUp({
                 phone: fullPhone,
+                email: finalEmail, // 🛡️ On remet l'email pour éviter l'erreur Database
                 password: finalPassword,
                 options: {
                     data: {
                         full_name: formData.fullName,
+                        email: finalEmail, // 🛡️ On le stocke aussi dans les métadonnées
                         phone: phoneClean,
                         role: formData.role,
                         city: formData.city,
