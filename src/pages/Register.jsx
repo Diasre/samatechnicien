@@ -55,18 +55,22 @@ const Register = () => {
             return alert("Veuillez accepter les conditions générales pour continuer.");
         }
         
+        console.log('🚀 Lancement de l\'inscription...');
         setLoading(true);
 
-        // 🛡️ UNIFICATION: Nettoyage et formatage pour Twilio (+221 obligatoire)
-        const phoneClean = formData.phone.replace(/\D/g, '').replace(/^221/, '').replace(/^00/, '');
-        const fullPhone = `+221${phoneClean}`;
-        const finalEmail = `${phoneClean}@samatechnicien.dummy`;
-        const finalPassword = formData.password.length === 4 ? formData.password + "00" : formData.password;
-
         try {
+            // 🛡️ UNIFICATION: Nettoyage et formatage pour Twilio (+221 obligatoire)
+            const phoneClean = formData.phone.replace(/\D/g, '').replace(/^221/, '').replace(/^00/, '');
+            const fullPhone = `+221${phoneClean}`;
+            const finalEmail = `${phoneClean}@samatechnicien.dummy`;
+            const finalPassword = formData.password.length === 4 ? formData.password + "00" : formData.password;
+
+            console.log('📱 Téléphone formaté:', fullPhone);
+
             // 1. UPLOAD IMAGE (si technicien)
             let imageUrl = null;
             if (formData.role === 'technician' && formData.image) {
+                console.log('📸 Envoi de l\'image...');
                 const fileExt = formData.image.name.split('.').pop();
                 const fileName = `avatars/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
                 const { data: uploadData } = await supabase.storage.from('produits').upload(fileName, formData.image);
@@ -76,15 +80,16 @@ const Register = () => {
                 }
             }
 
+            console.log('📡 Appel à Supabase Auth pour OTP...');
             // 2. INSCRIPTION DOUBLE (Téléphone pour Twilio + Email pour la DB)
             const { error: authError } = await supabase.auth.signUp({
                 phone: fullPhone,
-                email: finalEmail, // 🛡️ On remet l'email pour éviter l'erreur Database
+                email: finalEmail,
                 password: finalPassword,
                 options: {
                     data: {
                         full_name: formData.fullName,
-                        email: finalEmail, // 🛡️ On le stocke aussi dans les métadonnées
+                        email: finalEmail,
                         phone: phoneClean,
                         role: formData.role,
                         city: formData.city,
@@ -98,17 +103,19 @@ const Register = () => {
             });
 
             if (authError) {
+                console.error('❌ Erreur Supabase:', authError.message);
                 setLoading(false);
-                return alert("Erreur: " + authError.message);
+                return alert("Erreur Supabase: " + authError.message);
             }
 
+            console.log('✅ SMS envoyé avec succès !');
             // Passage à l'étape du code SMS
             setStep(3);
             setLoading(false);
         } catch (error) {
             setLoading(false);
-            console.error('Registration error:', error);
-            alert('Erreur lors de l\'initialisation de l\'inscription.');
+            console.error('💥 Crash de l\'inscription:', error);
+            alert('Erreur critique : ' + (error.message || 'Problème de connexion'));
         }
     };
 
