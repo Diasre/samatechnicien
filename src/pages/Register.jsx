@@ -50,12 +50,12 @@ const Register = () => {
 
     const handleSubmit = async (e) => {
         if (e) e.preventDefault();
+        window.alert("🚀 CLIC DÉTECTÉ ! Lancement de l'inscription...");
         
         if (!formData.acceptedTerms) {
             return alert("Veuillez accepter les conditions générales pour continuer.");
         }
         
-        console.log('🚀 Lancement de l\'inscription...');
         setLoading(true);
 
         try {
@@ -80,16 +80,16 @@ const Register = () => {
                 }
             }
 
-            console.log('📡 Appel à Supabase Auth pour OTP...');
-            // 2. INSCRIPTION DOUBLE (Téléphone pour Twilio + Email pour la DB)
+            console.log('📡 Appel à Supabase Auth pour OTP (PHONE PRIORITY)...');
+            // 2. INSCRIPTION 100% TÉLÉPHONE (DéclencheTwilio impérativement)
             const { error: authError } = await supabase.auth.signUp({
                 phone: fullPhone,
-                email: finalEmail,
                 password: finalPassword,
                 options: {
                     data: {
+                        // 🛡️ On cache l'email ici pour ne pas tromper Supabase
                         full_name: formData.fullName,
-                        email: finalEmail,
+                        email: finalEmail, 
                         phone: phoneClean,
                         role: formData.role,
                         city: formData.city,
