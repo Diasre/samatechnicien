@@ -107,15 +107,16 @@ const Home = () => {
         }
     };
 
-    const handleRejectOffer = async (offerId, quoteId) => {
+    const handleRejectOffer = async (offerId) => {
         if (!window.confirm("❌ Voulez-vous masquer cette offre ?")) return;
         try {
             const { error } = await supabase.from('devis').delete().eq('id', offerId);
             if (error) throw error;
-            // On force un refresh local
             alert("Offre masquée.");
+            return true;
         } catch (err) {
             alert("Erreur : " + err.message);
+            return false;
         }
     };
 
@@ -391,7 +392,13 @@ const Home = () => {
                             
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px', padding: '5px 0 15px' }}>
                                 {myQuotes.map(quote => (
-                                    <QuoteCard key={quote.id} quote={quote} navigate={navigate} />
+                                    <QuoteCard 
+                                        key={quote.id} 
+                                        quote={quote} 
+                                        navigate={navigate} 
+                                        onDelete={() => handleDeleteQuote(quote.id)}
+                                        onRejectOffer={handleRejectOffer}
+                                    />
                                 ))}
                             </div>
                         </div>
@@ -595,7 +602,7 @@ const Home = () => {
     // Splash Screen for guest users
     return <LandingPage />;
 };
-const QuoteCard = ({ quote, navigate }) => {
+const QuoteCard = ({ quote, navigate, onDelete, onRejectOffer }) => {
     const [offers, setOffers] = useState([]);
     const [showOffers, setShowOffers] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -671,7 +678,7 @@ const QuoteCard = ({ quote, navigate }) => {
         <div className="card" style={{ padding: '1.2rem', border: quote.status === 'fermée' ? '1px solid #eee' : '1px solid #dcfce7', position: 'relative' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                 <span style={{ fontWeight: 'bold', color: 'var(--primary-color)', fontSize: '1rem' }}>{quote.specialty}</span>
-                <button onClick={() => handleDeleteQuote(quote.id)} style={{ color: '#94a3b8', background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer' }}><X size={18} /></button>
+                <button onClick={onDelete} style={{ color: '#94a3b8', background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer' }}><X size={18} /></button>
             </div>
             
             <div style={{ marginBottom: '1rem' }}>
@@ -725,7 +732,15 @@ const QuoteCard = ({ quote, navigate }) => {
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                             <span style={{ color: '#059669', fontWeight: '900', fontSize: '1.1rem' }}>{offer.montant} F</span>
-                                            <button onClick={() => handleRejectOffer(offer.id, quote.id)} style={{ border: 'none', background: 'none', color: '#94a3b8' }}><Trash2 size={16} /></button>
+                                            <button 
+                                                onClick={async () => {
+                                                    const success = await onRejectOffer(offer.id);
+                                                    if (success) fetchOffers();
+                                                }} 
+                                                style={{ border: 'none', background: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
                                         </div>
                                     </div>
                                     <p style={{ fontSize: '0.8rem', color: '#15803d', marginBottom: '1rem', fontStyle: 'italic', backgroundColor: 'white', padding: '8px', borderRadius: '8px' }}>
