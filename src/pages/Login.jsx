@@ -3,6 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { Lock, Eye, EyeOff, Mail, User, Phone, X, Delete, ChevronLeft } from 'lucide-react';
 
+const Briefcase = ({ size, ...props }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+    </svg>
+);
+
 const Login = () => {
     const isMobile = window.innerWidth <= 768;
     const navigate = useNavigate();
@@ -12,6 +19,8 @@ const Login = () => {
     const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [errorMsg, setErrorMsg] = useState('');
 
     useEffect(() => {
         try {
@@ -34,64 +43,81 @@ const Login = () => {
     // Fonctions supprimées car PIN pad retiré
 
     const performLoginLogic = async () => {
+        if (loading) return;
+        setErrorMsg('');
+        setLoading(true);
+        console.log("Tentative de connexion...");
+        
         try {
             let userData = null;
+            const phoneClean = phone.replace(/\s+/g, '').replace(/^\+221/, '').replace(/^\+/, '').replace(/^00/, '');
+            
+            if (phoneClean.length < 9) {
+                setErrorMsg("Numéro non valide (9 chiffres minimum)");
+                setLoading(false);
+                return;
+            }
+            if (password.length < 4) {
+                setErrorMsg("Le mot de passe doit comporter 4 chiffres");
+                setLoading(false);
+                return;
+            }
 
-                const phoneClean = phone.replace(/\s+/g, '').replace(/^\+221/, '').replace(/^\+/, '');
+            // 1. Recherche directe dans la table users
+            const { data: userRecords, error: findError } = await supabase
+                .from('users')
+                .select('*')
+                .eq('phone', phoneClean)
+                .eq('password', password)
+                .limit(1);
+
+            if (userRecords && userRecords.length > 0) {
+                userData = userRecords[0];
+            } else {
+                // 🛡️ FALLBACK: Authentification Supabase
+                const vEmail = `${phoneClean}@samatechnicien.dummy`;
+                const finalPassword = password.length === 4 ? password + "00" : password;
                 
-                if (phoneClean.length < 8) return alert("Veuillez entrer un numéro de téléphone valide.");
-                if (password.length < 4) return alert("Veuillez entrer votre mot de passe.");
+                const { data: authResult, error: mainErr } = await supabase.auth.signInWithPassword({
+                    email: vEmail,
+                    password: finalPassword
+                });
 
-                // Recherche dans la table users par téléphone + mot de passe
-                const { data: userRecords, error: findError } = await supabase
-                    .from('users')
-                    .select('*')
-                    .eq('phone', phoneClean)
-                    .eq('password', password)
-                    .limit(1);
-
-                if (userRecords && userRecords.length > 0) {
-                    userData = userRecords[0];
+                if (authResult?.user) {
+                    const { data: syncData } = await supabase.from('users').select('*').eq('id', authResult.user.id).limit(1);
+                    userData = syncData && syncData.length > 0 ? syncData[0] : null;
                 } else {
-                    // 🛡️ FALLBACK: Authentification Supabase par mail dummy ou email réel
-                    const vEmail = `${phoneClean}@samatechnicien.dummy`;
-                    const finalPassword = password.length === 4 ? password + "00" : password;
-                    
-                    const { data: authResult, error: mainErr } = await supabase.auth.signInWithPassword({
-                        email: vEmail,
-                        password: finalPassword
-                    });
-
-                    if (!authResult?.user) {
-                        // On tente avec l'email si on en trouve un dans la base
-                        const { data: dbUsers } = await supabase.from('users').select('email, id').eq('phone', phoneClean).limit(1);
-                        const dbUser = dbUsers && dbUsers.length > 0 ? dbUsers[0] : null;
-                        if (dbUser?.email) {
-                            const { data: retry } = await supabase.auth.signInWithPassword({
-                                email: dbUser.email,
-                                password: finalPassword
-                            });
-                            userData = retry?.user ? (await supabase.from('users').select('*').eq('id', retry.user.id).limit(1)).data?.[0] : null;
+                    const { data: dbUsers } = await supabase.from('users').select('email, id').eq('phone', phoneClean).limit(1);
+                    if (dbUsers?.[0]?.email) {
+                        const { data: retry } = await supabase.auth.signInWithPassword({
+                            email: dbUsers[0].email,
+                            password: finalPassword
+                        });
+                        if (retry?.user) {
+                            userData = (await supabase.from('users').select('*').eq('id', retry.user.id).limit(1)).data?.[0];
                         }
-                    } else if (authResult.user) {
-                        const { data: syncData } = await supabase.from('users').select('*').eq('id', authResult.user.id).limit(1);
-                        userData = syncData && syncData.length > 0 ? syncData[0] : null;
                     }
                 }
+            }
 
-                if (!userData) {
-                    return alert("Identifiants incorrects. Vérifiez votre numéro ou votre mot de passe.");
-                }
+            if (!userData) {
+                setErrorMsg("Identifiants incorrects ou compte inexistant.");
+                setLoading(false);
+                return;
+            }
 
-                // 🛡️ VÉRIFICATION STRICTE DU RÔLE
-                if (userData.role !== role) {
-                    const expectedRole = userData.role === 'technician' ? 'Technicien' : 'Client';
-                    return alert(`Désolé, vous ne pouvez pas vous connecter en tant que ${role === 'technician' ? 'Technicien' : 'Client'}. Votre compte est enregistré en tant que ${expectedRole}. Veuillez changer d'onglet.`);
-                }
+            if (userData.role !== role) {
+                const expectedRole = userData.role === 'technician' ? 'Technicien' : 'Client';
+                setErrorMsg(`Ce compte est enregistré en tant que ${expectedRole}.`);
+                setLoading(false);
+                return;
+            }
 
-            // Logic unifyied above
-
-            if (userData.isblocked) return alert('Votre compte est bloqué.');
+            if (userData.isblocked) {
+                setErrorMsg("Votre compte est bloqué.");
+                setLoading(false);
+                return;
+            }
 
             const mappedUser = {
                 ...userData,
@@ -111,8 +137,10 @@ const Login = () => {
             }
 
         } catch (error) {
-            console.error('Login error:', error);
-            alert('Erreur lors de la connexion.');
+            console.error('Login critical error:', error);
+            setErrorMsg('Erreur serveur ou réseau. Vérifiez votre connexion.');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -133,6 +161,23 @@ const Login = () => {
             <h1 style={{ fontSize: '2.2rem', fontWeight: '900', marginBottom: '2rem', letterSpacing: '-1px', color: '#1e293b' }}>Connexion</h1>
 
             <div style={{ width: '100%', maxWidth: '380px' }}>
+                
+                {errorMsg && (
+                    <div style={{ 
+                        background: '#fff1f2', 
+                        color: '#e11d48', 
+                        padding: '1rem', 
+                        borderRadius: '15px', 
+                        marginBottom: '1.5rem', 
+                        fontSize: '0.9rem', 
+                        fontWeight: '600', 
+                        textAlign: 'center', 
+                        border: '1px solid #fda4af',
+                        animation: 'fadeIn 0.3s ease'
+                    }}>
+                        ⚠️ {errorMsg}
+                    </div>
+                )}
                 
                 {/* Role Switcher */}
                 <div style={{ display: 'flex', gap: '10px', marginBottom: '2rem' }}>
@@ -183,9 +228,10 @@ const Login = () => {
 
                     <button 
                         onClick={performLoginLogic}
-                        style={{ width: '100%', padding: '1.2rem', background: '#10b981', color: '#fff', border: 'none', borderRadius: '20px', fontWeight: '900', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 10px 20px rgba(16, 185, 129, 0.2)' }}
+                        disabled={loading}
+                        style={{ width: '100%', padding: '1.2rem', background: loading ? '#bdc3c7' : '#10b981', color: '#fff', border: 'none', borderRadius: '20px', fontWeight: '900', fontSize: '1.1rem', cursor: loading ? 'not-allowed' : 'pointer', boxShadow: loading ? 'none' : '0 10px 20px rgba(16, 185, 129, 0.2)' }}
                     >
-                        Se connecter
+                        {loading ? 'Connexion en cours...' : 'Se connecter'}
                     </button>
                 </div>
 
@@ -210,13 +256,5 @@ const Login = () => {
         </div>
     );
 };
-
-// Generic briefcase icon since lucide might skip it in some builds
-const Briefcase = ({ size, ...props }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
-        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
-    </svg>
-);
 
 export default Login;

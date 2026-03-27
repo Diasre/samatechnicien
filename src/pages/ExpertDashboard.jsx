@@ -2,7 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import API_URL from '../config';
 import { supabase } from '../supabaseClient';
-import { User, Users, Settings, Star, MessageSquare, Phone, MapPin, CheckCircle, Save, ArrowLeft, Share2, Flag, ShoppingBag } from 'lucide-react';
+import { 
+    User, Users, Settings, Star, MessageSquare, Phone, MapPin, CheckCircle, Save, 
+    ArrowLeft, PlusCircle, ShoppingBag, Send, MessageCircle, Shield, Share2, 
+    Flag, Bell, Info 
+} from 'lucide-react';
 import WelcomeOverlay from '../components/WelcomeOverlay';
 
 const ExpertDashboard = () => {
@@ -15,6 +19,15 @@ const ExpertDashboard = () => {
     const [feedbackMsg, setFeedbackMsg] = useState('');
     const [sendingFeedback, setSendingFeedback] = useState(false);
     const [products, setProducts] = useState([]);
+    const [quotes, setQuotes] = useState([]);
+    const [activeConversations, setActiveConversations] = useState([]);
+    const [loadingQuotes, setLoadingQuotes] = useState(false);
+    const [sendingQuickMsg, setSendingQuickMsg] = useState(null);
+    const [showResponseModal, setShowResponseModal] = useState(false);
+    const [selectedQuote, setSelectedQuote] = useState(null);
+    const [customResponse, setCustomResponse] = useState("");
+    const [devisLines, setDevisLines] = useState([{ desc: "Main d'œuvre", qty: 1, price: 0 }]);
+    const [devisNote, setDevisNote] = useState("Intervention possible rapidement.");
 
     // Import Supabase client if not already imported at top (I will add import in next step or assume it) 
     // Wait, I need to check imports. 
@@ -38,7 +51,27 @@ const ExpertDashboard = () => {
         commentsEnabled: true
     });
 
-    const standardSpecialties = ["Informatique", "Reparateur telephone", "Reparateur imprimante", "Réseaux", "Maintenancier", "Mécanicien", "Maçon", "Plombier", "Menuisier", "Sérigraphie"];
+    const standardSpecialties = [
+        "Informaticien", 
+        "Soudeur", 
+        "Plombier", 
+        "Mecanicien Automobile", 
+        "Telephone", 
+        "Frigo", 
+        "Macon", 
+        "Maçon",
+        "Manoeuvre", 
+        "Camera Monteur", 
+        "Aluminium", 
+        "Vigile", 
+        "Imprimante", 
+        "Réseau", 
+        "Décoration Intérieur", 
+        "Agronome en protection des Végétaux", 
+        "Agriculture", 
+        "Vidéo Surveillance", 
+        "Maintenancier"
+    ];
 
     useEffect(() => {
         if (user?.id) {
@@ -49,16 +82,39 @@ const ExpertDashboard = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            // Lancer les deux requêtes en PARALLÈLE pour gagner du temps
-            const [techResponse, reviewsResponse, productsResponse] = await Promise.all([
-                supabase.from('users').select('*').eq('id', user.id).single(),
+            // 1. D'abord récupérer les infos locales du tech
+            const { data: tech, error: techError } = await supabase.from('users').select('*').eq('id', user.id).single();
+            if (techError) throw techError;
+
+            // 2. Utiliser SA spécialité en base pour charger les devis et discussions
+            const cleanSpec = (tech.specialty || 'Autre').trim();
+            // Créer une recherche qui attrape avec ou sans accent (ex: Macon, Maçon, Maconnerie...)
+            const searchPattern = cleanSpec.toLowerCase().replace(/[açéèêëìîïòôöùûü]/g, '_');
+            const specSearch = `%${searchPattern.substring(0, 5)}%`;
+
+            const [reviewsResponse, productsResponse, quotesResponse, convsResponse] = await Promise.all([
                 supabase.from('reviews').select('*, client:clientId(fullname)').eq('technicianId', user.id).order('created_at', { ascending: false }),
-                supabase.from('products').select('*').eq('technicianid', user.id).order('created_at', { ascending: false })
+                supabase.from('products').select('*').eq('technicianid', user.id).order('created_at', { ascending: false }),
+                supabase.from('quotes').select('*, client:client_id(fullname, phone, userId:id)').ilike('specialty', specSearch).order('created_at', { ascending: false }),
+                supabase.from('conversations').select(`
+                    id, 
+                    updated_at,
+                    participant1:participant1_id (id, fullname, image),
+                    participant2:participant2_id (id, fullname, image)
+                `).or(`participant1_id.eq.${user.id},participant2_id.eq.${user.id}`).order('updated_at', { ascending: false }).limit(5)
             ]);
 
-            const { data: tech, error: techError } = techResponse;
-            const { data: reviewsData, error: reviewsError } = reviewsResponse;
-            const { data: productsData, error: productsError } = productsResponse;
+            const { data: reviewsData } = reviewsResponse;
+            const { data: productsData } = productsResponse;
+            const { data: quotesData } = quotesResponse;
+            const { data: convsData } = convsResponse;
+
+            setTechData(tech);
+            // Sync local storage specialty if mismatch
+            if (tech.specialty && tech.specialty !== user.specialty) {
+                const updatedUser = { ...user, specialty: tech.specialty };
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+            }
 
             if (techError) {
                 console.error("Supabase error fetching user:", techError);
@@ -111,6 +167,18 @@ const ExpertDashboard = () => {
                 setProducts(productsData);
             }
 
+            if (quotesData) {
+                setQuotes(quotesData);
+            }
+
+            if (convsData) {
+                const formatted = convsData.map(c => {
+                    const other = c.participant1.id === user.id ? c.participant2 : c.participant1;
+                    return { id: c.id, otherUser: other, updatedAt: c.updated_at };
+                });
+                setActiveConversations(formatted);
+            }
+
         } catch (error) {
             console.error("Error fetching expert data:", error);
         }
@@ -138,6 +206,129 @@ const ExpertDashboard = () => {
             }
         } catch (err) {
             console.error("Error sharing:", err);
+        }
+    };
+
+    const openResponseForm = (quote) => {
+        setSelectedQuote(quote);
+        setCustomResponse(`Bonjour ${quote.client?.fullname || ''}, je suis intéressé par votre devis pour : "${quote.title || quote.specialty}". Pouvons-nous en discuter ? Voici ma proposition : `);
+        setShowResponseModal(true);
+    };
+
+    const handleSendFinalReply = async () => {
+        const subtotal = devisLines.reduce((acc, line) => acc + (Number(line.qty || 0) * Number(line.price || 0)), 0);
+        const tva = Math.round(subtotal * 0.19);
+        const totalTtc = subtotal + tva;
+
+        if (!user || !selectedQuote || devisLines.length === 0 || totalTtc <= 0) {
+            alert("⚠️ Veuillez saisir au moins un article avec un prix valide.");
+            return;
+        }
+        setSendingQuickMsg(selectedQuote.id);
+        
+        try {
+            const devisData = {
+                type: 'DEVIS_PRO',
+                id: `DEV-${Date.now().toString().slice(-6)}`,
+                demande_id: selectedQuote.id,
+                technicien: {
+                    nom: user.fullname,
+                    rubrique: user.specialty,
+                    note: 4.8
+                },
+                lignes: devisLines,
+                sous_total: subtotal,
+                tva: 19,
+                tva_montant: tva,
+                total_ttc: totalTtc,
+                note_technicien: devisNote,
+                statut: 'en_attente',
+                date_envoi: new Date().toISOString()
+            };
+
+            // 1. DÉBOGAGE : RÉSOLUTION DE L'ID CLIENT (UUID) SANS ÉCHEC
+            let clientId = selectedQuote.client_id;
+            const clientPhone = selectedQuote.client_phone || selectedQuote.client?.phone;
+            
+            // On cherche le VRAI profil pour être certain d'avoir l'UUID texte
+            const { data: profile } = await supabase.from('users').select('id').eq('phone', clientPhone).maybeSingle();
+            if (profile) clientId = profile.id;
+
+            // 2. RECHERCHE DE CONVERSATION (TOLÉRANCE MAXIMALE AUX FORMATS)
+            // On cherche si une conversation existe entre ces deux UUIDs
+            const { data: existing } = await supabase
+                .from('conversations')
+                .select('id')
+                .or(`and(participant1_id.eq.${user.id},participant2_id.eq.${clientId}),and(participant1_id.eq.${clientId},participant2_id.eq.${user.id}),and(participant1_id.eq."${user.id}",participant2_id.eq."${clientId}"),and(participant1_id.eq."${clientId}",participant2_id.eq."${user.id}")`)
+                .maybeSingle();
+            
+            let convId = existing?.id;
+
+            // 3. CRÉATION DU TUNNEL (SI INEXISTANT)
+            if (!convId) {
+                const { data: newConv, error: convErr } = await supabase
+                    .from('conversations')
+                    .insert([{ 
+                        participant1_id: String(user.id), 
+                        participant2_id: String(clientId),
+                        last_message: "Invitation au devis"
+                    }])
+                    .select()
+                    .single();
+                
+                if (convErr) throw convErr;
+                convId = newConv.id;
+            }
+
+            // 4. ENVOI DU MESSAGE (JSON_DEVIS)
+            // 1. DÉPOSE DE L'OFFRE AU GUICHET (V42 - TABLE RASE)
+            // On ne crée PAS de conversation ici, on dépose juste le prix
+            try {
+                const { error: devisErr } = await supabase
+                    .from('devis')
+                    .insert([{
+                        demande_id: selectedQuote.id, // ID numérique simple (ex: 45)
+                        technicien_id: String(user.id),
+                        montant: totalTtc,
+                        statut: 'en_attente',
+                        note: devisNote
+                    }]);
+                
+                if (devisErr) throw devisErr;
+
+                // On informe la demande qu'une offre est arrivée
+                await supabase.from('quotes').update({ last_offer_price: totalTtc }).eq('id', selectedQuote.id);
+
+                alert("✅ Offre déposée avec succès ! Le client peut la voir sur son accueil.");
+                setShowResponseModal(false);
+                // On retire de la liste pour ne pas répondre deux fois
+                setQuotes(quotes.filter(q => q.id !== selectedQuote.id));
+            } catch (err) {
+                console.error("Erreur Depôt:", err);
+                alert("Erreur lors de l'envoi de l'offre : " + err.message);
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Erreur lors de l'envoi du devis.");
+        }
+        setSendingQuickMsg(null);
+    };
+
+    const addDevisLine = () => setDevisLines([...devisLines, { desc: "", qty: 1, price: 0 }]);
+    const updateDevisLine = (index, field, value) => {
+        const newLines = [...devisLines];
+        if (field === 'qty' || field === 'price') {
+            newLines[index][field] = value === '' ? '' : Number(value);
+        } else {
+            newLines[index][field] = value;
+        }
+        setDevisLines(newLines);
+    };
+    const removeDevisLine = (index) => {
+        if (devisLines.length > 1) {
+            setDevisLines(devisLines.filter((_, i) => i !== index));
+        } else {
+            alert("Il faut au moins une ligne de prix.");
         }
     };
 
@@ -262,6 +453,29 @@ const ExpertDashboard = () => {
     return (
         <div className="container animate-fade-in" style={{ padding: '1.5rem 1rem' }}>
             <WelcomeOverlay userName={techData.fullName} duration={2000} />
+            
+            {/* ALERTE DE NOUVELLE DEMANDE (BANNER) */}
+            {quotes.length > 0 && (
+                <div 
+                    onClick={() => {
+                        const targetQuote = quotes[quotes.length - 1]; // La plus récente
+                        openResponseForm(targetQuote);
+                    }}
+                    style={{ 
+                        backgroundColor: '#fff3cd', border: '1px solid #ffeeba', padding: '1rem', borderRadius: '15px', 
+                        marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', animation: 'slideDown 0.5s ease-out'
+                    }}
+                >
+                    <div style={{ backgroundColor: '#fbbf24', padding: '8px', borderRadius: '10px', color: 'white' }}>
+                        <Bell size={20} className="animate-pulse" />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <p style={{ margin: 0, fontWeight: '800', fontSize: '0.9rem', color: '#854d0e' }}>🚨 Nouvel appel pour vous !</p>
+                        <p style={{ margin: 0, fontSize: '0.75rem', color: '#92400e' }}>Cliquez ici pour répondre immédiatement au client.</p>
+                    </div>
+                </div>
+            )}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
@@ -273,6 +487,21 @@ const ExpertDashboard = () => {
                         <Link to="/technicians" className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', fontWeight: 'bold', borderRadius: '12px' }}>
                             <Users size={18} /> Trouver un collègue
                         </Link>
+                        <button 
+                            className="btn btn-outline" 
+                            style={{ position: 'relative', width: '45px', height: '45px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px' }}
+                            onClick={() => {
+                                if (quotes.length > 0) openResponseForm(quotes[0]);
+                                else alert("Aucune notification pour le moment.");
+                            }}
+                        >
+                            <Bell size={20} color={quotes.length > 0 ? '#ef4444' : '#64748b'} />
+                            {quotes.length > 0 && (
+                                <span style={{ position: 'absolute', top: '5px', right: '5px', backgroundColor: '#ef4444', color: 'white', fontSize: '0.6rem', padding: '2px 5px', borderRadius: '50%', fontWeight: '900' }}>
+                                    {quotes.length}
+                                </span>
+                            )}
+                        </button>
                         <button className="btn btn-primary" onClick={() => setEditMode(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', borderRadius: '12px' }}>
                             <Settings size={18} /> Paramètres
                         </button>
@@ -411,6 +640,7 @@ const ExpertDashboard = () => {
                         </div>
                     </div>
 
+
                     {/* Personal Info Summary */}
                     <div className="card" style={{ padding: '1.25rem' }}>
                         <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Informations de contact</h3>
@@ -423,6 +653,140 @@ const ExpertDashboard = () => {
                             </div>
                         </div>
                     </div>
+
+                    {/* ESPACE DEVIS - VERSION ÉPURÉE SANS LISTE AUTOMATIQUE */}
+                    <div className="card" style={{ padding: '2rem', textAlign: 'center', border: '1px dashed #e2e8f0', backgroundColor: '#f8fafc', marginBottom: '1.5rem' }}>
+                        <div style={{ backgroundColor: '#f1f5f9', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem', color: '#94a3b8' }}>
+                            <MessageSquare size={30} />
+                        </div>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#1e293b', marginBottom: '0.5rem' }}>Espace Devis Expert</h3>
+                        <p style={{ fontSize: '0.85rem', color: '#64748b', maxWidth: '280px', margin: '0 auto' }}>
+                           Désormais, les demandes ne s'affichent plus automatiquement. Vous recevrez une notification directe lorsqu'un client souhaitera travailler avec vous.
+                        </p>
+                    </div>
+
+                    {/* MODAL DE RÉPONSE PERSONNALISÉE */}
+                    {showResponseModal && (
+                        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+                            <div className="card" style={{ width: '100%', maxWidth: '400px', padding: '1.5rem', marginTop: 0 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                                    <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#1e293b', margin: 0 }}>Répondre au devis</h3>
+                                    <button onClick={() => setShowResponseModal(false)} style={{ background: '#f1f5f9', border: 'none', color: '#64748b', cursor: 'pointer', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                                </div>
+                                
+                                {/* DÉTAILS DE LA DEMANDE ENRICHIE (V49) */}
+                                {selectedQuote && (
+                                    <div style={{ backgroundColor: '#fff7ed', padding: '15px', borderRadius: '18px', marginBottom: '1.5rem', border: '1px solid #ffedd5', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                            <div style={{ backgroundColor: '#fb923c', color: 'white', padding: '4px', borderRadius: '8px' }}><Info size={16} /></div>
+                                            <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '900', color: '#9a3412' }}>{selectedQuote.title || 'Besoin urgent'}</h4>
+                                        </div>
+                                        
+                                        <p style={{ margin: '0 0 12px 0', fontSize: '0.85rem', color: '#c2410c', lineHeight: '1.4' }}>
+                                            {selectedQuote.description || selectedQuote.message}
+                                        </p>
+
+                                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                                            <span style={{ backgroundColor: 'white', padding: '4px 10px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: '800', border: '1px solid #ffedd5', color: '#ea580c', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                <Clock size={12} /> CONTRAT: {selectedQuote.billing_type?.toUpperCase() || 'JOURNALIER'}
+                                            </span>
+                                            <span style={{ backgroundColor: 'white', padding: '4px 10px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: '800', border: '1px solid #ffedd5', color: '#ea580c', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                <Calendar size={12} /> {selectedQuote.planned_date ? new Date(selectedQuote.planned_date).toLocaleDateString() : 'Aujourd\'hui'}
+                                            </span>
+                                        </div>
+
+                                        {selectedQuote.photo_url && (
+                                            <div style={{ marginTop: '10px' }}>
+                                                <img 
+                                                    src={selectedQuote.photo_url} 
+                                                    alt="Demande"
+                                                    onClick={() => window.open(selectedQuote.photo_url, '_blank')}
+                                                    style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: '15px', border: '2px solid white', cursor: 'zoom-in' }} 
+                                                />
+                                                <p style={{ fontSize: '0.6rem', color: '#9a3412', textAlign: 'center', marginTop: '4px' }}>Cliquer pour agrandir la photo</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div style={{ maxHeight: '350px', overflowY: 'auto', paddingRight: '5px' }}>
+                                    <h4 style={{ fontSize: '0.85rem', fontWeight: '800', marginBottom: '10px', color: '#1e293b' }}>Votre Proposition Financière :</h4>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.5fr auto', gap: '8px', marginBottom: '8px', fontSize: '0.7rem', fontWeight: 'bold', color: '#64748b' }}>
+                                        <span>Désignation</span>
+                                        <span>Qté</span>
+                                        <span>Prix Unit.</span>
+                                        <span></span>
+                                    </div>
+                                    {devisLines.map((line, idx) => (
+                                        <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.5fr auto', gap: '8px', marginBottom: '8px' }}>
+                                            <input 
+                                                value={line.desc} 
+                                                onChange={(e) => updateDevisLine(idx, 'desc', e.target.value)}
+                                                placeholder="Travail..."
+                                                style={{ padding: '8px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.8rem' }}
+                                            />
+                                            <input 
+                                                type="number" 
+                                                value={line.qty} 
+                                                onChange={(e) => updateDevisLine(idx, 'qty', e.target.value)}
+                                                placeholder="Qté"
+                                                style={{ padding: '8px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.8rem', width: '100%' }}
+                                            />
+                                            <input 
+                                                type="number" 
+                                                value={line.price} 
+                                                onChange={(e) => updateDevisLine(idx, 'price', e.target.value)}
+                                                placeholder="Prix"
+                                                style={{ padding: '8px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.8rem', width: '100%', fontWeight: 'bold' }}
+                                            />
+                                            <button onClick={() => removeDevisLine(idx)} style={{ background: 'none', border: 'none', color: '#ef4444' }}>✕</button>
+                                        </div>
+                                    ))}
+                                    <button 
+                                        onClick={addDevisLine}
+                                        style={{ width: '100%', padding: '8px', background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '8px', color: '#64748b', fontSize: '0.75rem', cursor: 'pointer', marginBottom: '10px' }}
+                                    >
+                                        + Ajouter une ligne de prix
+                                    </button>
+                                </div>
+
+                                <div style={{ backgroundColor: '#f0fdf4', padding: '12px', borderRadius: '12px', marginBottom: '1.25rem', border: '1px solid #bbf7d0' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#166534', marginBottom: '4px' }}>
+                                        <span>Sous-total HT :</span>
+                                        <span>{devisLines.reduce((acc, l) => acc + (Number(l.qty || 0) * Number(l.price || 0)), 0).toLocaleString()} F</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#166534', marginBottom: '4px' }}>
+                                        <span>TVA (19%) :</span>
+                                        <span>{Math.round(devisLines.reduce((acc, l) => acc + (Number(l.qty || 0) * Number(l.price || 0)), 0) * 0.19).toLocaleString()} F</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', fontWeight: '900', borderTop: '2px dashed #bbf7d0', paddingTop: '8px', marginTop: '8px' }}>
+                                        <span>TOTAL TTC :</span>
+                                        <span style={{ color: '#10b981' }}>{(devisLines.reduce((acc, l) => acc + (Number(l.qty || 0) * Number(l.price || 0)), 0) + Math.round(devisLines.reduce((acc, l) => acc + (Number(l.qty || 0) * Number(l.price || 0)), 0) * 0.19)).toLocaleString()} F</span>
+                                    </div>
+                                </div>
+                                
+                                <textarea 
+                                    rows="2"
+                                    value={devisNote}
+                                    onChange={(e) => setDevisNote(e.target.value)}
+                                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid #ddd', fontSize: '0.8rem', marginBottom: '1.25rem', fontFamily: 'inherit' }}
+                                    placeholder="Une note additionnelle (facultatif)..."
+                                ></textarea>
+                                
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <button onClick={() => setShowResponseModal(false)} className="btn" style={{ flex: 1, backgroundColor: '#f1f5f9', color: '#64748b', border: 'none' }}>Annuler</button>
+                                    <button 
+                                        onClick={handleSendFinalReply} 
+                                        disabled={sendingQuickMsg}
+                                        className="btn" 
+                                        style={{ flex: 2, backgroundColor: '#10b981', color: 'white', border: 'none' }}
+                                    >
+                                        {sendingQuickMsg ? 'Envoi...' : 'Envoyer la réponse'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Publications Card - DÉPLACÉE ICI */}
                     {!editMode && (
@@ -572,16 +936,7 @@ const ExpertDashboard = () => {
                                             name="specialty" value={formData.specialty} onChange={handleInputChange}
                                             style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem', backgroundColor: 'white' }}
                                         >
-                                            <option value="Informatique">Informatique</option>
-                                            <option value="Reparateur telephone">Reparateur telephone</option>
-                                            <option value="Reparateur imprimante">Reparateur imprimante</option>
-                                            <option value="Réseaux">Réseaux</option>
-                                            <option value="Maintenancier">Maintenancier</option>
-                                            <option value="Mécanicien">Mécanicien</option>
-                                            <option value="Maçon">Maçon</option>
-                                            <option value="Plombier">Plombier</option>
-                                            <option value="Menuisier">Menuisier</option>
-                                            <option value="Sérigraphie">Sérigraphie</option>
+                                            {standardSpecialties.map(s => <option key={s} value={s}>{s}</option>)}
                                             <option value="Autre">Autre</option>
                                         </select>
                                     </div>

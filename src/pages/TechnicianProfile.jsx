@@ -685,70 +685,8 @@ const TechnicianProfile = () => {
                     </div>
                 </div>
 
-                {/* Footer Section: Report Issue Form */}
-                <div style={{ padding: '1.5rem', borderTop: '1px solid #eee', backgroundColor: '#fff' }}>
-                    {(showFeedbackForm || feedbackMsg) ? (
-                        <div style={{ maxWidth: '400px', margin: '0 auto' }}>
-                            <h4 style={{ fontSize: '0.9rem', marginBottom: '0.5rem', color: '#dc2626' }}>Signaler un problème</h4>
-                            <form onSubmit={handleFeedbackSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                <textarea
-                                    value={feedbackMsg}
-                                    onChange={(e) => setFeedbackMsg(e.target.value)}
-                                    placeholder="Décrivez le problème avec ce profil..."
-                                    style={{
-                                        width: '100%', padding: '0.75rem', borderRadius: '8px',
-                                        border: '1px solid #ddd', fontSize: '0.85rem', minHeight: '80px'
-                                    }}
-                                />
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowFeedbackForm(false)}
-                                        className="btn btn-outline"
-                                        style={{ flex: 1, padding: '0.5rem', fontSize: '0.8rem' }}
-                                    > Annuler </button>
-                                    <button
-                                        type="submit"
-                                        disabled={sendingFeedback}
-                                        className="btn"
-                                        style={{
-                                            flex: 2,
-                                            padding: '0.5rem',
-                                            fontSize: '0.8rem',
-                                            backgroundColor: '#dc2626',
-                                            color: 'white',
-                                            cursor: 'pointer',
-                                            border: 'none',
-                                            transition: 'all 0.3s ease',
-                                            opacity: sendingFeedback ? 0.7 : 1
-                                        }}
-                                    >
-                                        {sendingFeedback ? 'Envoi...' : 'Envoyer le signalement'}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    ) : (
-                        <div style={{ textAlign: 'center' }}>
-                            <p style={{ fontSize: '0.75rem', color: '#888', marginBottom: '1rem' }}>
-                                Une revendication ou un signalement concernant ce profil ?
-                            </p>
-                            <button
-                                onClick={() => setShowFeedbackForm(true)}
-                                style={{
-                                    display: 'inline-flex', alignItems: 'center', gap: '8px',
-                                    color: '#dc2626', background: 'none', border: '1px solid #dc2626',
-                                    fontSize: '0.85rem', fontWeight: '600',
-                                    padding: '0.5rem 1rem', borderRadius: '20px', cursor: 'pointer'
-                                }}
-                            >
-                                <Flag size={14} /> Signaler un problème à l'administrateur
-                            </button>
-                        </div>
-                    )}
                 </div>
             </div>
-        </div>
     );
 };
 

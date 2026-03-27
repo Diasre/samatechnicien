@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, ShoppingBag, PlusSquare, MessageCircle, User, Users } from 'lucide-react';
+import { Home, ShoppingBag, PlusSquare, MessageCircle, User, Users, Power } from 'lucide-react';
 
 const MobileNav = () => {
     const location = useLocation();
@@ -14,6 +14,7 @@ const MobileNav = () => {
     }
     
     const isTechnician = user?.role === 'technician';
+    const isLoggedIn = !!user;
 
     const isActive = (path) => location.pathname === path;
 
@@ -29,24 +30,31 @@ const MobileNav = () => {
         },
     ];
 
+    const handleLogout = () => {
+        if (window.confirm("Voulez-vous vraiment vous déconnecter ?")) {
+            localStorage.removeItem('user');
+            window.location.href = '/login';
+        }
+    };
+
     return (
         <div className="mobile-only-nav" style={{
             position: 'fixed',
             bottom: '20px',
             left: '50%',
             transform: 'translateX(-50%)',
-            width: '90%',
-            maxWidth: '400px',
-            backgroundColor: 'rgba(255, 255, 255, 0.85)',
-            backdropFilter: 'blur(10px)',
+            width: '95%',
+            maxWidth: '430px',
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(15px)',
             borderRadius: '25px',
             display: 'flex',
-            justifyContent: 'space-around',
+            justifyContent: 'space-between',
             alignItems: 'center',
-            padding: '12px 10px',
-            boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+            padding: '10px 15px',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
             zIndex: 2000,
-            border: '1px solid rgba(255, 255, 255, 0.3)',
+            border: '1px solid rgba(255, 255, 255, 0.5)',
         }}>
             {navItems.map((item) => {
                 const ActiveIcon = item.icon;
@@ -64,8 +72,9 @@ const MobileNav = () => {
                             color: item.highlight 
                                 ? 'var(--primary-color)' 
                                 : (active ? 'var(--primary-color)' : '#666'),
-                            gap: '4px',
-                            transition: 'all 0.2s ease'
+                            gap: '2px',
+                            transition: 'all 0.2s ease',
+                            flex: 1
                         }}
                     >
                         <div style={{
@@ -76,18 +85,47 @@ const MobileNav = () => {
                             alignItems: 'center',
                             justifyContent: 'center'
                         }}>
-                            <ActiveIcon size={item.highlight ? 24 : 20} strokeWidth={active ? 2.5 : 2} />
+                            <ActiveIcon size={20} strokeWidth={active ? 2.5 : 2} />
                         </div>
                         <span style={{ 
-                            fontSize: '10px', 
+                            fontSize: '9px', 
                             fontWeight: active ? '700' : '500',
-                            opacity: active ? 1 : 0.8
                         }}>
                             {item.label}
                         </span>
                     </Link>
                 );
             })}
+
+            {isLoggedIn && (
+                <button
+                    onClick={handleLogout}
+                    style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        background: 'none',
+                        border: 'none',
+                        color: '#e11d48',
+                        gap: '2px',
+                        cursor: 'pointer',
+                        flex: 1
+                    }}
+                >
+                    <div style={{
+                        padding: '6px',
+                        backgroundColor: 'rgba(225, 29, 72, 0.1)',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 2px 8px rgba(225, 29, 72, 0.2)'
+                    }}>
+                        <Power size={20} strokeWidth={2.5} />
+                    </div>
+                    <span style={{ fontSize: '9px', fontWeight: '700' }}>Sortir</span>
+                </button>
+            )}
         </div>
     );
 };

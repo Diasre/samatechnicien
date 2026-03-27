@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Lock, Save, ArrowLeft, QrCode, Camera } from 'lucide-react';
+import { User, Lock, Save, ArrowLeft, QrCode, Camera, LogOut, Power } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { QRCodeSVG } from 'qrcode.react';
@@ -553,6 +553,41 @@ const ProfileSettings = () => {
                         <Save size={18} />
                         {isSaving ? 'Enregistrement...' : 'Enregistrer les modifications'}
                     </button>
+
+                    <div style={{ marginTop: '3rem', borderTop: '2px solid #fee2e2', paddingTop: '2rem', textAlign: 'center' }}>
+                        <h3 style={{ fontSize: '1rem', color: '#dc2626', marginBottom: '1.5rem', fontWeight: 'bold' }}>
+                             Quitter la session
+                        </h3>
+                        <div style={{ display: 'flex', justifyContent: 'center' }}>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (window.confirm("Voulez-vous vraiment vous déconnecter ?")) {
+                                        localStorage.removeItem('user');
+                                        window.location.href = '/login';
+                                    }
+                                }}
+                                style={{ 
+                                    width: '80px', height: '80px', backgroundColor: '#e11d48', 
+                                    color: 'white', border: 'none', borderRadius: '50%',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    cursor: 'pointer', boxShadow: '0 8px 16px rgba(225, 29, 72, 0.4)',
+                                    transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+                                }}
+                                onMouseOver={e => {
+                                    e.currentTarget.style.transform = 'scale(1.05)';
+                                    e.currentTarget.style.boxShadow = '0 12px 20px rgba(225, 29, 72, 0.5)';
+                                }}
+                                onMouseOut={e => {
+                                    e.currentTarget.style.transform = 'scale(1)';
+                                    e.currentTarget.style.boxShadow = '0 8px 16px rgba(225, 29, 72, 0.4)';
+                                }}
+                            >
+                                <Power size={36} strokeWidth={2.5} />
+                            </button>
+                        </div>
+                        <p style={{ marginTop: '1rem', fontSize: '0.85rem', color: '#666', fontWeight: '600' }}>Se déconnecter</p>
+                    </div>
                 </form>
 
 

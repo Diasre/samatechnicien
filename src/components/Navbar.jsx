@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, ShoppingBag, MessageSquare, MessageCircle, Settings } from 'lucide-react';
+import { Menu, X, ShoppingBag, MessageSquare, MessageCircle, Settings, Power } from 'lucide-react';
 import logo from '../assets/logo.png';
 
 const Navbar = () => {
@@ -105,20 +105,30 @@ const Navbar = () => {
                             )}
                         </Link>
 
-                        {isLoggedIn ? (
+                        {isLoggedIn && (
                             <button
                                 onClick={() => {
-                                    localStorage.removeItem('user');
-                                    window.location.href = '/';
+                                    if (window.confirm("Voulez-vous vraiment vous déconnecter ?")) {
+                                        localStorage.removeItem('user');
+                                        window.location.href = '/login';
+                                    }
                                 }}
-                                className="btn btn-outline"
-                                style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', borderColor: '#eee', color: '#666' }}
+                                style={{ 
+                                    width: '38px', height: '38px', backgroundColor: '#e11d48', 
+                                    color: 'white', border: 'none', borderRadius: '50%',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    cursor: 'pointer', boxShadow: '0 4px 10px rgba(225, 29, 72, 0.3)',
+                                    marginLeft: '5px'
+                                }}
+                                title="Se déconnecter"
                             >
-                                Deconnexion
+                                <Power size={20} strokeWidth={2.5} />
                             </button>
-                        ) : (
+                        )}
+
+                        {!isLoggedIn && (
                             <Link to="/login" className="btn btn-primary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>
-                                IN
+                                Connexion
                             </Link>
                         )}
                     </div>
@@ -163,18 +173,29 @@ const Navbar = () => {
                     </Link>
                 )}
 
-                {isLoggedIn ? (
-                    <button
-                        onClick={() => {
-                            localStorage.removeItem('user');
-                            window.location.href = '/';
-                        }}
-                        className="btn btn-outline"
-                        style={{ marginTop: '1rem' }}
-                    >
-                        Se déconnecter
-                    </button>
-                ) : (
+                {isLoggedIn && (
+                    <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                        <button
+                            onClick={() => {
+                                if (window.confirm("Voulez-vous vraiment vous déconnecter ?")) {
+                                    localStorage.removeItem('user');
+                                    window.location.href = '/login';
+                                }
+                            }}
+                            style={{ 
+                                width: '64px', height: '64px', backgroundColor: '#e11d48', 
+                                color: 'white', border: 'none', borderRadius: '50%',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                cursor: 'pointer', boxShadow: '0 6px 12px rgba(225, 29, 72, 0.4)'
+                            }}
+                        >
+                            <Power size={28} strokeWidth={2.5} />
+                        </button>
+                        <span style={{ fontSize: '0.9rem', color: '#e11d48', fontWeight: 'bold' }}>Se déconnecter</span>
+                    </div>
+                )}
+
+                {!isLoggedIn && (
                     <Link to="/login" onClick={toggleMenu} className="btn btn-primary" style={{ marginTop: '1rem', textAlign: 'center' }}>
                         Se connecter
                     </Link>

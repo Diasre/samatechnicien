@@ -1,16 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import API_URL from '../config';
 import { supabase } from '../supabaseClient';
 import { technicians } from '../data/mockData';
 import { Search, MapPin, Star, Phone, MessageCircle, AlertCircle } from 'lucide-react';
 
 const TechniciansList = () => {
+    const [searchParams] = useSearchParams();
+    const specialtyParam = searchParams.get('specialty');
+    
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedSpecialty, setSelectedSpecialty] = useState('');
+    const [selectedSpecialty, setSelectedSpecialty] = useState(specialtyParam || '');
     const [allTechnicians, setAllTechnicians] = useState([]);
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState(null);
+
+    useEffect(() => {
+        if (specialtyParam) {
+            setSelectedSpecialty(specialtyParam);
+        }
+    }, [specialtyParam]);
 
     useEffect(() => {
         const fetchTechnicians = async () => {
