@@ -465,13 +465,16 @@ const Home = () => {
                 </div>
 
                 {showQuoteModal && (
-                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '1rem' }}>
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '1rem', animation: 'fadeIn 0.2s ease-out' }}>
                         <div style={{ 
-                            width: '100%', maxWidth: '450px', maxHeight: '90vh', overflowY: 'auto',
-                            background: '#fff', borderRadius: '35px', padding: '2rem', 
-                            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', position: 'relative' 
+                            width: '95%', maxWidth: '480px', maxHeight: '92vh', overflowY: 'auto',
+                            background: '#fff', borderRadius: '40px', padding: '2.5rem 1.5rem', 
+                            boxShadow: '0 35px 70px -15px rgba(0,0,0,0.6)', position: 'relative',
+                            animation: 'modalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
                         }}>
-                            <button onClick={() => setShowQuoteModal(false)} style={{ position: 'absolute', top: '20px', right: '20px', background: '#f1f5f9', border: 'none', borderRadius: '50%', padding: '10px', cursor: 'pointer' }}><X size={20} /></button>
+                            <button onClick={() => setShowQuoteModal(false)} style={{ position: 'absolute', top: '15px', right: '15px', background: '#f8fafc', border: 'none', borderRadius: '50%', padding: '12px', cursor: 'pointer', color: '#64748b', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+                                <X size={22} />
+                            </button>
                             
                             <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
                                 <div style={{ backgroundColor: '#f0fdf4', width: '50px', height: '50px', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', color: '#10b981' }}>
