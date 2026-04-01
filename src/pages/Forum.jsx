@@ -68,10 +68,11 @@ const Forum = () => {
 
         setSubmitting(true);
         try {
+            console.log("👷‍♂️ Tentative d'insertion avec user_id...");
             const { error } = await supabase
                 .from('discussions')
                 .insert([{
-                    technician_id: currentUser.id,
+                    user_id: currentUser.id,
                     title: content.substring(0, 50) + (content.length > 50 ? '...' : ''),
                     content: content
                 }]);
