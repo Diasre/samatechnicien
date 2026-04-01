@@ -4,6 +4,7 @@ import { supabase } from '../supabaseClient';
 import { Lock, Eye, EyeOff, User, Phone, QrCode, Smartphone, Download, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { isWeb, isNative } from '../utils/platform';
+import logo from '../assets/logo.png';
 
 const Login = () => {
     const navigate = useNavigate();
@@ -206,7 +207,20 @@ const Login = () => {
                             <>
                                 <div style={{ position: 'relative', padding: '15px', background: '#fff', borderRadius: '25px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.1)' }}>
                                     {sessionId ? (
-                                        <QRCodeSVG value={sessionId} size={260} level="H" includeMargin={true} />
+                                        <QRCodeSVG 
+                                            value={sessionId} 
+                                            size={260} 
+                                            level="H" 
+                                            includeMargin={true}
+                                            imageSettings={{
+                                                src: logo,
+                                                x: undefined,
+                                                y: undefined,
+                                                height: 50,
+                                                width: 50,
+                                                excavate: true,
+                                            }}
+                                        />
                                     ) : (
                                         <div style={{ width: 260, height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                             <Loader2 className="animate-spin" size={40} color="#10b981" />
