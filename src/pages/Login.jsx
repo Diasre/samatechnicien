@@ -24,6 +24,8 @@ const Login = () => {
     const [sessionStatus, setSessionStatus] = useState('pending'); // 'pending', 'scanning', 'confirmed', 'error'
 
     // 🌐 LOGIQUE WEB (Génération du QR Code et attente du scan)
+    const [qrError, setQrError] = useState('');
+
     useEffect(() => {
         let subscription = null;
 
@@ -31,8 +33,9 @@ const Login = () => {
             try {
                 setLoading(true);
                 setSessionStatus('pending');
+                setQrError('');
                 
-                // 1. On crée une nouvelle session de synchronisation
+                // 1. On crée une nouvelle session
                 const { data, error } = await supabase
                     .from('web_login_sessions')
                     .insert([{ status: 'pending' }])
@@ -40,13 +43,14 @@ const Login = () => {
                     .single();
 
                 if (error) {
-                    console.error("❌ Erreur Supabase lors de la création du QR:", error);
+                    setQrError(`Erreur Base de données: ${error.message}`);
                     setSessionStatus('error');
-                    throw error;
+                    return;
                 }
 
                 if (data) {
                     setSessionId(data.id);
+                    // ... reste du code ...
                     
                     // 2. On écoute en temps réel les changements sur CETTE session précise
                     subscription = supabase
@@ -222,7 +226,7 @@ const Login = () => {
                                     <Smartphone size={60} color="#ef4444" />
                                 </div>
                                 <h3 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#ef4444' }}>Erreur de connexion</h3>
-                                <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '20px' }}>Impossible de générer le code QR. Vérifiez votre connexion.</p>
+                                <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '20px' }}>{qrError || "Impossible de générer le code QR. Vérifiez votre connexion."}</p>
                                 <button 
                                     onClick={() => window.location.reload()} 
                                     style={{ padding: '0.8rem 1.5rem', background: '#10b981', color: '#fff', border: 'none', borderRadius: '15px', fontWeight: '800', cursor: 'pointer' }}
