@@ -368,6 +368,15 @@ const Login = () => {
                 <button onClick={performLoginLogic} disabled={loading} style={{ width: '100%', padding: '1.2rem', background: '#10b981', color: '#fff', border: 'none', borderRadius: '20px', fontWeight: '900', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 10px 20px rgba(16, 185, 129, 0.2)' }}>
                     {loading ? 'Connexion en cours...' : 'Se connecter'}
                 </button>
+
+                <div style={{ marginTop: '2.5rem', textAlign: 'center' }}>
+                    <p style={{ color: '#64748b', fontSize: '1rem', fontWeight: '500' }}>
+                        Pas encore de compte ? <br/>
+                        <Link to="/register" style={{ color: '#10b981', fontWeight: '900', textDecoration: 'none', fontSize: '1.1rem' }}>
+                            S'inscrire maintenant
+                        </Link>
+                    </p>
+                </div>
             </div>
         </div>
     );
