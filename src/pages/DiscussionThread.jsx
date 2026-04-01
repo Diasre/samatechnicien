@@ -40,9 +40,9 @@ const DiscussionThread = () => {
 
             // 2. Fetch Messages
             const { data: messagesData, error: messagesError } = await supabase
-                .from('messages')
+                .from('discussion_messages')
                 .select('*, users (fullname, specialty, image)')
-                .eq('discussionId', id)
+                .eq('discussion_id', id)
                 .order('created_at', { ascending: true });
 
             if (messagesError) throw messagesError;
@@ -86,10 +86,10 @@ const DiscussionThread = () => {
         setSubmitting(true);
         try {
             const { error } = await supabase
-                .from('messages')
+                .from('discussion_messages')
                 .insert([{
-                    discussionId: id,
-                    technicianId: currentUser.id,
+                    discussion_id: id,
+                    user_id: currentUser.id,
                     content: message
                 }]);
 
