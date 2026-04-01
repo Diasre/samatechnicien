@@ -35,7 +35,7 @@ const Login = () => {
                 setSessionStatus('pending');
                 setQrError('');
                 
-                // 1. On crée une nouvelle session
+                // 1. On crée une nouvelle session de synchronisation
                 const { data, error } = await supabase
                     .from('web_login_sessions')
                     .insert([{ status: 'pending' }])
@@ -50,7 +50,6 @@ const Login = () => {
 
                 if (data) {
                     setSessionId(data.id);
-                    // ... reste du code ...
                     
                     // 2. On écoute en temps réel les changements sur CETTE session précise
                     subscription = supabase
@@ -65,13 +64,14 @@ const Login = () => {
                             if (updated.status === 'scanning') {
                                 setSessionStatus('scanning');
                             } else if (updated.status === 'confirmed' && updated.user_id) {
+                                setSessionStatus('confirmed');
                                 loginViaQR(updated.user_id);
                             }
                         })
                         .subscribe();
                 }
             } catch (err) {
-                console.error('💥 Échec de la configuration du QR Code:', err);
+                console.error('💥 Échec critique QR:', err);
                 setSessionStatus('error');
             } finally {
                 setLoading(false);
