@@ -1,99 +1,98 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { Facebook, Instagram, Linkedin, Mail, Phone, MapPin, Tool, CheckCircle } from 'lucide-react';
+import { Mail, Phone, MapPin, Facebook, Instagram, Twitter, ShieldCheck } from 'lucide-react';
+import { isWeb } from '../utils/platform';
+import logo from '../assets/logo.png';
 
 const Footer = () => {
+    // On n'affiche le footer que sur le Web pour garder l'app mobile épurée
+    if (!isWeb) return null;
+
     return (
-        <footer style={{
-            backgroundColor: '#111827',
-            color: '#f3f4f6',
-            padding: '4rem 1rem 1.5rem 1rem',
-            borderTop: '1px solid rgba(255,255,255,0.05)'
+        <footer style={{ 
+            background: '#1e293b', 
+            color: '#f8fafc', 
+            padding: '4rem 2rem 2rem', 
+            fontFamily: "'Outfit', sans-serif",
+            marginTop: '4rem'
         }}>
-            <div className="container" style={{
-                maxWidth: '1200px',
-                margin: '0 auto',
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                gap: '2.5rem',
-                marginBottom: '3rem'
+            <div style={{ 
+                maxWidth: '1200px', 
+                margin: '0 auto', 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+                gap: '3rem' 
             }}>
-                {/* Column 1: Brand */}
-                <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
-                        <div style={{
-                            backgroundColor: '#10b981',
-                            padding: '0.5rem',
-                            borderRadius: '10px'
-                        }}>
-                            <CheckCircle size={24} color="white" />
-                        </div>
-                        <span style={{ fontSize: '1.5rem', fontWeight: '900', letterSpacing: '-0.5px' }}>
-                            <span style={{ color: '#10b981' }}>sama</span>technicien
-                        </span>
+                {/* Section Logo & Slogan */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <img src={logo} alt="SamaTechnicien" style={{ height: '40px', filter: 'brightness(0) invert(1)' }} />
+                        <span style={{ fontSize: '1.5rem', fontWeight: '900', letterSpacing: '-1px' }}>SamaTechnicien</span>
                     </div>
-                    <p style={{ color: '#9ca3af', lineHeight: '1.6', fontSize: '0.95rem', marginBottom: '1.5rem' }}>
-                        La première plateforme au Sénégal qui connecte les meilleurs techniciens certifiés avec les particuliers et entreprises en toute confiance.
+                    <p style={{ color: '#94a3b8', lineHeight: '1.6', fontSize: '0.95rem' }}>
+                        La première plateforme de mise en relation entre techniciens certifiés et clients au Sénégal. 
+                        Qualité, rapidité et sécurité garanties.
                     </p>
-                    <div style={{ display: 'flex', gap: '1rem' }}>
-                        <a href="#" style={{ color: '#9ca3af', transition: 'color 0.3s' }} onMouseOver={(e) => e.target.style.color = '#10b981'} onMouseOut={(e) => e.target.style.color = '#9ca3af'}><Facebook size={22} /></a>
-                        <a href="#" style={{ color: '#9ca3af', transition: 'color 0.3s' }} onMouseOver={(e) => e.target.style.color = '#10b981'} onMouseOut={(e) => e.target.style.color = '#9ca3af'}><Instagram size={22} /></a>
-                        <a href="#" style={{ color: '#9ca3af', transition: 'color 0.3s' }} onMouseOver={(e) => e.target.style.color = '#10b981'} onMouseOut={(e) => e.target.style.color = '#9ca3af'}><Linkedin size={22} /></a>
+                    <div style={{ display: 'flex', gap: '15px' }}>
+                        <a href="#" style={{ color: '#94a3b8', transition: '0.3s' }}><Facebook size={20} /></a>
+                        <a href="#" style={{ color: '#94a3b8', transition: '0.3s' }}><Instagram size={20} /></a>
+                        <a href="#" style={{ color: '#94a3b8', transition: '0.3s' }}><Twitter size={20} /></a>
                     </div>
                 </div>
 
-                {/* Column 2: Quick Links */}
+                {/* Section Contact */}
                 <div>
-                    <h4 style={{ color: 'white', marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: 'bold' }}>Liens Rapides</h4>
-                    <ul style={{ listStyle: 'none', padding: 0 }}>
-                        <li style={{ marginBottom: '0.75rem' }}><Link to="/technicians" style={{ color: '#9ca3af', textDecoration: 'none', fontSize: '0.95rem' }} onMouseOver={(e) => e.target.style.color = '#10b981'} onMouseOut={(e) => e.target.style.color = '#9ca3af'}>Trouver un technicien</Link></li>
-                        <li style={{ marginBottom: '0.75rem' }}><Link to="/marketplace" style={{ color: '#9ca3af', textDecoration: 'none', fontSize: '0.95rem' }} onMouseOver={(e) => e.target.style.color = '#10b981'} onMouseOut={(e) => e.target.style.color = '#9ca3af'}>Boutique Pièces</Link></li>
-                        <li style={{ marginBottom: '0.75rem' }}><Link to="/register" style={{ color: '#9ca3af', textDecoration: 'none', fontSize: '0.95rem' }} onMouseOver={(e) => e.target.style.color = '#10b981'} onMouseOut={(e) => e.target.style.color = '#9ca3af'}>Devenir Technicien</Link></li>
-                        <li style={{ marginBottom: '0.75rem' }}><Link to="/login" style={{ color: '#9ca3af', textDecoration: 'none', fontSize: '0.95rem' }} onMouseOver={(e) => e.target.style.color = '#10b981'} onMouseOut={(e) => e.target.style.color = '#9ca3af'}>Mon Compte</Link></li>
-                    </ul>
-                </div>
-
-                {/* Column 3: Legal */}
-                <div>
-                    <h4 style={{ color: 'white', marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: 'bold' }}>Légal</h4>
-                    <ul style={{ listStyle: 'none', padding: 0 }}>
-                        <li style={{ marginBottom: '0.75rem' }}><Link to="/terms" style={{ color: '#9ca3af', textDecoration: 'none', fontSize: '0.95rem' }} onMouseOver={(e) => e.target.style.color = '#10b981'} onMouseOut={(e) => e.target.style.color = '#9ca3af'}>Conditions Générales (CGU)</Link></li>
-                        <li style={{ marginBottom: '0.75rem' }}><Link to="/terms" style={{ color: '#9ca3af', textDecoration: 'none', fontSize: '0.95rem' }} onMouseOver={(e) => e.target.style.color = '#10b981'} onMouseOut={(e) => e.target.style.color = '#9ca3af'}>Confidentialité</Link></li>
-                        <li style={{ marginBottom: '0.75rem' }}><a href="#" style={{ color: '#9ca3af', textDecoration: 'none', fontSize: '0.95rem' }} onMouseOver={(e) => e.target.style.color = '#10b981'} onMouseOut={(e) => e.target.style.color = '#9ca3af'}>Mentions Légales</a></li>
-                    </ul>
-                </div>
-
-                {/* Column 4: Contact */}
-                <div>
-                    <h4 style={{ color: 'white', marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: 'bold' }}>Contact</h4>
-                    <ul style={{ listStyle: 'none', padding: 0 }}>
-                        <li style={{ marginBottom: '1rem', display: 'flex', gap: '0.75rem', color: '#9ca3af' }}>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: '800', marginBottom: '1.5rem', color: '#10b981' }}>Contactez-nous</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#cbd5e1' }}>
                             <Mail size={18} color="#10b981" />
-                            <span style={{ fontSize: '0.95rem' }}>dias@samatechnicien.com</span>
-                        </li>
-                        <li style={{ marginBottom: '1rem', display: 'flex', gap: '0.75rem', color: '#9ca3af' }}>
+                            <a href="mailto:Dias@samatechnicien.com" style={{ color: 'inherit', textDecoration: 'none', fontWeight: '600' }}>
+                                Dias@samatechnicien.com
+                            </a>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#cbd5e1' }}>
                             <Phone size={18} color="#10b981" />
-                            <span style={{ fontSize: '0.95rem' }}>+221 77 859 96 49</span>
-                        </li>
-                        <li style={{ display: 'flex', gap: '0.75rem', color: '#9ca3af' }}>
+                            <span>+221 77 000 00 00</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#cbd5e1' }}>
                             <MapPin size={18} color="#10b981" />
-                            <span style={{ fontSize: '0.95rem' }}>Dakar, Sénégal</span>
-                        </li>
-                    </ul>
+                            <span>Dakar, Sénégal</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Section Liens Utiles */}
+                <div>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: '800', marginBottom: '1.5rem', color: '#10b981' }}>Liens Rapides</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <a href="/" style={{ color: '#94a3b8', textDecoration: 'none', transition: '0.3s' }}>Accueil</a>
+                        <a href="/login" style={{ color: '#94a3b8', textDecoration: 'none', transition: '0.3s' }}>Se connecter</a>
+                        <a href="/terms" style={{ color: '#94a3b8', textDecoration: 'none', transition: '0.3s' }}>Conditions d'utilisation</a>
+                        <a href="/register" style={{ color: '#94a3b8', textDecoration: 'none', transition: '0.3s' }}>Devenir partenaire</a>
+                    </div>
+                </div>
+
+                {/* Section Confiance */}
+                <div style={{ background: 'rgba(16, 185, 129, 0.05)', padding: '1.5rem', borderRadius: '20px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                        <ShieldCheck size={24} color="#10b981" />
+                        <span style={{ fontWeight: '800', color: '#10b981' }}>100% Sécurisé</span>
+                    </div>
+                    <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: 0 }}>
+                        Toutes vos données et transactions sont protégées par notre système de sécurité avancé.
+                    </p>
                 </div>
             </div>
 
-            {/* Bottom Copyright */}
-            <div style={{
-                maxWidth: '1200px',
-                margin: '0 auto',
-                paddingTop: '1.5rem',
-                borderTop: '1px solid rgba(255,255,255,0.05)',
-                textAlign: 'center'
+            <div style={{ 
+                maxWidth: '1200px', 
+                margin: '3rem auto 0', 
+                paddingTop: '2rem', 
+                borderTop: '1px solid #334155', 
+                textAlign: 'center', 
+                color: '#64748b',
+                fontSize: '0.85rem'
             }}>
-                <p style={{ color: '#4b5563', fontSize: '0.85rem' }}>
-                    © {new Date().getFullYear()} SamaTechnicien.com — Tous droits réservés. Développé avec ❤️ au Sénégal.
-                </p>
+                © {new Date().getFullYear()} SamaTechnicien. Tous droits réservés. Design by Dias.
             </div>
         </footer>
     );
