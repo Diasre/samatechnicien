@@ -21,56 +21,69 @@ const Login = () => {
 
     // States Web (QR Scan)
     const [sessionId, setSessionId] = useState('');
-    const [sessionStatus, setSessionStatus] = useState('pending'); // 'pending', 'scanning', 'confirmed'
+    const [sessionStatus, setSessionStatus] = useState('pending'); // 'pending', 'scanning', 'confirmed', 'error'
 
     // 🌐 LOGIQUE WEB (Génération du QR Code et attente du scan)
     useEffect(() => {
+        let subscription = null;
+
+        const setupQRLogin = async () => {
+            try {
+                setLoading(true);
+                setSessionStatus('pending');
+                
+                // 1. On crée une nouvelle session de synchronisation
+                const { data, error } = await supabase
+                    .from('web_login_sessions')
+                    .insert([{ status: 'pending' }])
+                    .select()
+                    .single();
+
+                if (error) {
+                    console.error("❌ Erreur Supabase lors de la création du QR:", error);
+                    setSessionStatus('error');
+                    throw error;
+                }
+
+                if (data) {
+                    setSessionId(data.id);
+                    
+                    // 2. On écoute en temps réel les changements sur CETTE session précise
+                    subscription = supabase
+                        .channel(`session-${data.id}`)
+                        .on('postgres_changes', { 
+                            event: 'UPDATE', 
+                            schema: 'public', 
+                            table: 'web_login_sessions',
+                            filter: `id=eq.${data.id}` 
+                        }, (payload) => {
+                            const updated = payload.new;
+                            if (updated.status === 'scanning') {
+                                setSessionStatus('scanning');
+                            } else if (updated.status === 'confirmed' && updated.user_id) {
+                                loginViaQR(updated.user_id);
+                            }
+                        })
+                        .subscribe();
+                }
+            } catch (err) {
+                console.error('💥 Échec de la configuration du QR Code:', err);
+                setSessionStatus('error');
+            } finally {
+                setLoading(false);
+            }
+        };
+
         if (isWeb) {
             setupQRLogin();
         }
+
+        return () => {
+            if (subscription) {
+                supabase.removeChannel(subscription);
+            }
+        };
     }, [isWeb]);
-
-    const setupQRLogin = async () => {
-        try {
-            // 1. Créer une session de synchronisation dans Supabase
-            const { data, error } = await supabase
-                .from('web_login_sessions')
-                .insert([{ status: 'pending' }])
-                .select()
-                .single();
-
-            if (error) throw error;
-            setSessionId(data.id);
-
-            // 2. Écouter les changements en Temps Réel sur cette session
-            const channel = supabase
-                .channel(`session-${data.id}`)
-                .on('postgres_changes', { 
-                    event: 'UPDATE', 
-                    schema: 'public', 
-                    table: 'web_login_sessions',
-                    filter: `id=eq.${data.id}` 
-                }, async (payload) => {
-                    const updated = payload.new;
-                    
-                    if (updated.status === 'scanning') {
-                        setSessionStatus('scanning');
-                    } else if (updated.status === 'confirmed' && updated.user_id) {
-                        setSessionStatus('confirmed');
-                        // ✅ CONNEXION RÉUSSIE ! Récupération du profil
-                        loginViaQR(updated.user_id);
-                    }
-                })
-                .subscribe();
-
-            return () => {
-                supabase.removeChannel(channel);
-            };
-        } catch (err) {
-            console.error("Erreur session QR:", err);
-            setErrorMsg("Impossible de générer le code de connexion.");
-        }
-    };
 
     const loginViaQR = async (userId) => {
         setLoading(true);
@@ -203,6 +216,20 @@ const Login = () => {
                                 <h3 style={{ fontSize: '1.5rem', fontWeight: '800' }}>Connexion réussie !</h3>
                                 <p style={{ color: '#64748b' }}>Préparation de votre tableau de bord...</p>
                             </div>
+                        ) : sessionStatus === 'error' ? (
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{ background: '#fef2f2', padding: '20px', borderRadius: '50%', marginBottom: '20px' }}>
+                                    <Smartphone size={60} color="#ef4444" />
+                                </div>
+                                <h3 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#ef4444' }}>Erreur de connexion</h3>
+                                <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '20px' }}>Impossible de générer le code QR. Vérifiez votre connexion.</p>
+                                <button 
+                                    onClick={() => window.location.reload()} 
+                                    style={{ padding: '0.8rem 1.5rem', background: '#10b981', color: '#fff', border: 'none', borderRadius: '15px', fontWeight: '800', cursor: 'pointer' }}
+                                >
+                                    Réessayer
+                                </button>
+                            </div>
                         ) : (
                             <>
                                 <div style={{ position: 'relative', padding: '15px', background: '#fff', borderRadius: '25px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.1)' }}>
@@ -223,7 +250,10 @@ const Login = () => {
                                         />
                                     ) : (
                                         <div style={{ width: 260, height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            <Loader2 className="animate-spin" size={40} color="#10b981" />
+                                            <div style={{ textAlign: 'center' }}>
+                                                <Loader2 className="animate-spin" size={40} color="#10b981" />
+                                                <p style={{ marginTop: '10px', fontSize: '0.85rem', color: '#64748b' }}>Génération...</p>
+                                            </div>
                                         </div>
                                     )}
                                     {sessionStatus === 'scanning' && (
