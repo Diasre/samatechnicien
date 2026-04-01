@@ -36,17 +36,21 @@ const Forum = () => {
             if (error) throw error;
 
             if (data) {
-                const mappedDiscussions = data.map(d => ({
-                    id: d.id,
-                    title: d.title,
-                    content: d.content,
-                    createdAt: d.created_at,
-                    authorName: d.users?.fullname || d.users?.fullName || 'Technicien Inconnu',
-                    authorSpecialty: d.users?.specialty || '',
-                    authorImage: d.users?.image,
-                    messageCount: 0 // Need to implement count join separately or view, skipping for now or set to 0.
-                    // To get message count, we'd need a separate query or a view. For speed, keeping 0.
-                }));
+                console.log("💾 Discussions brut Supabase:", data);
+                const mappedDiscussions = data.map(d => {
+                    // Récupération souple des données utilisateur
+                    const userProfile = d.users || {};
+                    return {
+                        id: d.id,
+                        title: d.title,
+                        content: d.content,
+                        createdAt: d.created_at,
+                        authorName: userProfile.fullname || userProfile.full_name || 'Technicien',
+                        authorSpecialty: userProfile.specialty || '',
+                        authorImage: userProfile.image,
+                        messageCount: 0
+                    };
+                });
                 setDiscussions(mappedDiscussions);
             }
         } catch (error) {
@@ -67,7 +71,7 @@ const Forum = () => {
             const { error } = await supabase
                 .from('discussions')
                 .insert([{
-                    technicianId: currentUser.id,
+                    technician_id: currentUser.id,
                     title: content.substring(0, 50) + (content.length > 50 ? '...' : ''),
                     content: content
                 }]);
