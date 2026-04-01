@@ -119,20 +119,45 @@ const Login = () => {
     const loginViaQR = async (userId) => {
         setLoading(true);
         try {
-            // Récupérer les infos utilisateur
-            const { data: userData } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+            console.log("🧩 Synchronisation forcée pour ID:", userId);
             
+            // 1. On récupère toutes les informations utilisateur
+            const { data: userData, error: fetchError } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', userId)
+                .maybeSingle();
+            
+            if (fetchError) throw fetchError;
+
             if (userData) {
-                const mappedUser = { ...userData, fullName: userData.fullname || userData.full_name || "Utilisateur" };
+                console.log("✅ Utilisateur identifié !");
+                setSessionStatus('confirmed');
+
+                // 2. Préparation du profil pour le stockage local
+                const mappedUser = { 
+                    ...userData, 
+                    fullName: userData.fullname || userData.full_name || userData.fullName || "Utilisateur",
+                    role: userData.role || 'client'
+                };
+
+                // 3. Stockage des informations
                 localStorage.setItem('user', JSON.stringify(mappedUser));
-                
-                // Redirection selon le rôle
-                if (mappedUser.role === 'admin') navigate('/dashboard');
-                else if (mappedUser.role === 'technician') navigate('/expert-dashboard');
-                else navigate('/');
+
+                // 4. Redirection forcée (Hard Reload) vers le bon dashboard
+                setTimeout(() => {
+                    if (mappedUser.role === 'admin') window.location.href = '/dashboard';
+                    else if (mappedUser.role === 'technician') window.location.href = '/expert-dashboard';
+                    else window.location.href = '/';
+                }, 1000);
+            } else {
+                setQrError("Profil introuvable en base. Veuillez réessayer.");
+                setSessionStatus('error');
             }
         } catch (e) {
-            setErrorMsg("Erreur lors de la synchronisation du profil.");
+            console.error("💥 Erreur login QR:", e);
+            setQrError(`Erreur: ${e.message}`);
+            setSessionStatus('error');
         } finally {
             setLoading(false);
         }
