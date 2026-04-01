@@ -39,32 +39,32 @@ const Login = () => {
                 setSessionStatus('pending');
                 setQrError('');
                 
-                // 1. On crée une nouvelle session (Action de base, doit normalement passer)
-                const { data, error } = await supabase
+                // 1. Insertion la plus simple possible (sans single() qui peut être bloqué par RLS)
+                const { data: inserts, error } = await supabase
                     .from('web_login_sessions')
                     .insert([{ status: 'pending' }])
-                    .select()
-                    .single();
+                    .select('id');
 
                 if (error) {
-                    setQrError(`Erreur: ${error.message}`);
+                    setQrError(`Code Erreur: ${error.code || 'Inconnu'}. ${error.message}`);
                     setSessionStatus('error');
                     return;
                 }
 
-                if (data) {
-                    setSessionId(data.id);
-                    sessionIdRef.current = data.id;
+                if (inserts && inserts[0]) {
+                    const dataId = inserts[0].id;
+                    setSessionId(dataId);
+                    sessionIdRef.current = dataId;
                     
-                    // 2. TENTATIVE DE TEMPS RÉEL (Isolation contre SecurityError)
+                    // 2. TENTATIVE DE TEMPS RÉEL (Isolation)
                     try {
                         subscription = supabase
-                            .channel(`session-${data.id}`)
+                            .channel(`session-${dataId}`)
                             .on('postgres_changes', { 
                                 event: 'UPDATE', 
                                 schema: 'public', 
                                 table: 'web_login_sessions',
-                                filter: `id=eq.${data.id}` 
+                                filter: `id=eq.${dataId}` 
                             }, (payload) => {
                                 const updated = payload.new;
                                 if (updated.status === 'scanning') {
@@ -74,14 +74,12 @@ const Login = () => {
                                     loginViaQR(updated.user_id);
                                 }
                             })
-                            .subscribe((status) => {
-                                console.log("📡 Statut Realtime:", status);
-                            });
+                            .subscribe();
                     } catch (subErr) {
-                        console.warn("⚠️ Le navigateur bloque le temps réel (SecurityError), on bascule sur le Polling seul.", subErr);
+                        console.warn("Realtime bloqué, mode polling activé.");
                     }
 
-                    // 3. SYSTÈME DE SECOURS (POLLING - TOUJOURS ACTIF)
+                    // 3. POLLING (Vérification manuelle infaillible)
                     pollingInterval = setInterval(async () => {
                         const currentId = sessionIdRef.current;
                         if (!currentId || sessionStatus === 'confirmed') return;
@@ -93,7 +91,7 @@ const Login = () => {
                             .maybeSingle();
 
                         if (remoteData && remoteData.status === 'confirmed' && remoteData.user_id) {
-                            console.log("✅ Connexion détectée via Polling !");
+                            console.log("✅ Connecté !");
                             clearInterval(pollingInterval);
                             setSessionStatus('confirmed');
                             loginViaQR(remoteData.user_id);
@@ -102,7 +100,7 @@ const Login = () => {
                 }
             } catch (err) {
                 console.error('💥 Échec QR:', err);
-                setQrError(`Erreur Génétique: ${err.name} - ${err.message}`);
+                setQrError(`Le navigateur bloque la requête. Essayez Chrome ou désactivez le bloqueur de pub.`);
                 setSessionStatus('error');
             } finally {
                 setLoading(false);
