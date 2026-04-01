@@ -26,8 +26,12 @@ const Login = () => {
     // 🌐 LOGIQUE WEB (Génération du QR Code et attente du scan)
     const [qrError, setQrError] = useState('');
 
+    const sessionIdRef = React.useRef(sessionId);
+    useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
+
     useEffect(() => {
         let subscription = null;
+        let pollingInterval = null;
 
         const setupQRLogin = async () => {
             try {
@@ -50,6 +54,7 @@ const Login = () => {
 
                 if (data) {
                     setSessionId(data.id);
+                    sessionIdRef.current = data.id;
                     
                     // 2. On écoute en temps réel les changements sur CETTE session précise
                     subscription = supabase
@@ -69,6 +74,27 @@ const Login = () => {
                             }
                         })
                         .subscribe();
+
+                    // 3. SYSTÈME DE SECOURS (POLLING)
+                    // Si le temps réel (Realtime) échoue, on vérifie manuellement toutes les 2 secondes
+                    pollingInterval = setInterval(async () => {
+                        const currentId = sessionIdRef.current;
+                        if (!currentId || sessionStatus === 'confirmed') return;
+
+                        console.log("🔄 Polling de secours sur ID:", currentId);
+                        const { data: remoteData } = await supabase
+                            .from('web_login_sessions')
+                            .select('status, user_id')
+                            .eq('id', currentId)
+                            .maybeSingle();
+
+                        if (remoteData && remoteData.status === 'confirmed' && remoteData.user_id) {
+                            console.log("✅ Connexion détectée via Polling !");
+                            clearInterval(pollingInterval);
+                            setSessionStatus('confirmed');
+                            loginViaQR(remoteData.user_id);
+                        }
+                    }, 3000);
                 }
             } catch (err) {
                 console.error('💥 Échec critique QR:', err);
@@ -83,6 +109,7 @@ const Login = () => {
         }
 
         return () => {
+            if (pollingInterval) clearInterval(pollingInterval);
             if (subscription) {
                 supabase.removeChannel(subscription);
             }
