@@ -25,7 +25,7 @@ const Footer = () => {
                 {/* Section Logo & Slogan */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <img src={logo} alt="SamaTechnicien" style={{ height: '40px', filter: 'brightness(0) invert(1)' }} />
+                        <img src={logo} alt="SamaTechnicien" style={{ height: '45px' }} />
                         <span style={{ fontSize: '1.5rem', fontWeight: '900', letterSpacing: '-1px' }}>SamaTechnicien</span>
                     </div>
                     <p style={{ color: '#94a3b8', lineHeight: '1.6', fontSize: '0.95rem' }}>
@@ -51,7 +51,7 @@ const Footer = () => {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#cbd5e1' }}>
                             <Phone size={18} color="#10b981" />
-                            <span>+221 77 000 00 00</span>
+                            <span>+221 77 859 96 49</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#cbd5e1' }}>
                             <MapPin size={18} color="#10b981" />
