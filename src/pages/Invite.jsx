@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Share2, Copy, MessageCircle, Mail, ArrowLeft, Users, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { WEB_URL } from '../config';
 
 const Invite = () => {
     const user = JSON.parse(localStorage.getItem('user'));
     const [copied, setCopied] = useState(false);
 
-    const appUrl = window.location.origin;
+    const appUrl = WEB_URL;
     const referralLink = `${appUrl}/register?ref=${user?.id || 'guest'}`;
     const inviteMessage = `Salut ! J'utilise SamaTechnicien pour trouver des experts en réparation certifiés. Inscris-toi ici : ${referralLink}`;
 

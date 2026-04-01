@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { User, Lock, Save, ArrowLeft, QrCode, Camera, LogOut, Power } from 'lucide-react';
+import { User, Lock, Save, ArrowLeft, QrCode, Camera, LogOut, Power, Trash2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { QRCodeSVG } from 'qrcode.react';
+import { isNative, isAndroid } from '../utils/platform';
+import { Html5Qrcode } from "html5-qrcode";
 
 const ProfileSettings = () => {
     const navigate = useNavigate();
@@ -28,17 +30,42 @@ const ProfileSettings = () => {
 
     const [qrData, setQrData] = useState(null);
     const [showQRModal, setShowQRModal] = useState(false);
+    const [isScanning, setIsScanning] = useState(false);
+    const [scanError, setScanError] = useState(null);
 
     useEffect(() => {
         const fetchUserData = async () => {
             if (!localUser?.id) return;
 
             try {
-                const { data, error } = await supabase
+                // 0. VÉRIFICATION D'IDENTITÉ SUPABASE (Crucial pour la sécurité RLS)
+                const { data: { user: authUser } } = await supabase.auth.getUser();
+                if (authUser && authUser.id !== localUser.id) {
+                    console.log("🔄 Décalage d'identité détecté dans ProfileSettings!");
+                    const correctedUser = { ...localUser, id: authUser.id };
+                    localStorage.setItem('user', JSON.stringify(correctedUser));
+                    await supabase.rpc('fix_my_id', { new_id: authUser.id, user_phone: localUser.phone });
+                    localUser.id = authUser.id; 
+                }
+
+                let { data, error } = await supabase
                     .from('users')
                     .select('*')
                     .eq('id', localUser.id)
-                    .single();
+                    .maybeSingle();
+
+                // 🛡️ RÉPARATION SILENCIEUSE DES ANCIENS COMPTES (ex: ID "104")
+                if (error || !data) {
+                    console.log("🔍 Profil non trouvé dans ProfileSettings, tentative par téléphone...");
+                    const { data: userByPhone } = await supabase.from('users').select('*').eq('phone', localUser.phone).maybeSingle();
+                    
+                    if (userByPhone && userByPhone.id !== localUser.id) {
+                        console.log("🛠️ Réparation d'ID détectée...");
+                        await supabase.rpc('fix_my_id', { new_id: localUser.id, user_phone: localUser.phone });
+                        const { data: fixedUser } = await supabase.from('users').select('*').eq('id', localUser.id).single();
+                        if (fixedUser) data = fixedUser;
+                    }
+                }
 
                 if (data) {
                     setUser(data);
@@ -117,14 +144,9 @@ const ProfileSettings = () => {
 
         setIsSaving(true);
         try {
-            // 1. Verify Authentication & ID match
+            // 1. Verify Authentication (Optional for Legacy users)
             const { data: { user: authUser } } = await supabase.auth.getUser();
-            if (!authUser) {
-                alert("Session expirée. Veuillez vous reconnecter.");
-                window.location.href = '/login';
-                return;
-            }
-
+            
             // Detect correct column name for generic 'fullName'
             const nameColumn = Object.keys(user).find(k => ['fullname', 'full_name', 'fullName'].includes(k)) || 'fullname';
 
@@ -152,6 +174,11 @@ const ProfileSettings = () => {
                 if (formData.description !== undefined && formData.description !== user.description) updates.description = formData.description;
             }
 
+            // Mise à jour de la colonne password pour rester synchronisé avec Auth
+            if (formData.password) {
+                updates.password = formData.password;
+            }
+
             // If nothing changed, stop here
             if (Object.keys(updates).length === 0 && !formData.password) {
                 alert("Aucune modification détectée.");
@@ -165,8 +192,8 @@ const ProfileSettings = () => {
             const { data: updateData, error: profileError } = await supabase
                 .from('users')
                 .update(updates)
-                .eq('id', authUser.id) // Use auth ID to be sure
-                .select(); // Return data to verify update happened
+                .eq('id', (authUser?.id || user.id).toString()) 
+                .select();
 
             if (!profileError && updateData && updateData.length > 0) {
                 updateSuccess = true;
@@ -174,9 +201,10 @@ const ProfileSettings = () => {
                 console.warn("Direct update failed or returned no data (RLS blocking?). Trying RPC...", profileError);
             }
 
-            // TRY 2: RPC Fallback (if direct update failed)
             if (!updateSuccess) {
+                const p_id = (authUser?.id || user.id).toString();
                 const rpcParams = {
+                    p_id,
                     p_fullname: formData.fullName || null,
                     p_phone: formData.phone || null,
                     p_city: formData.city || null,
@@ -188,24 +216,35 @@ const ProfileSettings = () => {
                     p_email: formData.email || null
                 };
 
-                const { error: rpcError } = await supabase.rpc('update_profile_v2', rpcParams);
+                const { data: updatedData, error: rpcError } = await supabase.rpc('update_profile_v4', rpcParams);
 
                 if (rpcError) {
-                    // Try V1 RPC as last resort
-                    const { error: rpcErrorV1 } = await supabase.rpc('update_user_profile', rpcParams);
-                    if (rpcErrorV1) {
-                        console.error("All update methods failed.");
-                        throw new Error(`Mise à jour impossible. (Direct: ${profileError?.message}, RPC: ${rpcError.message})`);
-                    }
+                    console.error("RPC v4 error:", rpcError);
+                    throw rpcError;
+                }
+                
+                if (updatedData && updatedData.length > 0) {
+                   updateSuccess = true;
+                } else {
+                   console.error("RPC v4 returned no data.");
                 }
             }
 
-            // 4. Update Password (Supabase Auth)
-            if (formData.password) {
+            // 4. Update Password (Supabase Auth if possible)
+            if (formData.password && authUser) {
                 const { error: authError } = await supabase.auth.updateUser({
                     password: formData.password + "00"
                 });
-                if (authError) throw authError;
+                if (authError) console.warn("Auth password update failed (legacy account?):", authError.message);
+            }
+
+            // 5. Déconnexion automatique si le mot de passe a été changé
+            if (formData.password) {
+                localStorage.removeItem('user');
+                await supabase.auth.signOut();
+                alert("Profil et mot de passe mis à jour ! Veuillez vous reconnecter avec votre nouveau code.");
+                window.location.href = '/login';
+                return;
             }
 
             alert("Profil mis à jour avec succès !");
@@ -246,42 +285,123 @@ const ProfileSettings = () => {
         setShowQRModal(true);
     };
 
-    const handleBecomeTechnician = async () => {
-        if (!window.confirm("Voulez-vous vraiment activer le mode Technicien ? Cela vous permettra de proposer vos services.")) {
+    // 📸 LOGIQUE DE SCAN (Pour connecter un ordinateur)
+    const startScanner = async () => {
+        setIsScanning(true);
+        setScanError(null);
+        
+        setTimeout(() => {
+            const html5QrCode = new Html5Qrcode("reader");
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                config,
+                async (decodedText) => {
+                    // ✅ CODE SCANNÉ !
+                    try {
+                        await html5QrCode.stop();
+                        setIsScanning(false);
+                        
+                        // Dire à Supabase que cet ordinateur est maintenant autorisé
+                        const { error: syncError } = await supabase
+                            .from('web_login_sessions')
+                            .update({ 
+                                user_id: user.id, 
+                                status: 'confirmed' 
+                            })
+                            .eq('id', decodedText);
+
+                        if (syncError) throw syncError;
+                        alert("✅ Succès ! Votre ordinateur est maintenant connecté.");
+                    } catch (err) {
+                        console.error("Erreur sync QR:", err);
+                        alert("❌ Erreur de synchronisation. Réessayez.");
+                    }
+                },
+                (errorMessage) => {
+                    // On ignore les erreurs de scan continu
+                }
+            ).catch(err => {
+                setScanError("Accès caméra refusé ou impossible.");
+                setIsScanning(false);
+            });
+        }, 300);
+    };
+
+
+
+    const handleQuitTechnicianMode = async () => {
+        if (!window.confirm("⚠️ Voulez-vous vraiment quitter le mode Technicien ? Vous ne serez plus visible dans la liste des experts et vos services seront suspendus.")) {
             return;
         }
 
         setIsSaving(true);
         try {
-            // 1. Tenter avec la fonction sécurisée (RPC)
-            const { error: rpcError } = await supabase.rpc('become_technician');
+            // 1. Mise à jour du rôle en base de données
+            const { error: updateError } = await supabase
+                .from('users')
+                .update({ 
+                    role: 'client', 
+                    availability: 'unavailable' // On marque comme indisponible par défaut
+                })
+                .eq('id', user.id);
 
-            if (rpcError) {
-                // Si la fonction n'existe pas encore (fallback), tenter la mise à jour directe
-                console.warn("RPC failed, trying direct update:", rpcError.message);
-                const { error: updateError } = await supabase
-                    .from('users')
-                    .update({ role: 'technician', availability: 'available' })
-                    .eq('id', user.id);
+            if (updateError) throw updateError;
 
-                if (updateError) throw updateError;
-            }
+            alert("Vous êtes maintenant redescendu au rôle de Client avec succès.");
 
-            alert("Félicitations ! Vous êtes maintenant un Technicien. Vous allez être redirigé vers la liste des techniciens.");
-
-            // Update local state
-            const updatedUser = { ...user, role: 'technician', availability: 'available' };
+            // 2. Mise à jour du LocalStorage
+            const updatedUser = { ...user, role: 'client', availability: 'unavailable' };
             setUser(updatedUser);
-            localStorage.setItem('user', JSON.stringify(updatedUser)); // Update stored user
+            localStorage.setItem('user', JSON.stringify(updatedUser));
 
-            // Redirect to Technicians List to show they are now listed
-            setTimeout(() => {
-                navigate('/technicians');
-            }, 500);
+            // 3. Redirection vers l'accueil (car le dashboard expert ne sera plus accessible)
+            window.location.href = '/';
 
         } catch (error) {
-            console.error("Error upgrading to technician:", error);
-            alert("Erreur: " + error.message);
+            console.error("Error quitting technician mode:", error);
+            alert("Erreur lors du changement de rôle : " + error.message);
+        }
+        setIsSaving(false);
+    };
+
+    const handleDeleteAccount = async () => {
+        const confirm1 = window.confirm("⚠️ ATTENTION : Voulez-vous vraiment supprimer votre compte ? Cette action est irréversible et toutes vos données (profil, messages, devis) seront définitivement effacées.");
+        if (!confirm1) return;
+
+        const confirm2 = window.confirm("Dernière vérification : Toute suppression est DÉFINITIVE. Êtes-vous ABSOLUMENT sûr ?");
+        if (!confirm2) return;
+
+        setIsSaving(true);
+        try {
+            // 1. Appel de la nouvelle fonction FORCE avec l'ID explicite ✨🚀
+            const { error: rpcError } = await supabase.rpc('delete_user_account_force', {
+                p_user_id: user.id
+            });
+
+            if (rpcError) {
+                console.error("RPC delete failed:", rpcError);
+                alert("Erreur de suppression (RPC) : " + rpcError.message);
+                
+                // Fallback direct avec alerte
+                const { error: dbError } = await supabase.from('users').delete().eq('id', user.id);
+                if (dbError) {
+                    alert("Erreur de suppression directe (BD) : " + dbError.message);
+                    throw dbError;
+                }
+            }
+
+            // 3. Déconnexion et nettoyage
+            localStorage.removeItem('user');
+            await supabase.auth.signOut();
+            
+            alert("Votre compte a été supprimé avec succès. Au revoir !");
+            window.location.href = '/login';
+
+        } catch (error) {
+            console.error("Error deleting account:", error);
+            alert("Erreur lors de la suppression du compte : " + error.message);
         }
         setIsSaving(false);
     };
@@ -295,8 +415,8 @@ const ProfileSettings = () => {
             </Link>
 
             <div className="card" style={{ padding: '2rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
-                    <div style={{ textAlign: 'left', flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '15px' }}>
+                    <div style={{ textAlign: 'left', flex: 1, minWidth: '200px' }}>
                         {/* Image Upload */}
                         <div style={{ position: 'relative', width: '80px', height: '80px', marginBottom: '1rem' }}>
                             <img
@@ -320,50 +440,32 @@ const ProfileSettings = () => {
                         <p style={{ color: '#666', fontSize: '0.85rem', margin: '0.25rem 0 0 0' }}>{user.role === 'technician' ? 'Technicien' : 'Client'}</p>
                     </div>
 
-                    <div style={{ textAlign: 'center' }}>
-                        <div
-                            onClick={generateLoginQR}
-                            style={{
-                                padding: '8px', border: '1px solid #eee', borderRadius: '12px',
-                                cursor: 'pointer', backgroundColor: '#f9f9f9', transition: 'all 0.2s',
-                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px'
-                            }}
-                            onMouseOver={e => e.currentTarget.style.borderColor = 'var(--primary-color)'}
-                            onMouseOut={e => e.currentTarget.style.borderColor = '#eee'}
-                        >
-                            <QrCode size={24} color="var(--primary-color)" />
-                            <span style={{ fontSize: '0.65rem', fontWeight: 'bold', color: 'var(--primary-color)' }}>Log QR</span>
-                        </div>
+                    <div style={{ flex: 1, minWidth: '200px' }}>
+                        {/* 💎 NOUVEAU BOUTON : SCANNER UN ORDINATEUR (Seulement sur Mobile) */}
+                        {(isNative || isAndroid) && (
+                            <div
+                                onClick={startScanner}
+                                style={{
+                                    padding: '12px', border: '1px solid #10b981', borderRadius: '15px',
+                                    cursor: 'pointer', backgroundColor: '#ecfdf5', transition: 'all 0.2s',
+                                    display: 'flex', alignItems: 'center', gap: '12px', width: '100%'
+                                }}
+                                onMouseOver={e => e.currentTarget.style.backgroundColor = '#d1fae5'}
+                                onMouseOut={e => e.currentTarget.style.backgroundColor = '#ecfdf5'}
+                            >
+                                <div style={{ background: '#10b981', padding: '8px', borderRadius: '10px', color: '#fff' }}>
+                                    <Smartphone size={20} />
+                                </div>
+                                <div style={{ textAlign: 'left' }}>
+                                    <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#10b981', display: 'block' }}>Connecter PC</span>
+                                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Scanner un ordinateur</span>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                {/* Section Devenir Technicien (Pour les clients uniquement) */}
-                {user.role === 'client' && (
-                    <div style={{
-                        marginTop: '-1rem', marginBottom: '2rem', padding: '1.5rem',
-                        backgroundColor: '#e3f2fd', borderRadius: '12px', border: '1px solid #bbdefb'
-                    }}>
-                        <h3 style={{ fontSize: '1.1rem', marginTop: 0, color: '#0d47a1', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            🛠️ Devenir Technicien
-                        </h3>
-                        <p style={{ fontSize: '0.9rem', color: '#1565c0', lineHeight: '1.5' }}>
-                            Vous êtes un réparateur professionnel ? Activez le mode Technicien pour proposer vos services, être visible sur la carte et gérer vos produits.
-                        </p>
-                        <button
-                            type="button"
-                            onClick={handleBecomeTechnician}
-                            disabled={isSaving}
-                            className="btn"
-                            style={{
-                                backgroundColor: '#1976d2', color: 'white', border: 'none',
-                                padding: '0.75rem 1.5rem', borderRadius: '8px', cursor: 'pointer',
-                                fontWeight: '600', marginTop: '0.5rem', width: '100%'
-                            }}
-                        >
-                            {isSaving ? 'Activation...' : 'Activer le mode Technicien'}
-                        </button>
-                    </div>
-                )}
+
 
                 <form onSubmit={handleSave}>
                     <div style={{ marginBottom: '1.25rem' }}>
@@ -539,8 +641,17 @@ const ProfileSettings = () => {
                                     setFormData({ ...formData, confirmPassword: val });
                                 }}
                                 placeholder="Confirmer"
-                                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ddd', letterSpacing: formData.confirmPassword ? '4px' : 'normal', fontWeight: 'bold' }}
+                                style={{ 
+                                    width: '100%', padding: '0.75rem', borderRadius: '8px', 
+                                    border: `1px solid ${formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword ? '#ef4444' : '#ddd'}`, 
+                                    letterSpacing: formData.confirmPassword ? '4px' : 'normal', fontWeight: 'bold' 
+                                }}
                             />
+                            {formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                                <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.4rem', fontWeight: 'bold' }}>
+                                    ⚠️ Les codes ne correspondent pas
+                                </p>
+                            )}
                         </div>
                     </div>
 
@@ -555,38 +666,47 @@ const ProfileSettings = () => {
                     </button>
 
                     <div style={{ marginTop: '3rem', borderTop: '2px solid #fee2e2', paddingTop: '2rem', textAlign: 'center' }}>
-                        <h3 style={{ fontSize: '1rem', color: '#dc2626', marginBottom: '1.5rem', fontWeight: 'bold' }}>
-                             Quitter la session
-                        </h3>
-                        <div style={{ display: 'flex', justifyContent: 'center' }}>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    if (window.confirm("Voulez-vous vraiment vous déconnecter ?")) {
-                                        localStorage.removeItem('user');
-                                        window.location.href = '/login';
-                                    }
-                                }}
-                                style={{ 
-                                    width: '80px', height: '80px', backgroundColor: '#e11d48', 
-                                    color: 'white', border: 'none', borderRadius: '50%',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    cursor: 'pointer', boxShadow: '0 8px 16px rgba(225, 29, 72, 0.4)',
-                                    transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-                                }}
-                                onMouseOver={e => {
-                                    e.currentTarget.style.transform = 'scale(1.05)';
-                                    e.currentTarget.style.boxShadow = '0 12px 20px rgba(225, 29, 72, 0.5)';
-                                }}
-                                onMouseOut={e => {
-                                    e.currentTarget.style.transform = 'scale(1)';
-                                    e.currentTarget.style.boxShadow = '0 8px 16px rgba(225, 29, 72, 0.4)';
-                                }}
-                            >
-                                <Power size={36} strokeWidth={2.5} />
-                            </button>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', alignItems: 'center' }}>
+                            <div>
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        if (window.confirm("Voulez-vous vraiment vous déconnecter ?")) {
+                                            localStorage.removeItem('user');
+                                            await supabase.auth.signOut();
+                                            window.location.href = '/login';
+                                        }
+                                    }}
+                                    style={{ 
+                                        width: '70px', height: '70px', backgroundColor: '#e11d48', 
+                                        color: 'white', border: 'none', borderRadius: '50%',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        cursor: 'pointer', boxShadow: '0 8px 16px rgba(225, 29, 72, 0.4)',
+                                        margin: '0 auto'
+                                    }}
+                                >
+                                    <Power size={30} strokeWidth={2.5} />
+                                </button>
+                                <p style={{ marginTop: '0.8rem', fontSize: '0.85rem', color: '#e11d48', fontWeight: 'bold' }}>Se déconnecter</p>
+                            </div>
+
+                            <div style={{ backgroundColor: '#fff', border: '1px solid #fee2e2', padding: '1.5rem', borderRadius: '20px', width: '100%', maxWidth: '300px' }}>
+                                <p style={{ fontSize: '0.8rem', color: '#991b1b', marginBottom: '1rem', fontWeight: '500' }}>Actions sur le compte</p>
+                                {/* Supprimer le compte */}
+                                <button
+                                    type="button"
+                                    onClick={handleDeleteAccount}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                                        width: '100%', padding: '0.7rem', backgroundColor: '#fef2f2', color: '#dc2626',
+                                        border: '1px solid #fecaca', borderRadius: '12px', fontSize: '0.85rem', fontWeight: 'bold',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    <Trash2 size={16} /> Supprimer mon compte
+                                </button>
+                            </div>
                         </div>
-                        <p style={{ marginTop: '1rem', fontSize: '0.85rem', color: '#666', fontWeight: '600' }}>Se déconnecter</p>
                     </div>
                 </form>
 
@@ -632,6 +752,26 @@ const ProfileSettings = () => {
                     </div>
                 )
             }
+
+            {/* Modal Scanner Caméra App */}
+            {isScanning && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'black', zIndex: 4000,
+                    display: 'flex', flexDirection: 'column', color: 'white'
+                }}>
+                    <div style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h3 style={{ margin: 0 }}>Scanner le code QR</h3>
+                        <button onClick={() => setIsScanning(false)} style={{ background: 'white', border: 'none', padding: '10px 20px', borderRadius: '12px', fontWeight: 'bold' }}>Fermer</button>
+                    </div>
+                    
+                    <div id="reader" style={{ flex: 1, width: '100%' }}></div>
+                    
+                    <div style={{ padding: '40px', textAlign: 'center' }}>
+                        <p>Pointez votre caméra vers l'écran de l'ordinateur</p>
+                    </div>
+                </div>
+            )}
         </div >
     );
 };

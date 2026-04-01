@@ -56,6 +56,29 @@ function App() {
     // 🌍 GESTIONNAIRE D'AUTHENTIFICATION GLOBAL
     // Écoute les connexions Supabase (ex: après clic email) sur TOUTES les pages
     useEffect(() => {
+        // Vérifier si l'utilisateur existe encore en base de données
+        // verifyProfile a été mis en pause car il provoquait des déconnexions intempestives (V98)
+        /*
+        const verifyProfile = async () => {
+            const stored = localStorage.getItem('user');
+            if (stored) {
+                try {
+                    const u = JSON.parse(stored);
+                    if (u?.id) {
+                        const { data, error } = await supabase.from('users').select('id').eq('id', u.id).maybeSingle();
+                        if (!data && !error) {
+                            console.warn('Profil introuvable, déconnexion...');
+                            localStorage.clear(); 
+                            await supabase.auth.signOut();
+                            window.location.reload();
+                        }
+                    }
+                } catch (e) { console.error(e); }
+            }
+        };
+        verifyProfile();
+        */
+
         const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
             console.log("🔔 Global Auth Event:", event);
 
@@ -66,44 +89,42 @@ function App() {
 
                 if (!localUser) {
                     try {
-                        console.log("🔄 Session Supabase détectée, synchronisation du profil pour:", session.user.email);
+                        console.log("🔄 Session Supabase détectée, synchronisation du profil pour ID:", session.user.id);
 
-                        // 1. On synchronise le statut vérifié
-                        if (session.user.email_confirmed_at) {
-                            await supabase.from('users').update({ email_verified: true }).eq('email', session.user.email);
-                        }
-
-                        // 2. On récupère le profil complet (maybeSingle to avoids throwing error if none)
-                        const { data: userData, error: fetchError } = await supabase
+                        // 2. On récupère le profil complet via l'ID
+                        let { data: userData, error: fetchError } = await supabase
                             .from('users')
                             .select('*')
-                            .eq('email', session.user.email)
+                            .eq('id', session.user.id)
                             .maybeSingle();
 
-                        if (fetchError) {
-                            console.error("❌ Erreur lors de la récup profil:", fetchError.message);
-                            return;
+                        // 🛡️ SECOURS : Recherche par téléphone si l'ID échoue (fréquent sur mobile)
+                        if (!userData && session.user.phone) {
+                            console.log("🔍 Secours: Recherche profil par téléphone...");
+                            const cleanPhone = session.user.phone.replace('+', '');
+                            const { data: fallbackData } = await supabase
+                                .from('users')
+                                .select('*')
+                                .or(`phone.eq.${cleanPhone},phone.eq.${session.user.phone}`)
+                                .maybeSingle();
+                            if (fallbackData) userData = fallbackData;
                         }
 
                         if (userData) {
-                            console.log("✅ Profil trouvé, création session locale...");
-                            // 3. On crée la session locale
+                            console.log("✅ Profil identifié, mise à jour session...");
+                            const finalUserData = userData || {}; 
                             const mappedUser = {
-                                ...userData,
-                                fullName: userData.fullname || userData.fullName,
-                                isBlocked: (userData.isblocked !== undefined ? userData.isblocked : userData.isBlocked) === 1,
-                                commentsEnabled: (userData.commentsenabled !== undefined ? userData.commentsenabled : userData.commentsEnabled) !== 0,
+                                ...finalUserData,
+                                fullName: finalUserData.fullname || finalUserData.full_name || finalUserData.fullName || "Utilisateur",
+                                isBlocked: (finalUserData.isblocked !== undefined ? finalUserData.isblocked : finalUserData.isBlocked) === 1,
+                                role: finalUserData.role || "client"
                             };
 
                             localStorage.setItem('user', JSON.stringify(mappedUser));
                             
-                            // On recharge pour mettre à jour l'interface (Header, etc.) uniquement si on n'est pas sur une page d'auth
                             if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
-                                console.log("🔄 Rafraîchissement de la page...");
                                 window.location.reload();
                             }
-                        } else {
-                            console.warn("⚠️ Aucun profil public trouvé pour cet email dans la table users.");
                         }
                     } catch (err) {
                         console.error("💥 Erreur critique lors de la synchronisation:", err);

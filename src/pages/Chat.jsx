@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
-import { Send, User, MessageCircle, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Send, User, MessageCircle, ArrowLeft, CheckCircle, ExternalLink } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 
 const Chat = () => {
+    const navigate = useNavigate();
     const [conversations, setConversations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedConversation, setSelectedConversation] = useState(null);
@@ -213,7 +215,7 @@ const Chat = () => {
             const { error } = await supabase.from('direct_messages').insert({
                 conversation_id: selectedConversation.id,
                 sender_id: userUUID,
-                content: "✅ [CONTRAT VALIDÉ] J'accepte officiellement votre proposition. Commençons le travail !"
+                content: "✅ [CONTRAT VALIDÉ] J'accepte officiellement cette proposition j vais contacter le Technicien Merci !"
             });
             
             // 2. Mettre à jour l'ALGORITHME (Statuts DB)
@@ -260,7 +262,7 @@ const Chat = () => {
             // On utilise .or() pour participant1 ou participant2
             const { data: convs, error: convError } = await supabase
                 .from('conversations')
-                .select('*, participant1:participant1_id(fullname, phone, id, image), participant2:participant2_id(fullname, phone, id, image)')
+                .select('*, participant1:participant1_id(fullname, phone, id, image, role, specialty), participant2:participant2_id(fullname, phone, id, image, role, specialty)')
                 .or(`participant1_id.in.(${myIdentities.map(id => `"${id}"`).join(',')}),participant2_id.in.(${myIdentities.map(id => `"${id}"`).join(',')})`)
                 .order('updated_at', { ascending: false });
 
@@ -276,7 +278,9 @@ const Chat = () => {
                             id: otherUser?.id || (isP1 ? conv.participant2_id : conv.participant1_id),
                             fullname: otherUser?.fullname || 'Utilisateur',
                             phone: otherUser?.phone || '',
-                            image: otherUser?.image || null
+                            image: otherUser?.image || null,
+                            role: otherUser?.role || 'user',
+                            specialty: otherUser?.specialty || ''
                         },
                         lastMessage: 'Message...', // Variable temporaire
                         updatedAt: conv.updated_at
@@ -425,21 +429,34 @@ const Chat = () => {
                                     alignItems: 'center'
                                 }}
                             >
-                                <div style={{
-                                    width: '40px', height: '40px', borderRadius: '50%',
-                                    backgroundColor: '#ddd', marginRight: '1rem',
-                                    display: 'flex', justifyContent: 'center', alignItems: 'center',
-                                    overflow: 'hidden'
-                                }}>
-                                    {conv.otherUser.avatar_url ? (
-                                        <img src={conv.otherUser.avatar_url} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <div 
+                                    onClick={(e) => {
+                                        if (conv.otherUser.role === 'technician') {
+                                            e.stopPropagation();
+                                            navigate(`/technician/${conv.otherUser.id}`);
+                                        }
+                                    }}
+                                    style={{
+                                        width: '40px', height: '40px', borderRadius: '50%',
+                                        backgroundColor: '#ddd', marginRight: '1rem',
+                                        display: 'flex', justifyContent: 'center', alignItems: 'center',
+                                        overflow: 'hidden', border: conv.otherUser.role === 'technician' ? '2px solid #10b981' : 'none'
+                                    }}
+                                >
+                                    {conv.otherUser.image ? (
+                                        <img src={conv.otherUser.image} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                     ) : (
                                         <User size={20} color="#666" />
                                     )}
                                 </div>
                                 <div>
-                                    <div style={{ fontWeight: 'bold' }}>{conv.otherUser.full_name || 'Utilisateur'}</div>
-                                    <div style={{ fontSize: '0.8rem', color: '#888' }}>Cliquez pour voir les messages</div>
+                                    <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                        {conv.otherUser.fullname || 'Utilisateur'}
+                                        {conv.otherUser.role === 'technician' && <CheckCircle size={12} color="#10b981" />}
+                                    </div>
+                                    <div style={{ fontSize: '0.8rem', color: '#888' }}>
+                                        {conv.otherUser.role === 'technician' ? `Expert • ${conv.otherUser.specialty}` : 'Cliquez pour voir les messages'}
+                                    </div>
                                 </div>
                             </div>
                         ))
@@ -456,17 +473,25 @@ const Chat = () => {
                                 <button className="mobile-only" onClick={() => setSelectedConversation(null)} style={{ background: 'none', border: 'none', padding: '5px' }}>
                                     <ArrowLeft size={20} />
                                 </button>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                                    {selectedConversation.otherUser.image ? (
-                                        <img src={selectedConversation.otherUser.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    ) : (
-                                        <User size={20} color="#94a3b8" />
-                                    )}
-                                </div>
-                                <div>
-                                    <div style={{ fontWeight: '800', fontSize: '0.95rem' }}>{selectedConversation.otherUser.fullname}</div>
-                                    <div style={{ fontSize: '0.65rem', color: '#10b981' }}>En ligne</div>
-                                </div>
+                                <Link 
+                                    to={selectedConversation.otherUser.role === 'technician' ? `/technician/${selectedConversation.otherUser.id}` : '#'}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', color: 'inherit' }}
+                                >
+                                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: selectedConversation.otherUser.role === 'technician' ? '2px solid #10b981' : 'none' }}>
+                                        {selectedConversation.otherUser.image ? (
+                                            <img src={selectedConversation.otherUser.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ) : (
+                                            <User size={20} color="#94a3b8" />
+                                        )}
+                                    </div>
+                                    <div>
+                                        <div style={{ fontWeight: '800', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                            {selectedConversation.otherUser.fullname}
+                                            {selectedConversation.otherUser.role === 'technician' && <ExternalLink size={12} color="#10b981" />}
+                                        </div>
+                                        <div style={{ fontSize: '0.65rem', color: '#10b981' }}>{selectedConversation.otherUser.role === 'technician' ? selectedConversation.otherUser.specialty : 'En ligne'}</div>
+                                    </div>
+                                </Link>
                             </div>
 
                             {/* BOUTON VALIDATION CLIENT */}
@@ -554,10 +579,13 @@ const Chat = () => {
                                             return <p>{msg.content}</p>;
                                         }
                                     })() : msg.content.includes('[CONTRAT VALIDÉ]') ? (
-                                             <div style={{ backgroundColor: '#10b981', color: 'white', padding: '10px', borderRadius: '10px', fontWeight: 'bold', textAlign: 'center' }}>
-                                                 🏆 CONTRAT ACCEPTÉ 🤝
-                                                 <p style={{ margin: '5px 0 0 0', fontWeight: 'normal', fontSize: '0.8rem' }}>{msg.content.replace('[CONTRAT VALIDÉ]', '')}</p>
-                                             </div>
+                                              <div style={{ backgroundColor: '#059669', color: '#ffffff', padding: '15px', borderRadius: '15px', fontWeight: 'bold', textAlign: 'center', boxShadow: '0 4px 15px rgba(5, 150, 105, 0.2)' }}>
+                                                  <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.9, marginBottom: '5px', color: '#ffffff' }}>OFFICIALISATION</div>
+                                                  <div style={{ fontSize: '1.2rem', marginBottom: '8px', color: '#ffffff' }}>🏆 CONTRAT ACCEPTÉ 🤝</div>
+                                                  <p style={{ margin: '0', fontWeight: '800', fontSize: '0.9rem', color: '#ffffff', lineHeight: '1.4' }}>
+                                                      {msg.content.replace('[CONTRAT VALIDÉ]', '').replace('✅', '').trim()}
+                                                  </p>
+                                              </div>
                                          ) : msg.content}
                                     <div style={{ fontSize: '0.65rem', textAlign: 'right', marginTop: '0.25rem', opacity: 0.8 }}>
                                         {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -568,34 +596,8 @@ const Chat = () => {
                         <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Input Area */}
-                    <div style={{ padding: '1rem', borderTop: '1px solid #eee' }}>
-                        <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '0.5rem' }}>
-                            <input
-                                type="text"
-                                value={newMessage}
-                                onChange={(e) => setNewMessage(e.target.value)}
-                                placeholder="Écrivez votre message..."
-                                style={{ flex: 1, padding: '0.75rem', borderRadius: '25px', border: '1px solid #ddd' }}
-                            />
-                            <button
-                                type="submit"
-                                disabled={!newMessage.trim()}
-                                style={{
-                                    backgroundColor: 'var(--primary-color)',
-                                    color: 'white',
-                                    border: 'none',
-                                    width: '45px', height: '45px',
-                                    borderRadius: '50%',
-                                    display: 'flex', justifyContent: 'center', alignItems: 'center',
-                                    cursor: newMessage.trim() ? 'pointer' : 'default',
-                                    opacity: newMessage.trim() ? 1 : 0.6
-                                }}
-                            >
-                                <Send size={20} />
-                            </button>
-                        </form>
-                    </div>
+                    {/* Input Area Supprimé à la demande de l'utilisateur V69 */}
+                    <div style={{ height: '20px', backgroundColor: '#f8fafc' }} />
                 </div>
             ) : (
                 <div className="card mobile-hidden" style={{ flex: '2', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#888', flexDirection: 'column' }}>

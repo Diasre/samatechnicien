@@ -19,13 +19,14 @@ const MobileNav = () => {
     const isActive = (path) => location.pathname === path;
 
     const navItems = [
-        { path: '/', icon: Home, label: 'Accueil' },
-        { path: '/technicians', icon: Users, label: 'Pros' },
+        { path: isTechnician ? '/expert-dashboard' : '/', icon: Home, label: 'Accueil' },
+        ...(isTechnician ? [] : [{ path: '/technicians', icon: Users, label: 'Pros' }]),
+        { path: '/forum', icon: MessageCircle, label: 'Communauté' }, // Ajout Communauté
         { path: '/marketplace', icon: ShoppingBag, label: 'Boutique' },
         { 
-            path: isTechnician ? '/expert-dashboard' : '/register', 
-            icon: PlusSquare, 
-            label: isTechnician ? 'Publier' : 'Compte',
+            path: isLoggedIn ? '/profile' : '/register', 
+            icon: User, 
+            label: isLoggedIn ? (isTechnician ? 'Profil' : 'Compte') : 'Compte',
             highlight: true 
         },
     ];
@@ -59,6 +60,48 @@ const MobileNav = () => {
             {navItems.map((item) => {
                 const ActiveIcon = item.icon;
                 const active = isActive(item.path);
+                
+                // Si l'utilisateur n'est pas connecté, seul 'Accueil' est cliquable
+                const isLocked = !isLoggedIn && item.label !== 'Accueil';
+
+                const content = (
+                    <>
+                        <div style={{
+                            padding: item.highlight ? '8px' : '0',
+                            backgroundColor: item.highlight ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
+                            borderRadius: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            opacity: isLocked ? 0.3 : 1
+                        }}>
+                            <ActiveIcon size={20} strokeWidth={active ? 2.5 : 2} />
+                        </div>
+                        <span style={{ 
+                            fontSize: '9px', 
+                            fontWeight: active ? '700' : '500',
+                            opacity: isLocked ? 0.4 : 1
+                        }}>
+                            {item.label}
+                        </span>
+                    </>
+                );
+
+                if (isLocked) {
+                    return (
+                        <div key={item.path} style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            color: '#999',
+                            gap: '2px',
+                            flex: 1,
+                            cursor: 'default'
+                        }}>
+                            {content}
+                        </div>
+                    );
+                }
 
                 return (
                     <Link
@@ -77,55 +120,11 @@ const MobileNav = () => {
                             flex: 1
                         }}
                     >
-                        <div style={{
-                            padding: item.highlight ? '8px' : '0',
-                            backgroundColor: item.highlight ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
-                            borderRadius: '12px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}>
-                            <ActiveIcon size={20} strokeWidth={active ? 2.5 : 2} />
-                        </div>
-                        <span style={{ 
-                            fontSize: '9px', 
-                            fontWeight: active ? '700' : '500',
-                        }}>
-                            {item.label}
-                        </span>
+                        {content}
                     </Link>
                 );
             })}
 
-            {isLoggedIn && (
-                <button
-                    onClick={handleLogout}
-                    style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        background: 'none',
-                        border: 'none',
-                        color: '#e11d48',
-                        gap: '2px',
-                        cursor: 'pointer',
-                        flex: 1
-                    }}
-                >
-                    <div style={{
-                        padding: '6px',
-                        backgroundColor: 'rgba(225, 29, 72, 0.1)',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 2px 8px rgba(225, 29, 72, 0.2)'
-                    }}>
-                        <Power size={20} strokeWidth={2.5} />
-                    </div>
-                    <span style={{ fontSize: '9px', fontWeight: '700' }}>Sortir</span>
-                </button>
-            )}
         </div>
     );
 };

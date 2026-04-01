@@ -1,258 +1,271 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { Lock, Eye, EyeOff, Mail, User, Phone, X, Delete, ChevronLeft } from 'lucide-react';
-
-const Briefcase = ({ size, ...props }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
-        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
-    </svg>
-);
+import { Lock, Eye, EyeOff, User, Phone, QrCode, Smartphone, Download, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import { isWeb } from '../utils/platform';
 
 const Login = () => {
-    const isMobile = window.innerWidth <= 768;
     const navigate = useNavigate();
     
-    // State
+    // States communs
     const [role, setRole] = useState('client');
-    const [phone, setPhone] = useState('');
-    const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
 
+    // States Mobile
+    const [phone, setPhone] = useState('');
+    const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+
+    // States Web (QR Scan)
+    const [sessionId, setSessionId] = useState('');
+    const [sessionStatus, setSessionStatus] = useState('pending'); // 'pending', 'scanning', 'confirmed'
+
+    // 🌐 LOGIQUE WEB (Génération du QR Code et attente du scan)
     useEffect(() => {
+        if (isWeb) {
+            setupQRLogin();
+        }
+    }, [isWeb]);
+
+    const setupQRLogin = async () => {
         try {
-            const storedUser = localStorage.getItem('user');
-            if (storedUser) {
-                const parsedUser = JSON.parse(storedUser);
-                if (parsedUser.role === 'admin') {
-                    navigate('/dashboard');
-                } else if (parsedUser.role === 'technician') {
-                    navigate('/expert-dashboard');
-                } else {
-                    navigate('/');
-                }
+            // 1. Créer une session de synchronisation dans Supabase
+            const { data, error } = await supabase
+                .from('web_login_sessions')
+                .insert([{ status: 'pending' }])
+                .select()
+                .single();
+
+            if (error) throw error;
+            setSessionId(data.id);
+
+            // 2. Écouter les changements en Temps Réel sur cette session
+            const channel = supabase
+                .channel(`session-${data.id}`)
+                .on('postgres_changes', { 
+                    event: 'UPDATE', 
+                    schema: 'public', 
+                    table: 'web_login_sessions',
+                    filter: `id=eq.${data.id}` 
+                }, async (payload) => {
+                    const updated = payload.new;
+                    
+                    if (updated.status === 'scanning') {
+                        setSessionStatus('scanning');
+                    } else if (updated.status === 'confirmed' && updated.user_id) {
+                        setSessionStatus('confirmed');
+                        // ✅ CONNEXION RÉUSSIE ! Récupération du profil
+                        loginViaQR(updated.user_id);
+                    }
+                })
+                .subscribe();
+
+            return () => {
+                supabase.removeChannel(channel);
+            };
+        } catch (err) {
+            console.error("Erreur session QR:", err);
+            setErrorMsg("Impossible de générer le code de connexion.");
+        }
+    };
+
+    const loginViaQR = async (userId) => {
+        setLoading(true);
+        try {
+            // Récupérer les infos utilisateur
+            const { data: userData } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+            
+            if (userData) {
+                const mappedUser = { ...userData, fullName: userData.fullname || userData.full_name || "Utilisateur" };
+                localStorage.setItem('user', JSON.stringify(mappedUser));
+                
+                // Redirection selon le rôle
+                if (mappedUser.role === 'admin') navigate('/dashboard');
+                else if (mappedUser.role === 'technician') navigate('/expert-dashboard');
+                else navigate('/');
             }
         } catch (e) {
-            console.error('LocalStorage access denied:', e);
-        }
-    }, [navigate]);
-
-    // Fonctions supprimées car PIN pad retiré
-
-    const performLoginLogic = async () => {
-        if (loading) return;
-        setErrorMsg('');
-        setLoading(true);
-        console.log("Tentative de connexion...");
-        
-        try {
-            let userData = null;
-            const phoneClean = phone.replace(/\s+/g, '').replace(/^\+221/, '').replace(/^\+/, '').replace(/^00/, '');
-            
-            if (phoneClean.length < 9) {
-                setErrorMsg("Numéro non valide (9 chiffres minimum)");
-                setLoading(false);
-                return;
-            }
-            if (password.length < 4) {
-                setErrorMsg("Le mot de passe doit comporter 4 chiffres");
-                setLoading(false);
-                return;
-            }
-
-            // 1. Recherche directe dans la table users
-            const { data: userRecords, error: findError } = await supabase
-                .from('users')
-                .select('*')
-                .eq('phone', phoneClean)
-                .eq('password', password)
-                .limit(1);
-
-            if (userRecords && userRecords.length > 0) {
-                userData = userRecords[0];
-            } else {
-                // 🛡️ FALLBACK: Authentification Supabase
-                const vEmail = `${phoneClean}@samatechnicien.dummy`;
-                const finalPassword = password.length === 4 ? password + "00" : password;
-                
-                const { data: authResult, error: mainErr } = await supabase.auth.signInWithPassword({
-                    email: vEmail,
-                    password: finalPassword
-                });
-
-                if (authResult?.user) {
-                    const { data: syncData } = await supabase.from('users').select('*').eq('id', authResult.user.id).limit(1);
-                    userData = syncData && syncData.length > 0 ? syncData[0] : null;
-                } else {
-                    const { data: dbUsers } = await supabase.from('users').select('email, id').eq('phone', phoneClean).limit(1);
-                    if (dbUsers?.[0]?.email) {
-                        const { data: retry } = await supabase.auth.signInWithPassword({
-                            email: dbUsers[0].email,
-                            password: finalPassword
-                        });
-                        if (retry?.user) {
-                            userData = (await supabase.from('users').select('*').eq('id', retry.user.id).limit(1)).data?.[0];
-                        }
-                    }
-                }
-            }
-
-            if (!userData) {
-                setErrorMsg("Identifiants incorrects ou compte inexistant.");
-                setLoading(false);
-                return;
-            }
-
-            if (userData.role !== role) {
-                const expectedRole = userData.role === 'technician' ? 'Technicien' : 'Client';
-                setErrorMsg(`Ce compte est enregistré en tant que ${expectedRole}.`);
-                setLoading(false);
-                return;
-            }
-
-            if (userData.isblocked) {
-                setErrorMsg("Votre compte est bloqué.");
-                setLoading(false);
-                return;
-            }
-
-            const mappedUser = {
-                ...userData,
-                fullName: userData.fullname || userData.fullName,
-                isBlocked: !!userData.isblocked,
-                commentsEnabled: userData.commentsenabled !== 0
-            };
-
-            localStorage.setItem('user', JSON.stringify(mappedUser));
-            
-            if (mappedUser.role === 'admin') {
-                navigate('/dashboard');
-            } else if (mappedUser.role === 'technician') {
-                navigate('/expert-dashboard');
-            } else {
-                navigate('/');
-            }
-
-        } catch (error) {
-            console.error('Login critical error:', error);
-            setErrorMsg('Erreur serveur ou réseau. Vérifiez votre connexion.');
+            setErrorMsg("Erreur lors de la synchronisation du profil.");
         } finally {
             setLoading(false);
         }
     };
 
-    // Logique de connexion unifiée
+    // 📱 LOGIQUE MOBILE (Connexion Classique)
+    const performLoginLogic = async () => {
+        if (loading) return;
+        if (!phone.trim() || !password.trim()) {
+            setErrorMsg("⚠️ Numéro et code secret requis.");
+            return;
+        }
 
+        setErrorMsg('');
+        setLoading(true);
+        
+        try {
+            await supabase.auth.signOut({ scope: 'local' });
+            localStorage.clear();
+
+            let digits = phone.trim().replace(/\D/g, '');
+            if (digits.startsWith('221') && digits.length > 9) digits = digits.substring(3);
+            const fullPhone = `+221${digits}`;
+
+            const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+                phone: fullPhone,
+                password: password.trim() + '00'
+            });
+
+            if (authError) {
+                alert("❌ Téléphone ou Code secret incorrect.");
+                setLoading(false);
+                return;
+            }
+
+            loginViaQR(authData.user.id);
+
+        } catch (err) {
+            setErrorMsg(`⚠️ ${err.message}`);
+            setLoading(false);
+        }
+    };
+
+    // --- 📱 RENDU MOBILE BROWSER (Forcer le téléchargement) ---
+    const isMobileBrowser = !isNative && window.innerWidth <= 768;
+
+    if (isMobileBrowser) {
+        return (
+            <div style={{ minHeight: '100vh', background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', textAlign: 'center', fontFamily: "'Outfit', sans-serif" }}>
+                <div style={{ width: '100px', height: '100px', background: '#ecfdf5', borderRadius: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '2rem' }}>
+                    <Download size={50} color="#10b981" />
+                </div>
+                <h1 style={{ fontSize: '1.8rem', fontWeight: '900', color: '#1e293b', marginBottom: '1rem' }}>Utilisez l'application SamaTechnicien</h1>
+                <p style={{ color: '#64748b', fontSize: '1.1rem', marginBottom: '3rem', maxWidth: '300px' }}>
+                    Pour une sécurité optimale, la connexion sur mobile se fait uniquement via notre application officielle.
+                </p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', width: '100%', maxWidth: '300px' }}>
+                    <button style={{ padding: '1.2rem', borderRadius: '20px', background: '#1e293b', color: '#fff', border: 'none', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontSize: '1rem', cursor: 'pointer' }}>
+                        <Smartphone size={20} /> Télécharger sur Android
+                    </button>
+                    <button style={{ padding: '1.2rem', borderRadius: '20px', background: '#f1f5f9', color: '#1e293b', border: 'none', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontSize: '1rem', cursor: 'pointer', border: '1px solid #e2e8f0' }}>
+                        iOS (Bientôt disponible)
+                    </button>
+                </div>
+
+                <div style={{ marginTop: '4rem' }}>
+                    <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Déjà sur l'application ?</p>
+                    <button onClick={() => window.location.reload()} style={{ background: 'none', border: 'none', color: '#10b981', fontWeight: '700', marginTop: '5px' }}>Rafraîchir la page</button>
+                </div>
+            </div>
+        );
+    }
+
+    // --- 💻 RENDU WEB DESKTOP (Scanner le code QR) ---
+    if (isWeb) {
+        return (
+            <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', fontFamily: "'Outfit', sans-serif" }}>
+                <div style={{ maxWidth: '900px', width: '100%', display: 'grid', gridTemplateColumns: window.innerWidth > 768 ? '1fr 1fr' : '1fr', gap: '30px', background: '#fff', padding: '40px', borderRadius: '32px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)' }}>
+                    
+                    {/* Colonne de gauche : Instructions */}
+                    <div style={{ textAlign: 'left' }}>
+                        <h1 style={{ fontSize: '2.5rem', fontWeight: '900', color: '#1e293b', marginBottom: '20px', letterSpacing: '-1px' }}>Connectez-vous avec votre smartphone</h1>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '25px', marginTop: '40px' }}>
+                            <div style={{ display: 'flex', gap: '15px' }}>
+                                <div style={{ minWidth: '40px', height: '40px', borderRadius: '50%', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: '#10b981' }}>1</div>
+                                <p style={{ fontSize: '1.1rem', color: '#64748b' }}>Ouvrez l'application <b>SamaTechnicien</b> sur votre téléphone.</p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '15px' }}>
+                                <div style={{ minWidth: '40px', height: '40px', borderRadius: '50%', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: '#10b981' }}>2</div>
+                                <p style={{ fontSize: '1.1rem', color: '#64748b' }}>Allez sur votre profil et appuyez sur <br/><b style={{ color: '#10b981' }}>Connecter PC</b>.</p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '15px' }}>
+                                <div style={{ minWidth: '40px', height: '40px', borderRadius: '50%', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: '#10b981' }}>3</div>
+                                <p style={{ fontSize: '1.1rem', color: '#64748b' }}>Scannez ce code QR pour une connexion instantanée.</p>
+                            </div>
+                        </div>
+
+                        <div style={{ marginTop: '50px', borderTop: '1px solid #f1f5f9', paddingTop: '20px' }}>
+                            <p style={{ fontSize: '0.9rem', color: '#94a3b8', marginBottom: '10px' }}>L'application mobile est plus rapide et plus sûre.</p>
+                        </div>
+                    </div>
+
+                    {/* Colonne de droite : QR Code */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', borderRadius: '24px', padding: '40px', border: '2px dashed #e2e8f0' }}>
+                        {sessionStatus === 'confirmed' ? (
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{ background: '#ecfdf5', padding: '20px', borderRadius: '50%', marginBottom: '20px' }}>
+                                    <CheckCircle2 size={60} color="#10b981" />
+                                </div>
+                                <h3 style={{ fontSize: '1.5rem', fontWeight: '800' }}>Connexion réussie !</h3>
+                                <p style={{ color: '#64748b' }}>Préparation de votre tableau de bord...</p>
+                            </div>
+                        ) : (
+                            <>
+                                <div style={{ position: 'relative', padding: '15px', background: '#fff', borderRadius: '25px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.1)' }}>
+                                    {sessionId ? (
+                                        <QRCodeSVG value={sessionId} size={260} level="H" includeMargin={true} />
+                                    ) : (
+                                        <div style={{ width: 260, height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <Loader2 className="animate-spin" size={40} color="#10b981" />
+                                        </div>
+                                    )}
+                                    {sessionStatus === 'scanning' && (
+                                        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(255,255,255,0.9)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRadius: '25px' }}>
+                                            <Loader2 className="animate-spin" size={50} color="#10b981" />
+                                            <p style={{ marginTop: '15px', fontWeight: '800', color: '#1e293b' }}>Scan validé...</p>
+                                        </div>
+                                    )}
+                                </div>
+                                <div style={{ marginTop: '25px', display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '0.85rem' }}>
+                                    <Loader2 size={14} className="animate-spin" />
+                                    En attente du scan de votre téléphone...
+                                </div>
+                                
+                                <div style={{ marginTop: '25px', padding: '10px 20px', background: '#f1f5f9', borderRadius: '12px' }}>
+                                    <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: '700', color: '#1e293b' }}>Confidentialité garantie 🔒</p>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // --- 📱 RENDU MOBILE APP NATIVE (Formulaire classique de ton image) ---
     return (
-        <div style={{ 
-            minHeight: '100vh', 
-            background: `linear-gradient(rgba(255,255,255,0.4), rgba(255,255,255,0.6)), url('/light-bg.png')`,
-            backgroundSize: 'cover', backgroundPosition: 'center',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1.5rem', color: '#1e293b', fontFamily: "'Outfit', sans-serif"
-        }}>
-            {/* Header Icon */}
-            <div style={{ width: '60px', height: '60px', background: '#10b981', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem', marginTop: '1rem', boxShadow: '0 10px 20px rgba(16, 185, 129, 0.3)' }}>
+        <div style={{ minHeight: '100vh', background: `linear-gradient(rgba(255,255,255,0.4), rgba(255,255,255,0.6)), url('/light-bg.png')`, backgroundSize: 'cover', backgroundPosition: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', color: '#1e293b', fontFamily: "'Outfit', sans-serif" }}>
+            <div style={{ width: '60px', height: '60px', background: '#10b981', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem', boxShadow: '0 10px 20px rgba(16, 185, 129, 0.3)' }}>
                 <Lock size={30} strokeWidth={2.5} color="#fff" />
             </div>
 
-            <h1 style={{ fontSize: '2.2rem', fontWeight: '900', marginBottom: '2rem', letterSpacing: '-1px', color: '#1e293b' }}>Connexion</h1>
+            <h1 style={{ fontSize: '2.2rem', fontWeight: '900', marginBottom: '2rem', letterSpacing: '-1px' }}>Connexion</h1>
 
             <div style={{ width: '100%', maxWidth: '380px' }}>
-                
-                {errorMsg && (
-                    <div style={{ 
-                        background: '#fff1f2', 
-                        color: '#e11d48', 
-                        padding: '1rem', 
-                        borderRadius: '15px', 
-                        marginBottom: '1.5rem', 
-                        fontSize: '0.9rem', 
-                        fontWeight: '600', 
-                        textAlign: 'center', 
-                        border: '1px solid #fda4af',
-                        animation: 'fadeIn 0.3s ease'
-                    }}>
-                        ⚠️ {errorMsg}
-                    </div>
-                )}
-                
-                {/* Role Switcher */}
                 <div style={{ display: 'flex', gap: '10px', marginBottom: '2rem' }}>
-                    <button 
-                        onClick={() => setRole('client')}
-                        style={{ flex: 1, padding: '0.8rem', borderRadius: '18px', border: `2px solid ${role === 'client' ? '#10b981' : 'rgba(255,255,255,0.8)'}`, background: role === 'client' ? '#10b981' : 'rgba(255,255,255,0.7)', backdropFilter: 'blur(10px)', color: role === 'client' ? '#fff' : '#1e293b', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: '0.3s', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}
-                    >
-                        <User size={18} /> Client
-                    </button>
-                    <button 
-                        onClick={() => setRole('technician')}
-                        style={{ flex: 1, padding: '0.8rem', borderRadius: '18px', border: `2px solid ${role === 'technician' ? '#10b981' : 'rgba(255,255,255,0.8)'}`, background: role === 'technician' ? '#10b981' : 'rgba(255,255,255,0.7)', backdropFilter: 'blur(10px)', color: role === 'technician' ? '#fff' : '#1e293b', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: '0.3s', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}
-                    >
-                        <Briefcase size={18} /> Technicien
-                    </button>
+                    <button onClick={() => setRole('client')} style={{ flex: 1, padding: '0.8rem', borderRadius: '18px', border: `2px solid ${role === 'client' ? '#10b981' : 'transparent'}`, background: role === 'client' ? '#10b981' : '#fff', color: role === 'client' ? '#fff' : '#1e293b', fontWeight: '800', cursor: 'pointer', transition: 'all 0.2s' }}>Client</button>
+                    <button onClick={() => setRole('technician')} style={{ flex: 1, padding: '0.8rem', borderRadius: '18px', border: `2px solid ${role === 'technician' ? '#10b981' : 'transparent'}`, background: role === 'technician' ? '#10b981' : '#fff', color: role === 'technician' ? '#fff' : '#1e293b', fontWeight: '800', cursor: 'pointer', transition: 'all 0.2s' }}>Technicien</button>
                 </div>
 
-                <div style={{ animation: 'fadeIn 0.5s ease' }}>
-                    <div style={{ position: 'relative', borderBottom: '2px solid #10b981', marginBottom: '2rem', paddingBottom: '0.8rem' }}>
-                        <Phone size={20} style={{ position: 'absolute', left: '0', color: '#10b981' }} />
-                        <input 
-                            type="tel" value={phone} 
-                            onChange={(e) => setPhone(e.target.value)}
-                            style={{ width: '100%', paddingLeft: '2.5rem', background: 'transparent', border: 'none', color: '#1e293b', fontSize: '1.2rem', outline: 'none' }}
-                            placeholder="77 000 00 00"
-                        />
-                    </div>
-
-                    <div style={{ position: 'relative', borderBottom: '2px solid #10b981', marginBottom: '2.5rem', paddingBottom: '0.8rem' }}>
-                        <Lock size={20} style={{ position: 'absolute', left: '0', color: '#10b981' }} />
-                        <input 
-                            type={showPassword ? "text" : "password"} 
-                            value={password} 
-                            maxLength="4"
-                            inputMode="numeric"
-                            pattern="\d*"
-                            onChange={(e) => {
-                                const val = e.target.value.replace(/\D/g, ''); // Uniquement des chiffres
-                                setPassword(val);
-                            }}
-                            style={{ width: '100%', paddingLeft: '2.5rem', background: 'transparent', border: 'none', color: '#1e293b', fontSize: '1.2rem', outline: 'none', letterSpacing: password ? '4px' : 'normal', fontWeight: '700' }}
-                            placeholder="Code secret (4 chiffres)"
-                        />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '0', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
-                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
-                    </div>
-
-                    <button 
-                        onClick={performLoginLogic}
-                        disabled={loading}
-                        style={{ width: '100%', padding: '1.2rem', background: loading ? '#bdc3c7' : '#10b981', color: '#fff', border: 'none', borderRadius: '20px', fontWeight: '900', fontSize: '1.1rem', cursor: loading ? 'not-allowed' : 'pointer', boxShadow: loading ? 'none' : '0 10px 20px rgba(16, 185, 129, 0.2)' }}
-                    >
-                        {loading ? 'Connexion en cours...' : 'Se connecter'}
-                    </button>
+                <div style={{ position: 'relative', borderBottom: '2px solid #10b981', marginBottom: '2rem', paddingBottom: '0.8rem', display: 'flex', alignItems: 'center' }}>
+                    <Phone size={20} style={{ position: 'absolute', left: '0', color: '#10b981' }} />
+                    <span style={{ position: 'absolute', left: '2rem', fontWeight: '900', fontSize: '1.2rem' }}>+221</span>
+                    <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} style={{ width: '100%', paddingLeft: '5.5rem', background: 'transparent', border: 'none', fontSize: '1.2rem', outline: 'none', fontWeight: '700' }} placeholder="77 000 00 00" />
                 </div>
 
-                <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-                    <Link to="/forgot-password" style={{ display: 'block', fontSize: '0.95rem', fontWeight: '700', textDecoration: 'none', marginBottom: '1rem', color: '#10b981' }}>
-                        Mot de passe oublié ?
-                    </Link>
-                    <p style={{ fontSize: '0.95rem', color: '#64748b', fontWeight: '600' }}>
-                        Pas encore de compte ? <Link to="/register" style={{ color: '#10b981', fontWeight: '900', textDecoration: 'none', borderBottom: '2px solid #10b981' }}>Inscription</Link>
-                    </p>
+                <div style={{ position: 'relative', borderBottom: '2px solid #10b981', marginBottom: '2.5rem', paddingBottom: '0.8rem' }}>
+                    <Lock size={20} style={{ position: 'relative', top: '10px', color: '#10b981' }} />
+                    <input type={showPassword ? "text" : "password"} value={password} maxLength="4" onChange={(e) => setPassword(e.target.value.replace(/\D/g, ''))} style={{ width: '100%', paddingLeft: '2.5rem', background: 'transparent', border: 'none', fontSize: '1.2rem', outline: 'none', fontWeight: '700', letterSpacing: password ? '4px' : 'normal' }} placeholder="Code secret" />
+                    <button onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: 0, top: '10px', background: 'none', border: 'none', cursor: 'pointer' }}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                 </div>
 
+                <button onClick={performLoginLogic} disabled={loading} style={{ width: '100%', padding: '1.2rem', background: '#10b981', color: '#fff', border: 'none', borderRadius: '20px', fontWeight: '900', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 10px 20px rgba(16, 185, 129, 0.2)' }}>
+                    {loading ? 'Connexion en cours...' : 'Se connecter'}
+                </button>
             </div>
-
-            {/* Icons mapping needed for role switcher */}
-            <style>{`
-                @keyframes fadeIn {
-                    from { opacity: 0; transform: translateY(10px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-            `}</style>
         </div>
     );
 };

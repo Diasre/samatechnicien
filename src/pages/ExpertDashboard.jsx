@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import API_URL from '../config';
+import { API_URL, WEB_URL } from '../config';
 import { supabase } from '../supabaseClient';
 import { 
     User, Users, Settings, Star, MessageSquare, Phone, MapPin, CheckCircle, Save, 
     ArrowLeft, PlusCircle, ShoppingBag, Send, MessageCircle, Shield, Share2, 
-    Flag, Bell, Info 
+    Flag, Bell, Info, Clock, Calendar, Home, X
 } from 'lucide-react';
 import WelcomeOverlay from '../components/WelcomeOverlay';
 
@@ -23,11 +23,18 @@ const ExpertDashboard = () => {
     const [activeConversations, setActiveConversations] = useState([]);
     const [loadingQuotes, setLoadingQuotes] = useState(false);
     const [sendingQuickMsg, setSendingQuickMsg] = useState(null);
+    const [sentOffers, setSentOffers] = useState([]);
+    const [loadingSent, setLoadingSent] = useState(false);
+    const [contactPhone, setContactPhone] = useState("");
     const [showResponseModal, setShowResponseModal] = useState(false);
     const [selectedQuote, setSelectedQuote] = useState(null);
     const [customResponse, setCustomResponse] = useState("");
-    const [devisLines, setDevisLines] = useState([{ desc: "Main d'œuvre", qty: 1, price: 0 }]);
     const [devisNote, setDevisNote] = useState("Intervention possible rapidement.");
+    const [sysNotifs, setSysNotifs] = useState([]); // Nouvelles alertes système
+    const [loadingSysNotifs, setLoadingSysNotifs] = useState(false);
+    const [showNotifModal, setShowNotifModal] = useState(null); 
+    const [showNotifsListModal, setShowNotifsListModal] = useState(false); 
+    const [devisLines, setDevisLines] = useState([{ desc: "Prestation", qty: 1, price: 0 }]); // Restored (V132)
 
     // Import Supabase client if not already imported at top (I will add import in next step or assume it) 
     // Wait, I need to check imports. 
@@ -76,15 +83,70 @@ const ExpertDashboard = () => {
     useEffect(() => {
         if (user?.id) {
             fetchData();
+            
+            // ABONNEMENT TEMPS RÉEL (NOTIFICATIONS SONORES)
+            const sub = supabase.channel('expert_notifs')
+                .on('postgres_changes', { event: 'INSERT', table: 'quotes' }, (payload) => {
+                    const techSpec = user.specialty?.toLowerCase() || '';
+                    if (payload.new.specialty?.toLowerCase().includes(techSpec.substring(0, 5))) {
+                        playNotifSound();
+                        fetchData();
+                        fetchSysNotifs(); 
+                    }
+                })
+                .on('postgres_changes', { event: 'INSERT', table: 'notifications' }, (payload) => {
+                    if (payload.new.user_id === user.id) {
+                        playNotifSound();
+                        fetchSysNotifs();
+                    }
+                })
+                .on('postgres_changes', { event: 'INSERT', table: 'direct_messages' }, (payload) => {
+                    if (payload.new.sender_id !== user.id) {
+                        playNotifSound();
+                        fetchData();
+                    }
+                })
+                .subscribe();
+                
+            return () => supabase.removeChannel(sub);
         }
     }, [user?.id]);
 
     const fetchData = async () => {
         setLoading(true);
         try {
+            // 0. VÉRIFICATION D'IDENTITÉ SUPABASE (Crucial pour la sécurité RLS)
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            if (authUser && authUser.id !== user.id) {
+                console.log("🔄 Décalage d'identité détecté! Migration vers UUID...");
+                // On met à jour l'ID local pour qu'il corresponde à Supabase Auth
+                const correctedUser = { ...user, id: authUser.id };
+                localStorage.setItem('user', JSON.stringify(correctedUser));
+                
+                // On répare la base de données pour ce nouvel ID via notre fonction RPC
+                await supabase.rpc('fix_my_id', { new_id: authUser.id, user_phone: user.phone });
+                
+                // On recharge avec le bon ID
+                user.id = authUser.id; 
+            }
+
             // 1. D'abord récupérer les infos locales du tech
-            const { data: tech, error: techError } = await supabase.from('users').select('*').eq('id', user.id).single();
-            if (techError) throw techError;
+            let { data: tech, error: techError } = await supabase.from('users').select('*').eq('id', user.id).single();
+            
+            // 🛡️ RÉPARATION SILENCIEUSE DES ANCIENS COMPTES (Fallback par téléphone)
+            if (techError || !tech) {
+                console.log("🔍 Profil non trouvé par ID, tentative par téléphone...");
+                const { data: techByPhone } = await supabase.from('users').select('*').eq('phone', user.phone).maybeSingle();
+                
+                if (techByPhone && techByPhone.id !== user.id) {
+                    console.log("🛠️ Réparation d'ID détectée pour:", user.phone);
+                    await supabase.rpc('fix_my_id', { new_id: user.id, user_phone: user.phone });
+                    const { data: fixedTech } = await supabase.from('users').select('*').eq('id', user.id).single();
+                    if (fixedTech) tech = fixedTech;
+                } else if (techError) {
+                    throw techError;
+                }
+            }
 
             // 2. Utiliser SA spécialité en base pour charger les devis et discussions
             const cleanSpec = (tech.specialty || 'Autre').trim();
@@ -92,7 +154,7 @@ const ExpertDashboard = () => {
             const searchPattern = cleanSpec.toLowerCase().replace(/[açéèêëìîïòôöùûü]/g, '_');
             const specSearch = `%${searchPattern.substring(0, 5)}%`;
 
-            const [reviewsResponse, productsResponse, quotesResponse, convsResponse] = await Promise.all([
+            const [reviewsResponse, productsResponse, quotesResponse, convsResponse, sentResponse] = await Promise.all([
                 supabase.from('reviews').select('*, client:clientId(fullname)').eq('technicianId', user.id).order('created_at', { ascending: false }),
                 supabase.from('products').select('*').eq('technicianid', user.id).order('created_at', { ascending: false }),
                 supabase.from('quotes').select('*, client:client_id(fullname, phone, userId:id)').ilike('specialty', specSearch).order('created_at', { ascending: false }),
@@ -101,15 +163,18 @@ const ExpertDashboard = () => {
                     updated_at,
                     participant1:participant1_id (id, fullname, image),
                     participant2:participant2_id (id, fullname, image)
-                `).or(`participant1_id.eq.${user.id},participant2_id.eq.${user.id}`).order('updated_at', { ascending: false }).limit(5)
+                `).or(`participant1_id.eq.${user.id},participant2_id.eq.${user.id}`).order('updated_at', { ascending: false }).limit(5),
+                supabase.from('devis').select('*, quote:demande_id(*)').eq('technicien_id', user.id).order('created_at', { ascending: false })
             ]);
 
             const { data: reviewsData } = reviewsResponse;
             const { data: productsData } = productsResponse;
             const { data: quotesData } = quotesResponse;
             const { data: convsData } = convsResponse;
+            const { data: sentData } = sentResponse;
 
             setTechData(tech);
+            if (tech.phone) setContactPhone(tech.phone);
             // Sync local storage specialty if mismatch
             if (tech.specialty && tech.specialty !== user.specialty) {
                 const updatedUser = { ...user, specialty: tech.specialty };
@@ -121,10 +186,9 @@ const ExpertDashboard = () => {
             }
 
             if (!tech) {
-                console.warn("User ID not found in Supabase. Probably old session.");
-                alert("Votre session a expiré ou votre compte n'existe plus. Veuillez vous reconnecter.");
-                localStorage.removeItem('user');
-                window.location.href = '/login';
+                console.warn("User ID not found in Supabase. Probably sync delay or profile missing.");
+                // Au lieu de déconnecter brutalement, on marque le chargement comme fini pour afficher l'erreur techData
+                setLoading(false);
                 return;
             }
 
@@ -167,7 +231,14 @@ const ExpertDashboard = () => {
                 setProducts(productsData);
             }
 
-            if (quotesData) {
+            if (sentData) {
+                setSentOffers(sentData);
+                // On filtre les quotes pour ne pas afficher celles auxquelles on a déjà répondu
+                const repliedIds = sentData.map(s => s.demande_id);
+                if (quotesData) {
+                    setQuotes(quotesData.filter(q => !repliedIds.includes(q.id)));
+                }
+            } else if (quotesData) {
                 setQuotes(quotesData);
             }
 
@@ -183,6 +254,57 @@ const ExpertDashboard = () => {
             console.error("Error fetching expert data:", error);
         }
         setLoading(false);
+        fetchSysNotifs();
+    };
+
+    const fetchSysNotifs = async () => {
+        if (!user?.id) return;
+        setLoadingSysNotifs(true);
+        try {
+            // V150 - Chargement de l'historique complet (limite 30)
+            const { data } = await supabase
+                .from('notifications')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false })
+                .limit(30);
+            
+            if (data) {
+                setSysNotifs(data);
+                // On affiche le modal auto uniquement pour la toute dernière non lue
+                const latestUnseen = data.find(n => !n.seen);
+                if (latestUnseen && !showNotifModal) {
+                    setShowNotifModal(latestUnseen); 
+                }
+            }
+        } catch (err) {
+            console.error("Notif Fetch Error:", err);
+        }
+        setLoadingSysNotifs(false);
+    };
+
+    const deleteNotif = async (id) => {
+        if (!window.confirm("🗑️ Supprimer cette alerte définitivement ?")) return;
+        try {
+            const { error } = await supabase.from('notifications').delete().eq('id', id);
+            if (error) throw error;
+            setSysNotifs(prev => prev.filter(n => n.id !== id));
+            if (showNotifModal?.id === id) setShowNotifModal(null);
+        } catch (err) {
+            console.error("Delete Notif Error:", err);
+        }
+    };
+
+    const markAllRead = async (singleNotifId = null) => {
+        if (!user?.id) return;
+        
+        if (singleNotifId) {
+            await supabase.from('notifications').update({ seen: true }).eq('id', singleNotifId);
+            setSysNotifs(prev => prev.map(n => n.id === singleNotifId ? { ...n, seen: true } : n));
+        } else if (sysNotifs.some(n => !n.seen)) {
+            await supabase.from('notifications').update({ seen: true }).eq('user_id', user.id);
+            setSysNotifs(prev => prev.map(n => ({ ...n, seen: true })));
+        }
     };
 
     const handleInputChange = (e) => {
@@ -190,7 +312,7 @@ const ExpertDashboard = () => {
     };
 
     const handleShare = async () => {
-        const profileUrl = `${window.location.origin}/technician/${user.id}`;
+        const profileUrl = `${WEB_URL}/technician/${user.id}`;
         const shareData = {
             title: `Profil de ${techData.fullName} - SamaTechnicien`,
             text: `Je suis disponible pour vos besoins en ${techData.specialty}. Consultez mon profil sur SamaTechnicien !`,
@@ -209,109 +331,108 @@ const ExpertDashboard = () => {
         }
     };
 
-    const openResponseForm = (quote) => {
+    const openResponseForm = (quoteOrId) => {
+        // V146 - Intelligence de secours : si on a juste un ID ou un objet partiel
+        const quote = typeof quoteOrId === 'object' ? quoteOrId : { id: quoteOrId, specialty: 'Service demandé', title: 'Demande urgente' };
+        
         setSelectedQuote(quote);
+        const initPrice = 0; 
+        setDevisLines([{ desc: `Prestation ${quote.specialty || ''}`, qty: 1, price: initPrice }]);
         setCustomResponse(`Bonjour ${quote.client?.fullname || ''}, je suis intéressé par votre devis pour : "${quote.title || quote.specialty}". Pouvons-nous en discuter ? Voici ma proposition : `);
         setShowResponseModal(true);
     };
 
-    const handleSendFinalReply = async () => {
-        const subtotal = devisLines.reduce((acc, line) => acc + (Number(line.qty || 0) * Number(line.price || 0)), 0);
-        const tva = Math.round(subtotal * 0.19);
-        const totalTtc = subtotal + tva;
-
-        if (!user || !selectedQuote || devisLines.length === 0 || totalTtc <= 0) {
-            alert("⚠️ Veuillez saisir au moins un article avec un prix valide.");
-            return;
+    const playNotifSound = () => {
+        try {
+            const audio = new Audio('https://www.soundjay.com/buttons/sounds/beep-07.mp3');
+            audio.play().catch(e => console.log("Audio play blocked:", e));
+        } catch (err) {
+            console.error("Sound error:", err);
         }
-        setSendingQuickMsg(selectedQuote.id);
+    };
+
+    const handleSendFinalReply = async () => {
+        if (!user || !selectedQuote) return;
+        
+        setSendingQuickMsg(true); // Utilisation correcte de l'état existant (V149)
+        try {
+            // V149 - LOGIQUE D'ENVOI BLINDÉE (POST-CRASH FIX)
+            const qId = Number(selectedQuote.id);
+            if (isNaN(qId)) throw new Error("Référence de devis invalide (#" + selectedQuote.id + ")");
+
+            // 1. Détermination de l'ID Client (On a besoin de son UUID)
+            let finalClientId = selectedQuote.client_id;
+            if (!finalClientId) {
+                const cPhone = selectedQuote.client_phone || selectedQuote.client?.phone;
+                if (cPhone) {
+                    const { data: profile } = await supabase.from('users').select('id').eq('phone', cPhone).maybeSingle();
+                    finalClientId = profile?.id;
+                }
+            }
+
+            const subtotal = devisLines.reduce((acc, line) => acc + (Number(line.qty || 0) * Number(line.price || 0)), 0);
+            const totalTtc = Math.round(subtotal);
+            if (totalTtc <= 0) throw new Error("Le montant total doit être supérieur à 0.");
+
+            // 2. ENREGISTREMENT DE L'OFFRE (Table devis)
+            const { data: insertData, error: devisErr } = await supabase
+                .from('devis')
+                .insert([{
+                    demande_id: qId,
+                    technicien_id: String(user.id),
+                    montant: totalTtc,
+                    statut: 'en_attente',
+                    note: `📞 Contact: ${contactPhone} | ${devisNote}`
+                }])
+                .select();
+
+            if (devisErr) {
+                console.error("DEBUG DEVIS ERR:", devisErr);
+                throw new Error(`DB Error: ${devisErr.message} (${devisErr.code})`);
+            }
+
+            // 3. MISE À JOUR DE LA DEMANDE
+            await supabase.from('quotes').update({ 
+                last_offer_price: totalTtc,
+                last_technician_name: user.fullname 
+            }).eq('id', qId);
+
+            // 4. NOTIFICATION AU CLIENT (POUR VALIDATION)
+            if (finalClientId) {
+                await supabase.from('notifications').insert([{
+                    user_id: finalClientId,
+                    title: `🏷️ Offre de ${user.fullname} : ${totalTtc.toLocaleString()} F`,
+                    content: `Nouveau tarif reçu pour votre demande #${qId}. Cliquez pour valider !`,
+                    type: 'offer_received',
+                    seen: false,
+                    redirect_url: `/demande/${qId}`
+                }]);
+            }
+
+            alert("✅ Votre offre a été envoyée ! Le client a été notifié pour validation.");
+            setShowResponseModal(false);
+            fetchData(); 
+        } catch (err) {
+            console.error("❌ Erreur Envoi Devis:", err);
+            alert("⚠️ Échec de l'envoi : " + (err.message || "Vérifiez votre connexion internet."));
+        } finally {
+            setSendingQuickMsg(false);
+        }
+    };
+    
+    const handleDeleteOffer = async (offerId) => {
+        if (!window.confirm("🗑️ Voulez-vous vraiment retirer votre offre pour ce devis ?")) return;
         
         try {
-            const devisData = {
-                type: 'DEVIS_PRO',
-                id: `DEV-${Date.now().toString().slice(-6)}`,
-                demande_id: selectedQuote.id,
-                technicien: {
-                    nom: user.fullname,
-                    rubrique: user.specialty,
-                    note: 4.8
-                },
-                lignes: devisLines,
-                sous_total: subtotal,
-                tva: 19,
-                tva_montant: tva,
-                total_ttc: totalTtc,
-                note_technicien: devisNote,
-                statut: 'en_attente',
-                date_envoi: new Date().toISOString()
-            };
-
-            // 1. DÉBOGAGE : RÉSOLUTION DE L'ID CLIENT (UUID) SANS ÉCHEC
-            let clientId = selectedQuote.client_id;
-            const clientPhone = selectedQuote.client_phone || selectedQuote.client?.phone;
+            const { error } = await supabase.from('devis').delete().eq('id', offerId);
+            if (error) throw error;
             
-            // On cherche le VRAI profil pour être certain d'avoir l'UUID texte
-            const { data: profile } = await supabase.from('users').select('id').eq('phone', clientPhone).maybeSingle();
-            if (profile) clientId = profile.id;
-
-            // 2. RECHERCHE DE CONVERSATION (TOLÉRANCE MAXIMALE AUX FORMATS)
-            // On cherche si une conversation existe entre ces deux UUIDs
-            const { data: existing } = await supabase
-                .from('conversations')
-                .select('id')
-                .or(`and(participant1_id.eq.${user.id},participant2_id.eq.${clientId}),and(participant1_id.eq.${clientId},participant2_id.eq.${user.id}),and(participant1_id.eq."${user.id}",participant2_id.eq."${clientId}"),and(participant1_id.eq."${clientId}",participant2_id.eq."${user.id}")`)
-                .maybeSingle();
-            
-            let convId = existing?.id;
-
-            // 3. CRÉATION DU TUNNEL (SI INEXISTANT)
-            if (!convId) {
-                const { data: newConv, error: convErr } = await supabase
-                    .from('conversations')
-                    .insert([{ 
-                        participant1_id: String(user.id), 
-                        participant2_id: String(clientId),
-                        last_message: "Invitation au devis"
-                    }])
-                    .select()
-                    .single();
-                
-                if (convErr) throw convErr;
-                convId = newConv.id;
-            }
-
-            // 4. ENVOI DU MESSAGE (JSON_DEVIS)
-            // 1. DÉPOSE DE L'OFFRE AU GUICHET (V42 - TABLE RASE)
-            // On ne crée PAS de conversation ici, on dépose juste le prix
-            try {
-                const { error: devisErr } = await supabase
-                    .from('devis')
-                    .insert([{
-                        demande_id: selectedQuote.id, // ID numérique simple (ex: 45)
-                        technicien_id: String(user.id),
-                        montant: totalTtc,
-                        statut: 'en_attente',
-                        note: devisNote
-                    }]);
-                
-                if (devisErr) throw devisErr;
-
-                // On informe la demande qu'une offre est arrivée
-                await supabase.from('quotes').update({ last_offer_price: totalTtc }).eq('id', selectedQuote.id);
-
-                alert("✅ Offre déposée avec succès ! Le client peut la voir sur son accueil.");
-                setShowResponseModal(false);
-                // On retire de la liste pour ne pas répondre deux fois
-                setQuotes(quotes.filter(q => q.id !== selectedQuote.id));
-            } catch (err) {
-                console.error("Erreur Depôt:", err);
-                alert("Erreur lors de l'envoi de l'offre : " + err.message);
-            }
-        } catch (e) {
-            console.error(e);
-            alert("Erreur lors de l'envoi du devis.");
+            alert("✅ Offre retirée avec succès.");
+            fetchData(); // Rafraîchir tout
+        } catch (err) {
+            console.error("Delete Offer Error:", err);
+            alert("Erreur lors de la suppression de l'offre.");
         }
-        setSendingQuickMsg(null);
     };
 
     const addDevisLine = () => setDevisLines([...devisLines, { desc: "", qty: 1, price: 0 }]);
@@ -341,13 +462,7 @@ const ExpertDashboard = () => {
             return;
         }
 
-        // Validation Email (Gmail/Outlook/Yahoo/Hotmail/iCloud)
-        const emailRegex = /^[a-zA-Z0-9._-]+@(gmail\.com|outlook\.com|yahoo\.com|yahoo\.fr|hotmail\.com|hotmail\.fr|icloud\.com)$/i;
-        if (formData.email && !emailRegex.test(formData.email)) {
-            alert("Donner une email valide (Gmail, Outlook, Yahoo, Hotmail, iCloud)");
-            setIsSaving(false);
-            return;
-        }
+        // Validation Email (Supprimée pour éviter les blocages sur les adresses dummy)
 
         try {
             const payload = {
@@ -372,26 +487,48 @@ const ExpertDashboard = () => {
                 payload.password = formData.password + "00";
             }
 
-            const { error: updateError } = await supabase
-                .from('users')
-                .update(payload)
-                .eq('id', user.id);
+            console.log("💾 Appel RPC de sauvegarde pour ID:", user.id);
 
-            if (!updateError) {
-                alert("Profil mis à jour avec succès !");
-                setEditMode(false);
+            const { error: updateError } = await supabase.rpc('save_expert_profile', {
+                p_id: user.id,
+                p_fullname: formData.fullName,
+                p_specialty: formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty,
+                p_city: formData.city,
+                p_district: formData.district,
+                p_phone: formData.phone,
+                p_description: formData.description,
+                p_image: formData.image,
+                p_commentsenabled: formData.commentsEnabled ? 1 : 0
+            });
 
-                // Update local storage
-                const updatedUser = { ...user, fullName: formData.fullName, email: formData.email };
-                localStorage.setItem('user', JSON.stringify(updatedUser));
+            if (updateError) {
+                console.error("❌ RPC Update Error:", updateError);
+                throw updateError;
+            }
+
+            alert("Profil mis à jour avec succès !");
+            setEditMode(false);
+
+            // Mettre à jour TOUT le LocalStorage pour que les changements persistent
+            const updatedUser = { 
+                ...user, 
+                fullname: formData.fullName, // Nom de la table
+                fullName: formData.fullName, // Compatibilité UI
+                email: formData.email,
+                city: formData.city,
+                district: formData.district,
+                specialty: formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty,
+                phone: formData.phone,
+                description: formData.description,
+                commentsenabled: formData.commentsEnabled ? 1 : 0,
+                image: formData.image
+            };
+            localStorage.setItem('user', JSON.stringify(updatedUser));
 
                 // Clear passwords
                 setFormData(prev => ({ ...prev, currentPassword: '', password: '', confirmPassword: '' }));
 
                 fetchData();
-            } else {
-                alert("Erreur lors de la sauvegarde: " + updateError.message);
-            }
         } catch (error) {
             console.error(error);
             alert("Erreur réseau: " + error.message);
@@ -478,33 +615,33 @@ const ExpertDashboard = () => {
             )}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-                <div>
-                    <h1 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>Mon profil</h1>
-                    <p style={{ fontSize: '0.85rem', color: '#666' }}>Gérez votre profil et suivez vos performances.</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <div style={{ backgroundColor: 'var(--primary-color)', color: 'white', padding: '10px', borderRadius: '15px' }}>
+                        <Shield size={28} />
+                    </div>
+                    <div>
+                        <h1 style={{ fontSize: '1.5rem', marginBottom: '0.25rem', fontWeight: '900' }}>
+                            Espace Expert <span style={{ fontSize: '0.7rem', color: 'var(--primary-color)', opacity: 0.6 }}>(V143)</span>
+                        </h1>
+                        <p style={{ fontSize: '0.85rem', color: '#666' }}>Gérez votre profil et vos interventions.</p>
+                    </div>
                 </div>
                 {!editMode && (
-                    <div style={{ display: 'flex', gap: '0.8rem' }}>
-                        <Link to="/technicians" className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', fontWeight: 'bold', borderRadius: '12px' }}>
-                            <Users size={18} /> Trouver un collègue
-                        </Link>
+                    <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap' }}>
+                        {/* Bouton Mode Client retiré (V95) */}
                         <button 
                             className="btn btn-outline" 
-                            style={{ position: 'relative', width: '45px', height: '45px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px' }}
-                            onClick={() => {
-                                if (quotes.length > 0) openResponseForm(quotes[0]);
-                                else alert("Aucune notification pour le moment.");
-                            }}
+                            style={{ position: 'relative', width: '45px', height: '45px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px', border: sysNotifs.length > 0 ? '2px solid #ef4444' : '1px solid #ddd' }}
+                            onClick={() => setShowNotifsListModal(true)}
                         >
-                            <Bell size={20} color={quotes.length > 0 ? '#ef4444' : '#64748b'} />
-                            {quotes.length > 0 && (
-                                <span style={{ position: 'absolute', top: '5px', right: '5px', backgroundColor: '#ef4444', color: 'white', fontSize: '0.6rem', padding: '2px 5px', borderRadius: '50%', fontWeight: '900' }}>
-                                    {quotes.length}
+                            <Bell size={20} color={sysNotifs.length > 0 ? '#ef4444' : '#64748b'} />
+                            {sysNotifs.length > 0 && (
+                                <span style={{ position: 'absolute', top: '5px', right: '5px', backgroundColor: '#ef4444', color: 'white', fontSize: '0.6rem', padding: '2px 5px', borderRadius: '50%', fontWeight: '900', animation: 'pulse 1s infinite' }}>
+                                    {sysNotifs.length}
                                 </span>
                             )}
                         </button>
-                        <button className="btn btn-primary" onClick={() => setEditMode(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', borderRadius: '12px' }}>
-                            <Settings size={18} /> Paramètres
-                        </button>
+                        {/* Paramètres Retirés */}
                     </div>
                 )}
             </div>
@@ -654,115 +791,253 @@ const ExpertDashboard = () => {
                         </div>
                     </div>
 
-                    {/* ESPACE DEVIS - VERSION ÉPURÉE SANS LISTE AUTOMATIQUE */}
-                    <div className="card" style={{ padding: '2rem', textAlign: 'center', border: '1px dashed #e2e8f0', backgroundColor: '#f8fafc', marginBottom: '1.5rem' }}>
-                        <div style={{ backgroundColor: '#f1f5f9', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem', color: '#94a3b8' }}>
-                            <MessageSquare size={30} />
+                    {/* ESPACE DEVIS SUPPRIMÉ V70 */}
+
+                    {/* DEMANDES DE DEVIS DISPONIBLES (NOUVEAU V144) - RÉVOLUTION UX */}
+                    {!editMode && quotes.length > 0 && (
+                        <div style={{ marginBottom: '2rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#1e293b', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <div style={{ backgroundColor: '#10b981', color: 'white', padding: '6px', borderRadius: '10px' }}><Clock size={18} /></div>
+                                    Appels d'offres ({quotes.length})
+                                </h3>
+                            </div>
+                            
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {quotes.map(quote => (
+                                    <div 
+                                        key={quote.id} 
+                                        className="card" 
+                                        style={{ 
+                                            padding: '16px', border: '2px solid #f0fdf4', borderRadius: '25px', cursor: 'pointer',
+                                            transition: 'all 0.3s ease', boxShadow: '0 4px 15px rgba(0,0,0,0.05)'
+                                        }}
+                                        onClick={() => openResponseForm(quote)}
+                                    >
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                                    <span style={{ backgroundColor: '#f0fdf4', color: '#10b981', padding: '2px 8px', borderRadius: '10px', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase' }}>
+                                                        {quote.specialty}
+                                                    </span>
+                                                    <span style={{ color: '#94a3b8', fontSize: '0.7rem' }}>#{quote.id}</span>
+                                                </div>
+                                                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '800', color: '#1e293b' }}>{quote.title || 'Demande de service'}</h4>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{new Date(quote.created_at).toLocaleDateString()}</div>
+                                            </div>
+                                        </div>
+                                        
+                                        <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0 0 12px 0', lineHeight: '1.4', display: '-webkit-box', WebkitLineClamp: '2', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                            {quote.description || quote.message}
+                                        </p>
+                                        
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: '16px' }}>
+                                            <div style={{ display: 'flex', gap: '10px', fontSize: '0.75rem', color: '#475569', fontWeight: 'bold' }}>
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={14} /> {quote.city || 'Dakar'}</span>
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={14} /> {quote.billing_type?.toUpperCase() || 'JOUR'}</span>
+                                            </div>
+                                            <button 
+                                                className="btn"
+                                                style={{ padding: '6px 14px', fontSize: '0.75rem', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '900' }}
+                                            >
+                                                RÉPONDRE
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#1e293b', marginBottom: '0.5rem' }}>Espace Devis Expert</h3>
-                        <p style={{ fontSize: '0.85rem', color: '#64748b', maxWidth: '280px', margin: '0 auto' }}>
-                           Désormais, les demandes ne s'affichent plus automatiquement. Vous recevrez une notification directe lorsqu'un client souhaitera travailler avec vous.
-                        </p>
-                    </div>
+                    )}
+                    {!editMode && sentOffers.length > 0 && (
+                        <div style={{ marginBottom: '2rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#1e293b', margin: 0 }}>Mes Réponses aux Devis</h3>
+                                <div style={{ backgroundColor: '#10b981', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 'bold' }}>{sentOffers.length}</div>
+                            </div>
+                            
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {sentOffers.map(offer => (
+                                    <div key={offer.id} className="card" style={{ padding: '12px', border: '1px solid #e2e8f0', position: 'relative' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                                            <div style={{ flex: 1 }}>
+                                                <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: '800', color: '#10b981' }}>{offer.quote?.title || 'Demande de devis'}</h4>
+                                                <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: '#64748b' }}>
+                                                    Proposé le {new Date(offer.created_at).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                            <button 
+                                                onClick={() => handleDeleteOffer(offer.id)}
+                                                style={{ padding: '8px', background: '#ffe4e6', border: 'none', borderRadius: '10px', color: '#e11d48', cursor: 'pointer', display: 'flex' }}
+                                                title="Supprimer mon offre"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2m-6 0h6"></path><path d="M10 11v6m4-6v6"></path></svg>
+                                            </button>
+                                        </div>
+                                        
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '8px 12px', borderRadius: '10px' }}>
+                                            <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#64748b' }}>Votre prix :</span>
+                                            <span style={{ fontSize: '0.95rem', fontWeight: '900', color: '#1e293b' }}>{Number(offer.montant).toLocaleString()} F</span>
+                                        </div>
+                                        
+                                        {offer.statut === 'validé' && (
+                                            <div style={{ marginTop: '8px', padding: '10px', background: '#dcfce7', borderRadius: '12px', textAlign: 'center', fontSize: '0.8rem', fontWeight: '900', color: '#166534', border: '1px solid #bbf7d0', animation: 'bounce 2s infinite' }}>
+                                                🏆 OFFRE VALIDÉE PAR LE CLIENT ! 🎉
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* MODAL DE RÉPONSE PERSONNALISÉE */}
                     {showResponseModal && (
-                        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-                            <div className="card" style={{ width: '100%', maxWidth: '400px', padding: '1.5rem', marginTop: 0 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                                    <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#1e293b', margin: 0 }}>Répondre au devis</h3>
-                                    <button onClick={() => setShowResponseModal(false)} style={{ background: '#f1f5f9', border: 'none', color: '#64748b', cursor: 'pointer', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                        <div style={{ 
+                            position: 'fixed', inset: 0, 
+                            backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)',
+                            display: 'flex', alignItems: 'flex-start', justifyContent: 'center', 
+                            zIndex: 10000, padding: '15px', paddingTop: '5vh',
+                            animation: 'fadeIn 0.2s ease-out'
+                        }}>
+                            <div className="card" style={{ 
+                                width: '100%', maxWidth: '440px', maxHeight: '90vh', overflowY: 'auto',
+                                padding: '1.5rem', borderRadius: '30px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+                                animation: 'modalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                                backgroundColor: 'white'
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.2rem', alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--primary-color)' }}>
+                                            <img src={avatarUrl} alt="Me" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        </div>
+                                        <h3 style={{ fontSize: '1.1rem', fontWeight: '900', color: '#1e293b', margin: 0 }}>Répondre au devis</h3>
+                                    </div>
+                                    <button onClick={() => setShowResponseModal(false)} style={{ background: '#f1f5f9', border: 'none', color: '#64748b', cursor: 'pointer', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
                                 </div>
                                 
                                 {/* DÉTAILS DE LA DEMANDE ENRICHIE (V49) */}
                                 {selectedQuote && (
-                                    <div style={{ backgroundColor: '#fff7ed', padding: '15px', borderRadius: '18px', marginBottom: '1.5rem', border: '1px solid #ffedd5', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                                            <div style={{ backgroundColor: '#fb923c', color: 'white', padding: '4px', borderRadius: '8px' }}><Info size={16} /></div>
-                                            <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '900', color: '#9a3412' }}>{selectedQuote.title || 'Besoin urgent'}</h4>
+                                    <div style={{ backgroundColor: '#fff7ed', padding: '12px', borderRadius: '20px', marginBottom: '1rem', border: '1px solid #ffedd5' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                                            <div style={{ backgroundColor: '#fb923c', color: 'white', padding: '4px', borderRadius: '8px' }}><Info size={14} /></div>
+                                            <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '900', color: '#9a3412' }}>{selectedQuote.title || 'Besoin urgent'}</h4>
                                         </div>
                                         
-                                        <p style={{ margin: '0 0 12px 0', fontSize: '0.85rem', color: '#c2410c', lineHeight: '1.4' }}>
+                                        <p style={{ margin: '0 0 10px 0', fontSize: '0.8rem', color: '#c2410c', lineHeight: '1.4' }}>
                                             {selectedQuote.description || selectedQuote.message}
                                         </p>
 
-                                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
-                                            <span style={{ backgroundColor: 'white', padding: '4px 10px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: '800', border: '1px solid #ffedd5', color: '#ea580c', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                                <Clock size={12} /> CONTRAT: {selectedQuote.billing_type?.toUpperCase() || 'JOURNALIER'}
+                                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                                            <span style={{ backgroundColor: 'white', padding: '3px 8px', borderRadius: '10px', fontSize: '0.65rem', fontWeight: '800', border: '1px solid #ffedd5', color: '#ea580c', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <Clock size={10} /> {selectedQuote.billing_type?.toUpperCase() || 'JOURNALIER'}
                                             </span>
-                                            <span style={{ backgroundColor: 'white', padding: '4px 10px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: '800', border: '1px solid #ffedd5', color: '#ea580c', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                                <Calendar size={12} /> {selectedQuote.planned_date ? new Date(selectedQuote.planned_date).toLocaleDateString() : 'Aujourd\'hui'}
+                                            <span style={{ backgroundColor: 'white', padding: '3px 8px', borderRadius: '10px', fontSize: '0.65rem', fontWeight: '800', border: '1px solid #ffedd5', color: '#ea580c', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <Calendar size={10} /> {selectedQuote.planned_date ? new Date(selectedQuote.planned_date).toLocaleDateString() : 'Aujourd\'hui'}
+                                            </span>
+                                            <span style={{ backgroundColor: '#fff', padding: '3px 8px', borderRadius: '10px', fontSize: '0.65rem', fontWeight: '800', border: '1px solid #ffedd5', color: '#ea580c', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <MapPin size={10} /> {selectedQuote.city || 'Dakar'} / {selectedQuote.district || '?' }
                                             </span>
                                         </div>
 
                                         {selectedQuote.photo_url && (
-                                            <div style={{ marginTop: '10px' }}>
+                                            <div style={{ marginTop: '8px' }}>
                                                 <img 
                                                     src={selectedQuote.photo_url} 
                                                     alt="Demande"
                                                     onClick={() => window.open(selectedQuote.photo_url, '_blank')}
-                                                    style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: '15px', border: '2px solid white', cursor: 'zoom-in' }} 
+                                                    style={{ width: '100%', height: '110px', objectFit: 'cover', borderRadius: '12px', border: '2px solid white', cursor: 'zoom-in' }} 
                                                 />
-                                                <p style={{ fontSize: '0.6rem', color: '#9a3412', textAlign: 'center', marginTop: '4px' }}>Cliquer pour agrandir la photo</p>
                                             </div>
                                         )}
                                     </div>
                                 )}
 
-                                <div style={{ maxHeight: '350px', overflowY: 'auto', paddingRight: '5px' }}>
-                                    <h4 style={{ fontSize: '0.85rem', fontWeight: '800', marginBottom: '10px', color: '#1e293b' }}>Votre Proposition Financière :</h4>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.5fr auto', gap: '8px', marginBottom: '8px', fontSize: '0.7rem', fontWeight: 'bold', color: '#64748b' }}>
+                                <div style={{ marginBottom: '10px' }}>
+                                    <h4 style={{ fontSize: '0.8rem', fontWeight: '800', marginBottom: '8px', color: '#1e293b' }}>Votre Proposition :</h4>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 0.8fr 1.2fr auto', gap: '6px', marginBottom: '6px', fontSize: '0.65rem', fontWeight: 'bold', color: '#64748b' }}>
                                         <span>Désignation</span>
                                         <span>Qté</span>
                                         <span>Prix Unit.</span>
                                         <span></span>
                                     </div>
-                                    {devisLines.map((line, idx) => (
-                                        <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.5fr auto', gap: '8px', marginBottom: '8px' }}>
-                                            <input 
-                                                value={line.desc} 
-                                                onChange={(e) => updateDevisLine(idx, 'desc', e.target.value)}
-                                                placeholder="Travail..."
-                                                style={{ padding: '8px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.8rem' }}
-                                            />
-                                            <input 
-                                                type="number" 
-                                                value={line.qty} 
-                                                onChange={(e) => updateDevisLine(idx, 'qty', e.target.value)}
-                                                placeholder="Qté"
-                                                style={{ padding: '8px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.8rem', width: '100%' }}
-                                            />
-                                            <input 
-                                                type="number" 
-                                                value={line.price} 
-                                                onChange={(e) => updateDevisLine(idx, 'price', e.target.value)}
-                                                placeholder="Prix"
-                                                style={{ padding: '8px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.8rem', width: '100%', fontWeight: 'bold' }}
-                                            />
-                                            <button onClick={() => removeDevisLine(idx)} style={{ background: 'none', border: 'none', color: '#ef4444' }}>✕</button>
-                                        </div>
-                                    ))}
+                                    <div style={{ maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
+                                        {devisLines.map((line, idx) => (
+                                            <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 0.8fr 1.2fr auto', gap: '6px', marginBottom: '6px' }}>
+                                                <input 
+                                                    value={line.desc} 
+                                                    onChange={(e) => updateDevisLine(idx, 'desc', e.target.value)}
+                                                    placeholder="Travail..."
+                                                    style={{ padding: '6px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.75rem' }}
+                                                />
+                                                <input 
+                                                    type="number" 
+                                                    value={line.qty} 
+                                                    onChange={(e) => updateDevisLine(idx, 'qty', e.target.value)}
+                                                    placeholder="Qté"
+                                                    style={{ padding: '6px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.75rem', width: '100%' }}
+                                                />
+                                                <input 
+                                                    type="number" 
+                                                    value={line.price} 
+                                                    onChange={(e) => updateDevisLine(idx, 'price', e.target.value)}
+                                                    placeholder="Prix"
+                                                    style={{ padding: '6px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.75rem', width: '100%', fontWeight: 'bold' }}
+                                                />
+                                                <button onClick={() => removeDevisLine(idx)} style={{ background: 'none', border: 'none', color: '#ef4444' }}>✕</button>
+                                            </div>
+                                        ))}
+                                    </div>
                                     <button 
                                         onClick={addDevisLine}
-                                        style={{ width: '100%', padding: '8px', background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '8px', color: '#64748b', fontSize: '0.75rem', cursor: 'pointer', marginBottom: '10px' }}
+                                        style={{ width: '100%', padding: '6px', background: '#f1f5f9', border: '1px dashed #cbd5e1', borderRadius: '8px', color: '#64748b', fontSize: '0.7rem', cursor: 'pointer', marginTop: '5px' }}
                                     >
-                                        + Ajouter une ligne de prix
+                                        + Ajouter une ligne
                                     </button>
                                 </div>
 
-                                <div style={{ backgroundColor: '#f0fdf4', padding: '12px', borderRadius: '12px', marginBottom: '1.25rem', border: '1px solid #bbf7d0' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#166534', marginBottom: '4px' }}>
-                                        <span>Sous-total HT :</span>
-                                        <span>{devisLines.reduce((acc, l) => acc + (Number(l.qty || 0) * Number(l.price || 0)), 0).toLocaleString()} F</span>
+                                <div style={{ backgroundColor: '#f0fdf4', padding: '15px', borderRadius: '20px', marginBottom: '1.25rem', border: '2px solid #bbf7d0' }}>
+                                    <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <h4 style={{ fontSize: '0.85rem', fontWeight: '900', color: '#166534', margin: 0 }}>VOTRE OFFRE TOTALE (F) :</h4>
+                                        <div style={{ backgroundColor: 'white', padding: '2px 8px', borderRadius: '8px', fontSize: '0.65rem', fontWeight: 'bold', border: '1px solid #bbf7d0' }}>NET À PERCEVOIR</div>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#166534', marginBottom: '4px' }}>
-                                        <span>TVA (19%) :</span>
-                                        <span>{Math.round(devisLines.reduce((acc, l) => acc + (Number(l.qty || 0) * Number(l.price || 0)), 0) * 0.19).toLocaleString()} F</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                                        <input 
+                                            type="number"
+                                            value={devisLines[0].price}
+                                            onChange={(e) => updateDevisLine(0, 'price', e.target.value)}
+                                            style={{ 
+                                                width: '100%', padding: '12px 15px', fontSize: '1.8rem', fontWeight: '900', 
+                                                borderRadius: '15px', border: '1px solid #10b981', color: '#10b981',
+                                                outline: 'none', textAlign: 'center', backgroundColor: 'white',
+                                                boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)'
+                                            }}
+                                            placeholder="0"
+                                        />
+                                        <span style={{ position: 'absolute', right: '15px', fontSize: '1.2rem', fontWeight: '900', color: '#10b981' }}>FCFA</span>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', fontWeight: '900', borderTop: '2px dashed #bbf7d0', paddingTop: '8px', marginTop: '8px' }}>
-                                        <span>TOTAL TTC :</span>
-                                        <span style={{ color: '#10b981' }}>{(devisLines.reduce((acc, l) => acc + (Number(l.qty || 0) * Number(l.price || 0)), 0) + Math.round(devisLines.reduce((acc, l) => acc + (Number(l.qty || 0) * Number(l.price || 0)), 0) * 0.19)).toLocaleString()} F</span>
+                                    
+                                    <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Basé sur 1 prestation d'urgence</span>
+                                        <button 
+                                            onClick={() => setDevisLines([...devisLines, { desc: "Accessoires", qty: 1, price: 0 }])}
+                                            style={{ background: 'none', border: 'none', color: '#10b981', fontSize: '0.7rem', fontWeight: 'bold', textDecoration: 'underline', cursor: 'pointer' }}
+                                        >
+                                            + Ajouter des détails
+                                        </button>
                                     </div>
+                                </div>
+                                
+                                <div style={{ marginBottom: '1.25rem' }}>
+                                    <h4 style={{ fontSize: '0.8rem', fontWeight: '800', marginBottom: '8px', color: '#1e293b' }}>Numéro de téléphone de contact :</h4>
+                                    <input 
+                                        type="tel"
+                                        value={contactPhone}
+                                        onChange={(e) => setContactPhone(e.target.value)}
+                                        placeholder="Votre numéro (ex: 77 000 00 00)"
+                                        style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid #ddd', fontSize: '0.85rem' }}
+                                    />
                                 </div>
                                 
                                 <textarea 
@@ -1016,12 +1291,13 @@ const ExpertDashboard = () => {
                                     </div>
                                 </div>
 
+
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem' }}>Ma Biographie</label>
                                     <textarea
                                         name="description" value={formData.description} onChange={handleInputChange}
                                         placeholder="Parlez de votre parcours, de vos certifications et de votre approche du service client..."
-                                        style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem', minHeight: '120px', resize: 'vertical' }}
+                                        style={{ width: '100%', padding: '10px', borderRadius: '15px', border: '1px solid #ddd', fontSize: '0.8rem', minHeight: '120px', resize: 'vertical' }}
                                     />
                                 </div>
 
@@ -1086,6 +1362,196 @@ const ExpertDashboard = () => {
                     )}
                 </div>
             </div>
+            {/* MODAL DE NOTIFICATIONS SYSTÈME (ACTIONNABLE) */}
+            {showNotifModal && (
+                <div style={{ 
+                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', 
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                    zIndex: 20000, padding: '1rem', animation: 'fadeIn 0.3s ease-out' 
+                }}>
+                    <div style={{ 
+                        width: '90%', maxWidth: '400px', background: '#fff', borderRadius: '30px', 
+                        padding: '2rem 1.5rem', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', 
+                        textAlign: 'center', position: 'relative', animation: 'scaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                    }}>
+                        <div style={{ 
+                            backgroundColor: showNotifModal.type === 'offer_accepted' ? '#f0fdf4' : '#fff7ed', 
+                            width: '60px', height: '60px', borderRadius: '50%', display: 'flex', 
+                            alignItems: 'center', justifyContent: 'center', fontSize: '2rem', margin: '0 auto 1.2rem',
+                            boxShadow: 'inner 0 2px 4px rgba(0,0,0,0.05)'
+                        }}>
+                            {showNotifModal.type === 'offer_accepted' ? '🎉' : '🔔'}
+                        </div>
+                        
+                        <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#1e293b', marginBottom: '0.5rem' }}>
+                            {showNotifModal.title}
+                        </h3>
+                        <p style={{ fontSize: '0.9rem', color: '#64748b', lineHeight: '1.5', marginBottom: '1.5rem' }}>
+                            {showNotifModal.content}
+                        </p>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {(showNotifModal.title.includes('Nouvel appel') || showNotifModal.title.includes('Demande')) && (
+                                <button 
+                                    onClick={async () => {
+                                        // V146 - SYSTÈME DE RÉESSAI AUTO (Anti-clic multiple)
+                                        let techTarget = null;
+                                        const idExtraction = showNotifModal.content.match(/#([a-zA-Z0-9-]{1,})/i);
+                                        const extractedId = idExtraction ? idExtraction[1] : null;
+
+                                        // Fonction de recherche interne
+                                        const findQuote = async (id) => {
+                                            // 1. Local
+                                            let res = quotes.find(q => String(q.id) === String(id));
+                                            // 2. Server
+                                            if (!res && id) {
+                                                const { data } = await supabase.from('quotes').select('*, client:client_id(*)').eq('id', id).maybeSingle();
+                                                res = data;
+                                            }
+                                            return res;
+                                        };
+
+                                        techTarget = await findQuote(extractedId);
+
+                                        if (techTarget) {
+                                            openResponseForm(techTarget);
+                                            setShowNotifModal(null);
+                                            markAllRead(showNotifModal.id);
+                                        } else {
+                                            // Fallback par Titre/Spécialité
+                                            const titlePart = showNotifModal.title.split(':').pop().trim();
+                                            techTarget = quotes.find(q => 
+                                                (q.title && q.title.includes(titlePart)) || 
+                                                (q.specialty && q.specialty.includes(titlePart))
+                                            );
+
+                                            if (techTarget) {
+                                                openResponseForm(techTarget);
+                                                setShowNotifModal(null);
+                                            } else {
+                                                // DERNIER RECOURS (V146) : On ouvre quand même avec l'ID extrait
+                                                if (extractedId) {
+                                                    openResponseForm(extractedId); 
+                                                    setShowNotifModal(null);
+                                                } else {
+                                                    fetchData();
+                                                    alert("⌛ Synchronisation en cours... Réessayez.");
+                                                }
+                                            }
+                                        }
+                                    }}
+                                    style={{ 
+                                        width: '100%', padding: '1rem', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
+                                        color: 'white', border: 'none', borderRadius: '15px', fontWeight: '900', fontSize: '1rem',
+                                        boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.3)', cursor: 'pointer'
+                                    }}
+                                >
+                                    💰 Proposer mon prix
+                                </button>
+                            )}
+                            
+                            <button 
+                                onClick={() => {
+                                    setShowNotifModal(null);
+                                    markAllRead();
+                                }}
+                                style={{ 
+                                    width: '100%', padding: '0.8rem', background: '#f1f5f9', color: '#64748b', 
+                                    border: 'none', borderRadius: '15px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer'
+                                }}
+                            >
+                                Fermer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* LISTE COMPLÈTE DES NOTIFICATIONS (TECHNICIEN) */}
+            {showNotifsListModal && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(5px)', zIndex: 19000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                    <div style={{ width: '100%', maxWidth: '500px', backgroundColor: 'white', borderTopLeftRadius: '30px', borderTopRightRadius: '30px', padding: '1.5rem', maxHeight: '85vh', overflowY: 'auto', animation: 'slideUp 0.3s ease-out' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                            <h3 style={{ fontSize: '1.2rem', fontWeight: '900' }}>Notifications 🔔</h3>
+                            <button onClick={() => setShowNotifsListModal(false)} style={{ background: '#f1f5f9', border: 'none', padding: '10px', borderRadius: '50%', cursor: 'pointer' }}><X size={20} /></button>
+                        </div>
+
+                        {sysNotifs.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+                                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📭</div>
+                                <p style={{ color: '#64748b', fontWeight: 'bold' }}>Aucune notification pour le moment.</p>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                {sysNotifs.map(notif => (
+                                    <div key={notif.id} style={{ 
+                                        padding: '1rem', borderRadius: '20px', border: notif.seen ? '1px solid #f1f5f9' : '2px solid #10b981', 
+                                        background: notif.seen ? '#fff' : '#f0fdf4', 
+                                        position: 'relative'
+                                    }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '5px' }}>
+                                            <p style={{ margin: 0, fontWeight: '900', fontSize: '0.95rem', color: '#1e293b' }}>
+                                                {notif.seen ? '' : '🟢 '}{notif.title}
+                                            </p>
+                                            <button 
+                                                onClick={() => deleteNotif(notif.id)}
+                                                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+                                            >
+                                                <X size={16} />
+                                            </button>
+                                        </div>
+                                        <p style={{ margin: '0 0 12px 0', fontSize: '0.8rem', color: '#64748b', lineHeight: '1.4' }}>{notif.content}</p>
+                                        
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            {(notif.title.includes('Nouvel appel') || notif.type === 'new_quote' || notif.type === 'offer_received' || notif.type === 'offer_accepted') && (
+                                                <button 
+                                                    onClick={async () => {
+                                                        const match = notif.content.match(/#([a-zA-Z0-9-]{1,})/i);
+                                                        const quoteId = match ? match[1] : null;
+                                                        let target = quotes.find(q => (quoteId && String(q.id) === String(quoteId)));
+                                                        
+                                                        if (target) {
+                                                            openResponseForm(target);
+                                                            setShowNotifsListModal(false);
+                                                            markAllRead(notif.id);
+                                                        } else {
+                                                            const cleanId = quoteId ? quoteId.replace(/\D/g, '') : null;
+                                                            const { data: qServer } = await supabase.from('quotes').select('*, client:client_id(*)').eq('id', cleanId).maybeSingle();
+                                                            if (qServer) {
+                                                                openResponseForm(qServer);
+                                                                setShowNotifsListModal(false);
+                                                                markAllRead(notif.id);
+                                                            } else {
+                                                                fetchData();
+                                                                alert("⌛ Synchronisation...");
+                                                            }
+                                                        }
+                                                    }}
+                                                    style={{ flex: 2, padding: '0.65rem', background: '#10b981', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '900', fontSize: '0.8rem' }}
+                                                >
+                                                    ✍️ Action
+                                                </button>
+                                            )}
+                                            {!notif.seen && (
+                                                <button 
+                                                    onClick={() => markAllRead(notif.id)}
+                                                    style={{ flex: 1, background: '#f1f5f9', border: 'none', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b' }}
+                                                >
+                                                    Lu
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                                {sysNotifs.some(n => !n.seen) && (
+                                    <button onClick={() => markAllRead()} style={{ marginTop: '1rem', background: 'none', border: 'none', color: '#10b981', fontWeight: 'bold', textDecoration: 'underline', width: '100%', fontSize: '0.9rem' }}>
+                                        Tout marquer comme lu
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div >
     );
 };

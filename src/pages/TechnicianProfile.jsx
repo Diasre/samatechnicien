@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import API_URL from '../config';
+import { API_URL, WEB_URL } from '../config';
 import { supabase } from '../supabaseClient';
 import { technicians as mockTechnicians } from '../data/mockData';
 import { MapPin, Star, Phone, MessageCircle, MessageSquare, CheckCircle, ArrowLeft, AlertCircle, Edit, Share2, ShoppingBag, Flag } from 'lucide-react';
@@ -206,7 +206,7 @@ const TechnicianProfile = () => {
         const shareData = {
             title: `Profil de ${tech.name} - SamaTechnicien`,
             text: `Découvrez le profil de ${tech.name}, expert en ${tech.specialty} sur SamaTechnicien.`,
-            url: window.location.href
+            url: `${WEB_URL}/technician/${id}`
         };
 
         try {

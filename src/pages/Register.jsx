@@ -7,6 +7,7 @@ const Register = () => {
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
+    const [phoneError, setPhoneError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [otpCode, setOtpCode] = useState('');
 
@@ -51,8 +52,14 @@ const Register = () => {
     };
 
     // Validation helpers
-    const phoneClean = formData.phone.replace(/\D/g, '').replace(/^221/, '').replace(/^00/, '');
-    const isStep1Valid = phoneClean.length >= 9 && formData.role;
+    const getFullPhone = (p) => {
+        let clean = p.trim().replace(/\s+/g, '');
+        if (clean.startsWith('+')) return clean;
+        const digits = clean.replace(/\D/g, '').replace(/^221/, '').replace(/^00/, '');
+        return `+221${digits}`;
+    };
+
+    const isStep1Valid = formData.phone.trim().length >= 8 && formData.role;
     
     const isStep2Valid = (
         formData.fullName.trim().length >= 3 &&
@@ -81,41 +88,76 @@ const Register = () => {
         setLoading(true);
 
         try {
-            const phoneClean = formData.phone.replace(/\D/g, '').replace(/^221/, '').replace(/^00/, '');
-            const fullPhone = `+221${phoneClean}`;
+            const fullPhone = getFullPhone(formData.phone);
+            const phoneClean = fullPhone.replace(/\+/g, '').replace(/^221/, '');
+            const finalEmail = `${phoneClean}@samatechnicien.dummy`;
 
-            console.log('📡 Envoi OTP vers:', fullPhone);
-            
-            // 🛡️ MÉTHODE DIRECTE: On envoie le SMS sans créer le compte tout de suite
-            const { error: otpError } = await supabase.auth.signInWithOtp({
+            console.log('📡 Inscription directe...');
+
+            // 1. Création de l'utilisateur dans Supabase Auth (ajout '00' pour contourner min 6 caractères)
+            const { data: authData, error: authError } = await supabase.auth.signUp({
                 phone: fullPhone,
+                password: formData.password + '00',
                 options: {
-                    shouldCreateUser: true
+                    data: {
+                        full_name: formData.fullName,
+                        role: formData.role,
+                        phone: phoneClean,
+                        city: formData.city,
+                        district: formData.district,
+                        specialty: formData.role === 'technician' ? (formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty) : null,
+                        image: null,
+                        email: finalEmail
+                    }
                 }
             });
 
-            if (otpError) {
-                console.error('❌ Erreur OTP:', otpError.message);
-                setLoading(false);
-                return alert("Erreur SMS: " + otpError.message);
-            }
+            if (authError) throw authError;
 
-            console.log('✅ SMS envoyé !');
-            setStep(3);
-            setLoading(false);
+            const authUser = authData?.user;
+
+            if (authUser) {
+                // 2. Création du profil public
+                const profileData = {
+                    id: authUser.id,
+                    fullname: formData.fullName,
+                    phone: phoneClean,
+                    role: formData.role,
+                    city: formData.city,
+                    district: formData.district,
+                    password: formData.password,
+                    email: finalEmail,
+                    specialty: formData.role === 'technician' ? (formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty) : null,
+                    isblocked: 0,
+                    commentsenabled: 1,
+                    email_verified: true
+                };
+
+                const { error: dbError } = await supabase.from('users').upsert(profileData);
+                if (dbError) throw dbError;
+
+                // 3. Session locale
+                localStorage.setItem('user', JSON.stringify({ ...profileData, fullName: profileData.fullname }));
+                
+                alert(`Bienvenue ! Votre compte est créé avec succès.`);
+                navigate(formData.role === 'technician' ? '/expert-dashboard' : '/');
+            }
         } catch (error) {
+            console.error('❌ Erreur Inscription:', error);
+            alert("Erreur lors de l'inscription : " + error.message);
+        } finally {
             setLoading(false);
-            alert('Erreur: ' + error.message);
         }
     };
 
     const handleVerifyOtp = async (e) => {
         if (e) e.preventDefault();
+        alert("🔍 Tentative de vérification avec le numéro : " + getFullPhone(formData.phone));
         if (otpCode.length !== 6) return alert("Veuillez entrer le code à 6 chiffres.");
 
         setLoading(true);
-        const phoneClean = formData.phone.replace(/\D/g, '').replace(/^221/, '').replace(/^00/, '');
-        const fullPhone = `+221${phoneClean}`;
+        const fullPhone = getFullPhone(formData.phone);
+        const phoneClean = fullPhone.replace(/\+/g, '').replace(/^221/, '');
         const finalEmail = `${phoneClean}@samatechnicien.dummy`;
 
         try {
@@ -127,6 +169,8 @@ const Register = () => {
                 type: 'signup'
             });
 
+            let userData = verifyData?.user;
+
             if (verifyError) {
                 // Tenta avec type 'sms' si 'signup' échoue
                 const { data: verifyData2, error: verifyError2 } = await supabase.auth.verifyOtp({
@@ -135,16 +179,16 @@ const Register = () => {
                     type: 'sms'
                 });
                 if (verifyError2) throw verifyError2;
-                verifyData.user = verifyData2.user;
+                userData = verifyData2?.user;
             }
 
             // 2. Création/Maj du profil dans la table USERS
-            if (verifyData?.user) {
-                console.log('✅ Utilisateur vérifié ! Création du profil...');
+            if (userData) {
+                alert("✅ Code validé ! Création de votre profil..."); 
                 
                 const profileData = {
-                    id: verifyData.user.id,
-                    fullname: formData.fullName,
+                    id: userData.id,
+                    full_name: formData.fullName, // Correction ici
                     phone: phoneClean,
                     role: formData.role,
                     city: formData.city,
@@ -160,8 +204,10 @@ const Register = () => {
                 const { error: dbError } = await supabase.from('users').upsert(profileData);
                 if (dbError) throw dbError;
                 
+                alert("✅ Profil enregistré !");
+                
                 // Stockage local pour rester connecté
-                localStorage.setItem('user', JSON.stringify({ ...profileData, fullName: profileData.fullname }));
+                localStorage.setItem('user', JSON.stringify({ ...profileData, fullName: profileData.full_name }));
                 
                 alert(`Félicitations ${formData.fullName} ! Votre compte est créé.`);
                 navigate(formData.role === 'technician' ? '/expert-dashboard' : '/');
@@ -239,19 +285,89 @@ const Register = () => {
                         <div style={{ marginBottom: '2rem' }}>
                             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#10b981', background: '#fff', width: 'fit-content', padding: '2px 8px', borderRadius: '6px', transform: 'translateY(10px) translateX(15px)', zIndex: 1, position: 'relative', border: '1px solid #f1f5f9' }}>Téléphone</label>
                             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                                <Phone size={20} style={{ position: 'absolute', left: '1.2rem', color: '#10b981' }} />
+                                <Phone size={20} style={{ position: 'absolute', left: '1.2rem', color: '#10b981', zIndex: 2 }} />
+                                <span style={{ 
+                                    position: 'absolute', 
+                                    left: '3.2rem', 
+                                    color: '#1e293b', 
+                                    fontWeight: '900', 
+                                    fontSize: '1.1rem',
+                                    zIndex: 2,
+                                    pointerEvents: 'none'
+                                }}>+221</span>
                                 <input 
-                                    type="tel" name="phone" value={formData.phone} onChange={handleChange}
-                                    style={{ width: '100%', padding: '1.2rem 1.2rem 1.2rem 3.2rem', borderRadius: '20px', border: '2px solid #10b981', background: 'rgba(255,255,255,0.8)', color: '#1e293b', fontSize: '1.1rem', outline: 'none', backdropFilter: 'blur(10px)' }}
-                                    placeholder="+221 77 000 00 00"
+                                    type="tel" 
+                                    name="phone" 
+                                    value={formData.phone} 
+                                    onChange={handleChange}
+                                    style={{ 
+                                        width: '100%', 
+                                        padding: '1.2rem 1.2rem 1.2rem 6.8rem', 
+                                        borderRadius: '20px', 
+                                        border: '2px solid #10b981', 
+                                        background: 'rgba(255,255,255,0.8)', 
+                                        color: '#1e293b', 
+                                        fontSize: '1.1rem', 
+                                        outline: 'none', 
+                                        backdropFilter: 'blur(10px)',
+                                        fontWeight: '700'
+                                    }}
+                                    placeholder="77 000 00 00"
                                 />
-                                <div style={{ position: 'absolute', right: '1rem', background: '#10b98120', color: '#10b981', padding: '4px 10px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: '800' }}>Valide ✓</div>
+                                <div style={{ position: 'absolute', right: '1rem', background: phoneError ? '#fee2e2' : '#10b98120', color: phoneError ? '#dc2626' : '#10b981', padding: '4px 10px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: '800' }}>
+                                    {phoneError ? '!' : 'Valide ✓'}
+                                </div>
                             </div>
+                            {phoneError && (
+                                <div style={{
+                                    color: '#dc2626', 
+                                    fontSize: '0.8rem', 
+                                    marginTop: '8px', 
+                                    textAlign: 'center', 
+                                    fontWeight: 'bold', 
+                                    backgroundColor: '#fee2e2', 
+                                    padding: '8px', 
+                                    borderRadius: '12px',
+                                    animation: 'fadeIn 0.3s ease'
+                                }}>
+                                    {phoneError}
+                                </div>
+                            )}
                         </div>
 
                         <button 
-                            disabled={!isStep1Valid}
-                            onClick={() => setStep(2)}
+                            disabled={!isStep1Valid || loading}
+                            onClick={async () => {
+                                setLoading(true);
+                                try {
+                                    setPhoneError('');
+                                    const rawPhone = formData.phone.trim().replace(/\s+/g, '').replace(/\+221/, '').replace(/\+216/, '');
+                                    
+                                    const isValidPhone = /^\d{8,12}$/.test(rawPhone);
+
+                                    if (!isValidPhone) {
+                                        setPhoneError("Numéro invalide (min 8 chiffres)");
+                                        setLoading(false);
+                                        return;
+                                    }
+
+                                    const fullPhone = getFullPhone(formData.phone);
+                                    const phoneClean = fullPhone.replace(/\+/g, '').replace(/^221/, '');
+                                    const { data } = await supabase.from('users').select('id, role').eq('phone', phoneClean).maybeSingle();
+                                    
+                                    if (data) {
+                                        const roleLabel = data.role === 'technician' ? 'Technicien' : 'Client';
+                                        setPhoneError(`Ce numéro est déjà lié à un compte ${roleLabel}.`);
+                                        setTimeout(() => navigate('/login'), 3000);
+                                    } else {
+                                        setStep(2);
+                                    }
+                                } catch (err) {
+                                    console.error(err);
+                                    setStep(2); // Fallback to allow retry in next step if error
+                                }
+                                setLoading(false);
+                            }}
                             style={{ 
                                 width: '100%', padding: '1.2rem', borderRadius: '22px', border: 'none', 
                                 background: isStep1Valid ? '#10b981' : '#cbd5e1', 
@@ -275,48 +391,51 @@ const Register = () => {
                              </div>
                         </div>
 
+                        {/* Ville et Quartier */}
+                        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.2rem' }}>
+                            <div style={{ flex: 1 }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b' }}>Ville</label>
+                                <input type="text" name="city" required value={formData.city} onChange={handleChange} style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: 'rgba(255,255,255,0.8)', color: '#1e293b', outline: 'none' }} placeholder="Dakar" />
+                            </div>
+                            {formData.role === 'technician' && (
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b' }}>Quartier</label>
+                                    <input type="text" name="district" required value={formData.district} onChange={handleChange} style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: 'rgba(255,255,255,0.8)', color: '#1e293b', outline: 'none' }} placeholder="Parcelles" />
+                                </div>
+                            )}
+                        </div>
+
                         {/* Métier (Techniciens Uniquement) */}
-                                {formData.role === 'technician' && (
-                                    <>
-                                        <div style={{ marginBottom: '1.2rem' }}>
-                                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b' }}>Votre Métier</label>
-                                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                                                <Hammer size={18} style={{ position: 'absolute', left: '1rem', color: '#10b981' }} />
-                                                <select 
-                                                    name="specialty" 
-                                                    value={formData.specialty} 
-                                                    onChange={handleChange} 
-                                                    style={{ width: '100%', padding: '1rem 1rem 1rem 2.8rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', color: '#1e293b', outline: 'none', appearance: 'none' }}
-                                                >
-                                                    {specialtiesList.map(item => (
-                                                        <option key={item} value={item}>{item}</option>
-                                                    ))}
-                                                </select>
-                                                <div style={{ position: 'absolute', right: '1rem', pointerEvents: 'none' }}>▼</div>
-                                            </div>
-                                        </div>
-
-                                        {formData.specialty === 'Autre' && (
-                                            <div style={{ marginBottom: '1.2rem', animation: 'fadeIn 0.3s ease' }}>
-                                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.85rem', color: '#10b981' }}>Précisez votre métier</label>
-                                                <input 
-                                                    type="text" name="otherSpecialty" value={formData.otherSpecialty} onChange={handleChange} 
-                                                    style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid #10b981', background: '#fff', color: '#1e293b', outline: 'none' }} 
-                                                    placeholder="Ex: Menuisier, Électricien..." 
-                                                />
-                                            </div>
-                                        )}
-
-                                        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.2rem' }}>
-                                    <div style={{ flex: 1 }}>
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b' }}>Ville</label>
-                                        <input type="text" name="city" value={formData.city} onChange={handleChange} style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: 'rgba(255,255,255,0.8)', color: '#1e293b', outline: 'none' }} placeholder="Dakar" />
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b' }}>Quartier</label>
-                                        <input type="text" name="district" value={formData.district} onChange={handleChange} style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: 'rgba(255,255,255,0.8)', color: '#1e293b', outline: 'none' }} placeholder="Parcelles" />
+                        {formData.role === 'technician' && (
+                            <>
+                                <div style={{ marginBottom: '1.2rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b' }}>Votre Métier</label>
+                                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                        <Hammer size={18} style={{ position: 'absolute', left: '1rem', color: '#10b981' }} />
+                                        <select 
+                                            name="specialty" 
+                                            value={formData.specialty} 
+                                            onChange={handleChange} 
+                                            style={{ width: '100%', padding: '1rem 1rem 1rem 2.8rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', color: '#1e293b', outline: 'none', appearance: 'none' }}
+                                        >
+                                            {specialtiesList.map(item => (
+                                                <option key={item} value={item}>{item}</option>
+                                            ))}
+                                        </select>
+                                        <div style={{ position: 'absolute', right: '1rem', pointerEvents: 'none' }}>▼</div>
                                     </div>
                                 </div>
+
+                                {formData.specialty === 'Autre' && (
+                                    <div style={{ marginBottom: '1.2rem', animation: 'fadeIn 0.3s ease' }}>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.85rem', color: '#10b981' }}>Précisez votre métier</label>
+                                        <input 
+                                            type="text" name="otherSpecialty" value={formData.otherSpecialty} onChange={handleChange} 
+                                            style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid #10b981', background: '#fff', color: '#1e293b', outline: 'none' }} 
+                                            placeholder="Ex: Menuisier, Électricien..." 
+                                        />
+                                    </div>
+                                )}
                             </>
                         )}
 
@@ -385,50 +504,11 @@ const Register = () => {
                                     transition: '0.3s'
                                 }}
                             >
-                                {loading ? 'Envoi...' : 'Terminer'}
+                                {loading ? 'Création...' : "S'inscrire"}
                             </button>
                         </div>
                     </div>
-                ) : (
-                    <div style={{ animation: 'fadeIn 0.4s ease' }}>
-                        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                            <div style={{ display: 'inline-flex', padding: '1rem', backgroundColor: '#3b82f620', borderRadius: '20px', color: '#3b82f6', marginBottom: '1rem' }}>
-                                <CheckCircle2 size={40} />
-                            </div>
-                            <h3 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#1e293b' }}>Vérifiez vos messages</h3>
-                            <p style={{ color: '#64748b', fontSize: '0.9rem' }}>Un code à 6 chiffres a été envoyé au <b>+221 {formData.phone}</b></p>
-                        </div>
-
-                        <div style={{ marginBottom: '2rem' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b', textAlign: 'center' }}>Code de confirmation</label>
-                            <input 
-                                type="text" maxLength="6" inputMode="numeric" value={otpCode} 
-                                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                                style={{ width: '100%', padding: '1.2rem', borderRadius: '20px', border: '2px solid #10b981', background: '#f8fafc', color: '#10b981', fontSize: '2rem', textAlign: 'center', fontWeight: '900', letterSpacing: '8px', outline: 'none' }} 
-                                placeholder="000000"
-                            />
-                        </div>
-
-                        <button 
-                            disabled={loading}
-                            onClick={handleVerifyOtp}
-                            style={{ 
-                                width: '100%', padding: '1.2rem', borderRadius: '22px', border: 'none', 
-                                background: '#10b981', color: '#fff', fontWeight: '900', fontSize: '1.2rem', cursor: 'pointer',
-                                boxShadow: '0 10px 20px rgba(16, 185, 129, 0.3)'
-                            }}
-                        >
-                            {loading ? 'Vérification...' : 'Valider mon compte'}
-                        </button>
-
-                        <button 
-                            onClick={() => setStep(2)}
-                            style={{ width: '100%', background: 'none', border: 'none', color: '#64748b', marginTop: '1.5rem', cursor: 'pointer', fontWeight: '600' }}
-                        >
-                            Retour / Modifier les infos
-                        </button>
-                    </div>
-                )}
+                ) : null}
 
                 <p style={{ textAlign: 'center', marginTop: '2.5rem', fontSize: '0.85rem', color: '#64748b', lineHeight: '1.5' }}>
                     En vous inscrivant, vous acceptez nos <span style={{ color: '#10b981', textDecoration: 'underline' }}>Conditions Générales</span> et la <span style={{ color: '#10b981', textDecoration: 'underline' }}>Politique de Confidentialité</span>.

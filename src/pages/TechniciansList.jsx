@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import API_URL from '../config';
 import { supabase } from '../supabaseClient';
 import { technicians } from '../data/mockData';
-import { Search, MapPin, Star, Phone, MessageCircle, AlertCircle } from 'lucide-react';
+import { Search, MapPin, Star, Phone, MessageCircle, AlertCircle, RefreshCw } from 'lucide-react';
 
 const TechniciansList = () => {
     const [searchParams] = useSearchParams();
@@ -250,44 +250,32 @@ const TechniciansList = () => {
                     <div className="animate-pulse">Chargement des techniciens...</div>
                 </div>
             ) : errorMsg ? (
-                <div className="container" style={{ padding: '1rem', textAlign: 'center' }}>
-                    <div className="card" style={{ padding: '2rem', border: '1px solid #ffc107', backgroundColor: '#fff8e1' }}>
-                        <div style={{ color: '#d32f2f', marginBottom: '1rem', fontWeight: 'bold' }}>
-                            Une erreur est survenue : {errorMsg}
-                        </div>
-                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                            <button className="btn btn-primary" onClick={() => window.location.reload()}>
-                                Réessayer
-                            </button>
-                            <button className="btn btn-outline" onClick={() => {
-                                setAllTechnicians(technicians);
-                                setErrorMsg(null);
-                                setLoading(false);
-                            }}>
-                                Passer en mode Démo (Test)
-                            </button>
-                        </div>
-                        <p style={{ marginTop: '1rem', fontSize: '0.8rem', color: '#856404' }}>
-                            Note: Vérifiez que votre projet Supabase est "Active" et relancez votre terminal avec <code>npm run dev</code>.
-                        </p>
+                <div style={{ textAlign: 'center', padding: '3rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ backgroundColor: '#fef2f2', color: '#dc2626', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.5rem' }}>
+                        <AlertCircle size={30} />
                     </div>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#1e293b' }}>Oups ! Service temporairement indisponible</h3>
+                    <p style={{ fontSize: '0.9rem', color: '#64748b', maxWidth: '300px', margin: '0 auto' }}>
+                        Une erreur est survenue lors du chargement des techniciens. Veuillez vérifier votre connexion et réessayer.
+                    </p>
+                    <button 
+                        className="btn btn-primary" 
+                        onClick={() => window.location.reload()}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0.6rem 2rem', borderRadius: '25px' }}
+                    >
+                        <RefreshCw size={18} /> Réessayer
+                    </button>
                 </div>
             ) : filteredTechnicians.length === 0 ? (
-                <div className="card" style={{ padding: '2rem', textAlign: 'center', backgroundColor: '#f8f9fa' }}>
-                    <p style={{ color: '#666', marginBottom: '1rem' }}>Aucun technicien trouvé pour cette recherche ou spécialité.</p>
-                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                        <button className="btn btn-outline" onClick={() => window.location.reload()}>
-                            Actualiser
-                        </button>
-                        <button className="btn btn-secondary" onClick={async () => {
-                            setLoading(true);
-                            const { data } = await supabase.from('users').select('fullname, role').limit(5);
-                            alert("Diagnostic Base (5 derniers utils): \n" + (data?.map(u => `${u.fullname} (${u.role})`).join('\n') || "Aucun utilisateur trouvé"));
-                            setLoading(false);
-                        }}>
-                             Vérifier la base
-                        </button>
-                    </div>
+                <div className="card" style={{ padding: '3rem 2rem', textAlign: 'center', backgroundColor: '#fff', borderRadius: '25px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🙏</div>
+                    <p style={{ color: '#1e293b', marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: '700', lineHeight: '1.4' }}>
+                        Je suis vraiment désolé.<br/>
+                        <span style={{ color: '#64748b', fontWeight: '500', fontSize: '1rem' }}>Aucun technicien n'est disponible pour le moment.</span>
+                    </p>
+                    <button className="btn btn-primary" onClick={() => window.location.reload()} style={{ padding: '0.6rem 2rem', borderRadius: '25px' }}>
+                        Actualiser
+                    </button>
                 </div>
             ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '0.4rem' }}>

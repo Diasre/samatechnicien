@@ -85,7 +85,7 @@ const LandingPage = () => {
                         opacity: '0',
                         animation: 'fadeInUp 0.8s ease-out 0.6s forwards'
                     }}>
-                        <Link to="/technicians" className="btn" style={{
+                        <Link to="/register" className="btn" style={{
                             backgroundColor: 'white',
                             color: 'var(--primary-color)',
                             fontWeight: 'bold',
@@ -171,7 +171,7 @@ const LandingPage = () => {
                                     Vendez vos articles et pièces détachées dans la boutique.
                                 </li>
                             </ul>
-                            <Link to="/technicians" className="btn btn-primary" style={{ marginTop: '1rem' }}>
+                            <Link to="/register" className="btn btn-primary" style={{ marginTop: '1rem' }}>
                                 Trouver un réparateur
                             </Link>
                         </div>
@@ -262,7 +262,7 @@ const LandingPage = () => {
                     }}>
                         Rejoignez dès aujourd'hui la première plateforme de réparation au Sénégal.
                     </p>
-                    <Link to="/technicians" className="btn btn-primary" style={{
+                    <Link to="/register" className="btn btn-primary" style={{
                         padding: '1rem 3rem',
                         fontSize: '1.2rem',
                         borderRadius: '30px',
