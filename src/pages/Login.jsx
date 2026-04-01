@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { Lock, Eye, EyeOff, User, Phone, QrCode, Smartphone, Download, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { isWeb } from '../utils/platform';
+import { isWeb, isNative } from '../utils/platform';
 
 const Login = () => {
     const navigate = useNavigate();
