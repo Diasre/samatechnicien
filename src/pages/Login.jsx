@@ -39,7 +39,7 @@ const Login = () => {
                 setSessionStatus('pending');
                 setQrError('');
                 
-                // 1. On crée une nouvelle session de synchronisation
+                // 1. On crée une nouvelle session (Action de base, doit normalement passer)
                 const { data, error } = await supabase
                     .from('web_login_sessions')
                     .insert([{ status: 'pending' }])
@@ -47,7 +47,7 @@ const Login = () => {
                     .single();
 
                 if (error) {
-                    setQrError(`Erreur Base de données: ${error.message}`);
+                    setQrError(`Erreur: ${error.message}`);
                     setSessionStatus('error');
                     return;
                 }
@@ -56,32 +56,36 @@ const Login = () => {
                     setSessionId(data.id);
                     sessionIdRef.current = data.id;
                     
-                    // 2. On écoute en temps réel les changements sur CETTE session précise
-                    subscription = supabase
-                        .channel(`session-${data.id}`)
-                        .on('postgres_changes', { 
-                            event: 'UPDATE', 
-                            schema: 'public', 
-                            table: 'web_login_sessions',
-                            filter: `id=eq.${data.id}` 
-                        }, (payload) => {
-                            const updated = payload.new;
-                            if (updated.status === 'scanning') {
-                                setSessionStatus('scanning');
-                            } else if (updated.status === 'confirmed' && updated.user_id) {
-                                setSessionStatus('confirmed');
-                                loginViaQR(updated.user_id);
-                            }
-                        })
-                        .subscribe();
+                    // 2. TENTATIVE DE TEMPS RÉEL (Isolation contre SecurityError)
+                    try {
+                        subscription = supabase
+                            .channel(`session-${data.id}`)
+                            .on('postgres_changes', { 
+                                event: 'UPDATE', 
+                                schema: 'public', 
+                                table: 'web_login_sessions',
+                                filter: `id=eq.${data.id}` 
+                            }, (payload) => {
+                                const updated = payload.new;
+                                if (updated.status === 'scanning') {
+                                    setSessionStatus('scanning');
+                                } else if (updated.status === 'confirmed' && updated.user_id) {
+                                    setSessionStatus('confirmed');
+                                    loginViaQR(updated.user_id);
+                                }
+                            })
+                            .subscribe((status) => {
+                                console.log("📡 Statut Realtime:", status);
+                            });
+                    } catch (subErr) {
+                        console.warn("⚠️ Le navigateur bloque le temps réel (SecurityError), on bascule sur le Polling seul.", subErr);
+                    }
 
-                    // 3. SYSTÈME DE SECOURS (POLLING)
-                    // Si le temps réel (Realtime) échoue, on vérifie manuellement toutes les 2 secondes
+                    // 3. SYSTÈME DE SECOURS (POLLING - TOUJOURS ACTIF)
                     pollingInterval = setInterval(async () => {
                         const currentId = sessionIdRef.current;
                         if (!currentId || sessionStatus === 'confirmed') return;
 
-                        console.log("🔄 Polling de secours sur ID:", currentId);
                         const { data: remoteData } = await supabase
                             .from('web_login_sessions')
                             .select('status, user_id')
@@ -97,7 +101,8 @@ const Login = () => {
                     }, 3000);
                 }
             } catch (err) {
-                console.error('💥 Échec critique QR:', err);
+                console.error('💥 Échec QR:', err);
+                setQrError(`Erreur Génétique: ${err.name} - ${err.message}`);
                 setSessionStatus('error');
             } finally {
                 setLoading(false);
