@@ -113,8 +113,8 @@ const Forum = () => {
         <div className="container" style={{ padding: '1rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                 <div>
-                    <h2 style={{ fontSize: '1.25rem', marginBottom: '0.25rem', color: '#10b981' }}>Forum SamaTechnicien 🚀</h2>
-                    <p style={{ fontSize: '0.8rem', color: '#666' }}>Connecté avec user_id ✅</p>
+                    <h2 style={{ fontSize: '1.25rem', marginBottom: '0.25rem' }}>Forum Techniciens</h2>
+                    <p style={{ fontSize: '0.8rem', color: '#666' }}>Espace de discussion entre professionnels</p>
                 </div>
                 <button
                     className="btn btn-primary"
