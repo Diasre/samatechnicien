@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Lock, Save, ArrowLeft, QrCode, Camera, LogOut, Power, Trash2 } from 'lucide-react';
+import { User, Lock, Save, ArrowLeft, QrCode, Camera, LogOut, Power, Trash2, Smartphone } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { QRCodeSVG } from 'qrcode.react';
