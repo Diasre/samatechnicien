@@ -19,6 +19,18 @@ const DiscussionThread = () => {
 
     useEffect(() => {
         fetchDiscussion();
+
+        // 🟢 ABONNEMENT TEMPS RÉEL (V185)
+        const sub = supabase.channel(`forum_thread_${id}`)
+            .on('postgres_changes', { event: 'INSERT', table: 'discussion_messages', filter: `discussion_id=eq.${id}` }, () => {
+                console.log("🆕 Nouveau message détecté par Realtime!");
+                fetchDiscussion(); // On recharge silencieusement
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(sub);
+        };
     }, [id]);
 
     const fetchDiscussion = async () => {
@@ -115,8 +127,11 @@ const DiscussionThread = () => {
         return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
     };
 
-    if (!currentUser || currentUser.role !== 'technician') {
-        return null;
+    const userRole = (currentUser?.role || "").toLowerCase();
+    const isTech = userRole.includes('tech') || userRole.includes('expert') || userRole.includes('pro');
+
+    if (!currentUser || !isTech) {
+        return <div style={{ textAlign: 'center', padding: '2rem' }}>⚠️ Accès réservé aux techniciens.</div>;
     }
 
     if (loading) {
@@ -140,6 +155,18 @@ const DiscussionThread = () => {
             </div>
         );
     }
+
+    const messagesEndRef = React.useRef(null);
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    useEffect(() => {
+        if (discussion?.messages) {
+            scrollToBottom();
+        }
+    }, [discussion?.messages]);
 
     return (
         <div style={{ 
@@ -199,8 +226,8 @@ const DiscussionThread = () => {
                     maxWidth: '85%',
                     boxShadow: '0 1px 1px rgba(0,0,0,0.1)',
                     position: 'relative',
-                    marginBottom: '15px',
-                    border: '1px solid #ddd'
+                    marginBottom: '10px',
+                    borderLeft: '4px solid #10b981'
                 }}>
                     <div style={{ fontWeight: '700', fontSize: '0.75rem', color: '#10b981', marginBottom: '4px' }}>
                         {discussion.authorName} (Auteur)
@@ -239,7 +266,7 @@ const DiscussionThread = () => {
                         </div>
                     );
                 })}
-                <div style={{ height: '70px' }}></div> {/* Spacer pour le footer */}
+                <div ref={messagesEndRef} style={{ height: '70px' }}></div> {/* Spacer & Scroll target */}
             </div>
 
             {/* Input Bar floating */}
