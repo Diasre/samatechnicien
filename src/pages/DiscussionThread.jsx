@@ -15,12 +15,7 @@ const DiscussionThread = () => {
 
     const currentUser = JSON.parse(localStorage.getItem('user'));
 
-    // Redirect if not a technician
-    useEffect(() => {
-        if (!currentUser || currentUser.role !== 'technician') {
-            navigate('/');
-        }
-    }, [currentUser, navigate]);
+    // Protected by App.jsx Route
 
     useEffect(() => {
         fetchDiscussion();

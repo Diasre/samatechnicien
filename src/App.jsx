@@ -33,7 +33,9 @@ const AdminRoute = ({ children }) => {
 const TechnicianRoute = ({ children }) => {
     const user = JSON.parse(localStorage.getItem('user'));
 
-    if (!user || user.role !== 'technician') {
+    const userRole = (user?.role || "").toLowerCase();
+    if (!user || (userRole !== 'technician' && userRole !== 'expert')) {
+        console.warn("🚫 Accès refusé (TechnicianRoute):", userRole);
         return <Navigate to="/login" replace />;
     }
 
