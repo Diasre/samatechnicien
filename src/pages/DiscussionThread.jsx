@@ -142,125 +142,170 @@ const DiscussionThread = () => {
     }
 
     return (
-        <div className="container" style={{ padding: '1rem', maxWidth: '900px', margin: '0 auto' }}>
-            {/* Back Button */}
-            <Link
-                to="/forum"
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    marginBottom: '1rem',
-                    textDecoration: 'none',
-                    color: '#666',
-                    fontSize: '0.85rem'
-                }}
-            >
-                <ArrowLeft size={16} /> Retour au forum
-            </Link>
+        <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            height: '100vh', 
+            background: '#efe7de', // Fond WhatsApp classique
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1000,
+            fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+        }}>
+            {/* Header style WhatsApp */}
+            <header style={{
+                background: '#075e54',
+                color: '#fff',
+                padding: '12px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                zIndex: 10
+            }}>
+                <button onClick={() => navigate('/forum')} style={{ background: 'none', border: 'none', color: '#fff', padding: '5px', cursor: 'pointer' }}>
+                    <ArrowLeft size={24} />
+                </button>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <h2 style={{ fontSize: '1.1rem', margin: 0, fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {discussion.title}
+                    </h2>
+                    <div style={{ fontSize: '0.75rem', opacity: 0.9 }}>
+                        {discussion.authorName} • {discussion.authorSpecialty}
+                    </div>
+                </div>
+            </header>
 
-            {/* Discussion Header */}
-            <div className="card" style={{ padding: '0.6rem', marginBottom: '0.5rem' }}>
-                <h2 style={{ fontSize: '0.95rem', marginBottom: '0.5rem', color: 'var(--primary-color)' }}>
-                    {discussion.title}
-                </h2>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem', paddingBottom: '0.5rem', borderBottom: '1px solid #eee' }}>
-                    <img
-                        src={discussion.authorImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(discussion.authorName)}&background=random&color=fff&size=48`}
-                        alt={discussion.authorName}
-                        style={{ width: '26px', height: '26px', borderRadius: '50%' }}
-                    />
-                    <div>
-                        <div style={{ fontWeight: '600', fontSize: '0.7rem' }}>{discussion.authorName}</div>
-                        <div style={{ fontSize: '0.6rem', color: '#666' }}>
-                            {discussion.authorSpecialty} • {formatDate(discussion.createdAt)}
-                        </div>
+            {/* Messages Area */}
+            <div style={{ 
+                flex: 1, 
+                overflowY: 'auto', 
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+                backgroundImage: 'url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png")', // Subtile pattern
+                backgroundBlendMode: 'overlay'
+            }}>
+                {/* Premier message (Auteur) */}
+                <div style={{
+                    alignSelf: 'flex-start',
+                    background: '#fff',
+                    padding: '8px 12px',
+                    borderRadius: '0 10px 10px 10px',
+                    maxWidth: '85%',
+                    boxShadow: '0 1px 1px rgba(0,0,0,0.1)',
+                    position: 'relative',
+                    marginBottom: '15px',
+                    border: '1px solid #ddd'
+                }}>
+                    <div style={{ fontWeight: '700', fontSize: '0.75rem', color: '#10b981', marginBottom: '4px' }}>
+                        {discussion.authorName} (Auteur)
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#111', lineHeight: '1.4', whiteSpace: 'pre-line' }}>{discussion.content}</p>
+                    <div style={{ textAlign: 'right', fontSize: '0.65rem', color: '#667781', marginTop: '4px' }}>
+                        {formatDate(discussion.createdAt)}
                     </div>
                 </div>
 
-                <p style={{ fontSize: '0.75rem', lineHeight: '1.3', color: '#333', whiteSpace: 'pre-line' }}>
-                    {discussion.content}
-                </p>
-            </div>
-
-            {/* Messages */}
-            <div style={{ marginBottom: '0.5rem' }}>
-                <h3 style={{ fontSize: '0.8rem', marginBottom: '0.4rem', color: '#666' }}>
-                    Réponses ({discussion.messages?.length || 0})
-                </h3>
-
-                {discussion.messages && discussion.messages.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                        {discussion.messages.map((msg) => (
-                            <div
-                                key={msg.id}
-                                className="card"
-                                style={{
-                                    padding: '0.5rem',
-                                    backgroundColor: msg.authorName === currentUser.fullName ? '#f0f9ff' : '#fff'
-                                }}
-                            >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: '0.3rem' }}>
-                                    <img
-                                        src={msg.authorImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.authorName)}&background=random&color=fff&size=32`}
-                                        alt={msg.authorName}
-                                        style={{ width: '24px', height: '24px', borderRadius: '50%' }}
-                                    />
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontWeight: '600', fontSize: '0.7rem' }}>{msg.authorName}</div>
-                                        <div style={{ fontSize: '0.6rem', color: '#888' }}>
-                                            {msg.authorSpecialty}
-                                        </div>
-                                    </div>
-                                    <div style={{ fontSize: '0.6rem', color: '#999', display: 'flex', alignItems: 'center', gap: '0.15rem' }}>
-                                        <Clock size={10} />
-                                        {formatDate(msg.createdAt)}
-                                    </div>
+                {/* Réponses */}
+                {discussion.messages?.map((msg) => {
+                    const isMe = msg.authorName === currentUser.fullName || msg.authorName === currentUser.fullname;
+                    return (
+                        <div
+                            key={msg.id}
+                            style={{
+                                alignSelf: isMe ? 'flex-end' : 'flex-start',
+                                background: isMe ? '#dcf8c6' : '#fff', // Vert WhatsApp pour moi
+                                padding: '8px 12px',
+                                borderRadius: isMe ? '10px 0 10px 10px' : '0 10px 10px 10px',
+                                maxWidth: '85%',
+                                boxShadow: '0 1px 1px rgba(0,0,0,0.1)',
+                                position: 'relative'
+                            }}
+                        >
+                            {!isMe && (
+                                <div style={{ fontWeight: '700', fontSize: '0.75rem', color: '#3b82f6', marginBottom: '4px' }}>
+                                    {msg.authorName} • {msg.authorSpecialty}
                                 </div>
-                                <p style={{ fontSize: '0.72rem', lineHeight: '1.3', color: '#444', margin: 0, whiteSpace: 'pre-line' }}>
-                                    {msg.message}
-                                </p>
+                            )}
+                            <p style={{ margin: 0, fontSize: '0.9rem', color: '#111', lineHeight: '1.4', whiteSpace: 'pre-line' }}>{msg.message}</p>
+                            <div style={{ textAlign: 'right', fontSize: '0.65rem', color: '#667781', marginTop: '4px' }}>
+                                {formatDate(msg.createdAt)}
                             </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="card" style={{ padding: '1rem', textAlign: 'center', color: '#999', fontSize: '0.75rem' }}>
-                        Aucune réponse pour le moment. Soyez le premier à répondre !
-                    </div>
-                )}
+                        </div>
+                    );
+                })}
+                <div style={{ height: '70px' }}></div> {/* Spacer pour le footer */}
             </div>
 
-            {/* Reply Form */}
-            <div className="card" style={{ padding: '0.6rem', position: 'sticky', bottom: '1rem', backgroundColor: '#fff' }}>
-                <h4 style={{ fontSize: '0.75rem', marginBottom: '0.4rem' }}>Votre réponse</h4>
-                <form onSubmit={handlePostMessage}>
+            {/* Input Bar floating */}
+            <div style={{
+                position: 'fixed',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                padding: '10px 12px',
+                background: '#f0f2f5',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                zIndex: 20
+            }}>
+                <div style={{ 
+                    flex: 1, 
+                    background: '#fff', 
+                    borderRadius: '25px', 
+                    padding: '0 10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    minHeight: '45px'
+                }}>
                     <textarea
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
-                        placeholder="Écrivez votre réponse..."
+                        placeholder="Tapez un message"
                         style={{
-                            width: '100%',
-                            padding: '0.4rem',
-                            borderRadius: '6px',
-                            border: '1px solid #ddd',
-                            fontSize: '0.75rem',
-                            minHeight: '50px',
-                            marginBottom: '0.5rem',
-                            resize: 'vertical'
+                            flex: 1,
+                            border: 'none',
+                            outline: 'none',
+                            padding: '10px 5px',
+                            fontSize: '0.95rem',
+                            resize: 'none',
+                            maxHeight: '100px',
+                            fontFamily: 'inherit'
                         }}
-                        required
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handlePostMessage(e);
+                            }
+                        }}
                     />
-                    <button
-                        type="submit"
-                        className="btn btn-primary"
-                        disabled={submitting}
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.72rem', padding: '0.35rem 0.7rem' }}
-                    >
-                        <Send size={14} />
-                        {submitting ? 'Envoi...' : 'Envoyer'}
-                    </button>
-                </form>
+                </div>
+                <button
+                    onClick={handlePostMessage}
+                    disabled={submitting || !message.trim()}
+                    style={{
+                        width: '45px',
+                        height: '45px',
+                        borderRadius: '50%',
+                        background: '#075e54',
+                        color: '#fff',
+                        border: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+                        transition: 'transform 0.2s'
+                    }}
+                >
+                    <Send size={20} />
+                </button>
             </div>
         </div>
     );

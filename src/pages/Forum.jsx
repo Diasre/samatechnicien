@@ -108,58 +108,87 @@ const Forum = () => {
     // Identité déjà validée en haut du composant
 
     return (
-        <div className="container" style={{ padding: '1rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <div>
-                    <h2 style={{ fontSize: '1.25rem', marginBottom: '0.25rem' }}>Forum Techniciens</h2>
-                    <p style={{ fontSize: '0.8rem', color: '#666' }}>Espace de discussion entre professionnels</p>
+        <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            height: '100vh', 
+            background: '#fff',
+            fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+            position: 'relative'
+        }}>
+            {/* Header WhatsApp */}
+            <header style={{
+                background: '#075e54',
+                color: '#fff',
+                padding: '16px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                position: 'sticky',
+                top: 0,
+                zIndex: 100
+            }}>
+                <h1 style={{ fontSize: '1.25rem', margin: 0, fontWeight: '700' }}>Communauté</h1>
+                <div style={{ fontSize: '0.8rem', opacity: 0.9 }}>
+                    Espace Pro
                 </div>
-                <button
-                    className="btn btn-primary"
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', fontSize: '0.85rem' }}
-                    onClick={() => setShowNewDiscussion(!showNewDiscussion)}
-                >
-                    <Plus size={16} />
-                    Nouvelle Discussion
-                </button>
-            </div>
+            </header>
 
-            {/* New Discussion Form */}
+            {/* Formulaire (S'affiche par dessus ou en haut) */}
             {showNewDiscussion && (
-                <div className="card" style={{ marginBottom: '1rem', padding: '1rem' }}>
-                    <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem' }}>Créer une nouvelle discussion</h3>
+                <div style={{ 
+                    padding: '16px', 
+                    background: '#f0f2f5', 
+                    borderBottom: '1px solid #ddd',
+                    animation: 'slideDown 0.3s ease'
+                }}>
+                    <h3 style={{ fontSize: '1rem', marginBottom: '12px', color: '#075e54' }}>Nouvelle discussion</h3>
                     <form onSubmit={handleCreateDiscussion}>
-
                         <textarea
-                            placeholder="Écrivez votre question ou sujet de discussion..."
+                            placeholder="De quoi voulez-vous discuter ?"
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
                             style={{
                                 width: '100%',
-                                padding: '0.5rem',
-                                borderRadius: '6px',
-                                border: '1px solid #ddd',
-                                fontSize: '0.9rem',
-                                minHeight: '120px',
-                                marginBottom: '0.75rem',
-                                resize: 'vertical'
+                                padding: '12px',
+                                borderRadius: '15px',
+                                border: 'none',
+                                fontSize: '0.95rem',
+                                minHeight: '100px',
+                                marginBottom: '12px',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                outline: 'none'
                             }}
                             required
                         />
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', gap: '8px' }}>
                             <button
                                 type="submit"
-                                className="btn btn-primary"
+                                style={{ 
+                                    background: '#25d366', 
+                                    color: '#fff', 
+                                    border: 'none', 
+                                    padding: '10px 20px', 
+                                    borderRadius: '20px',
+                                    fontWeight: '700',
+                                    cursor: 'pointer'
+                                }}
                                 disabled={submitting}
-                                style={{ fontSize: '0.85rem' }}
                             >
                                 {submitting ? 'Publication...' : 'Publier'}
                             </button>
                             <button
                                 type="button"
-                                className="btn btn-outline"
                                 onClick={() => setShowNewDiscussion(false)}
-                                style={{ fontSize: '0.85rem' }}
+                                style={{ 
+                                    background: 'transparent', 
+                                    color: '#666', 
+                                    border: 'none', 
+                                    padding: '10px 10px', 
+                                    fontWeight: '600',
+                                    cursor: 'pointer'
+                                }}
                             >
                                 Annuler
                             </button>
@@ -167,6 +196,13 @@ const Forum = () => {
                     </form>
                 </div>
             )}
+
+            <style>{`
+                @keyframes slideDown {
+                    from { transform: translateY(-20px); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
+                }
+            `}</style>
 
             {/* Discussions List */}
             {loading ? (
@@ -178,62 +214,114 @@ const Forum = () => {
                     <p style={{ color: '#999', fontSize: '0.8rem' }}>Soyez le premier à lancer une discussion !</p>
                 </div>
             ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', background: '#fff' }}>
                     {discussions.map(discussion => (
                         <Link
                             key={discussion.id}
                             to={`/forum/${discussion.id}`}
-                            className="card"
                             style={{
-                                padding: '1rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '12px 16px',
                                 textDecoration: 'none',
                                 color: 'inherit',
-                                transition: 'transform 0.2s, box-shadow 0.2s',
-                                cursor: 'pointer'
+                                borderBottom: '1px solid #f0f2f5',
+                                transition: 'background 0.2s'
                             }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = 'translateY(-2px)';
-                                e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.transform = 'translateY(0)';
-                                e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
-                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = '#f5f6f6'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}
                         >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                                <h3 style={{ fontSize: '1rem', margin: 0, color: 'var(--primary-color)' }}>
-                                    {discussion.title}
-                                </h3>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: '#666' }}>
-                                    <MessageCircle size={14} />
-                                    <span>{discussion.messageCount}</span>
-                                </div>
+                            {/* Avatar */}
+                            <div style={{ position: 'relative', marginRight: '15px' }}>
+                                <img
+                                    src={discussion.authorImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(discussion.authorName)}&background=random&color=fff&size=50`}
+                                    alt={discussion.authorName}
+                                    style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover' }}
+                                />
                             </div>
 
-                            <p style={{ fontSize: '0.85rem', color: '#555', marginBottom: '0.75rem', lineHeight: '1.4' }}>
-                                {discussion.content.length > 150 ? discussion.content.substring(0, 150) + '...' : discussion.content}
-                            </p>
-
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: '#888' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <img
-                                        src={discussion.authorImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(discussion.authorName)}&background=random&color=fff&size=32`}
-                                        alt={discussion.authorName}
-                                        style={{ width: '24px', height: '24px', borderRadius: '50%' }}
-                                    />
-                                    <span>{discussion.authorName}</span>
-                                    <span style={{ color: '#ccc' }}>•</span>
-                                    <span style={{ color: 'var(--primary-color)', fontSize: '0.7rem' }}>{discussion.authorSpecialty}</span>
+                            {/* Infos */}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                    <h3 style={{ 
+                                        fontSize: '1rem', 
+                                        margin: 0, 
+                                        fontWeight: '700', 
+                                        color: '#111b21',
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis'
+                                    }}>
+                                        {discussion.title}
+                                    </h3>
+                                    <span style={{ fontSize: '0.75rem', color: '#667781' }}>
+                                        {formatDate(discussion.createdAt)}
+                                    </span>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                    <Clock size={12} />
-                                    <span>{formatDate(discussion.createdAt)}</span>
+                                
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <p style={{ 
+                                        fontSize: '0.85rem', 
+                                        color: '#667781', 
+                                        margin: 0,
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        flex: 1
+                                    }}>
+                                        <span style={{ fontWeight: '600', color: 'var(--primary-color)' }}>{discussion.authorName}</span> : {discussion.content}
+                                    </p>
+                                    {discussion.messageCount > 0 && (
+                                        <span style={{ 
+                                            background: '#25d366', 
+                                            color: '#fff', 
+                                            fontSize: '0.7rem', 
+                                            minWidth: '20px', 
+                                            height: '20px', 
+                                            borderRadius: '10px', 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            justifyContent: 'center',
+                                            padding: '0 6px',
+                                            marginLeft: '8px',
+                                            fontWeight: '700'
+                                        }}>
+                                            {discussion.messageCount}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </Link>
                     ))}
                 </div>
             )}
+
+            {/* Floating Action Button (FAB) */}
+            <button
+                onClick={() => setShowNewDiscussion(!showNewDiscussion)}
+                style={{
+                    position: 'fixed',
+                    bottom: '100px',
+                    right: '25px',
+                    width: '60px',
+                    height: '60px',
+                    borderRadius: '50%',
+                    background: '#25d366',
+                    color: '#fff',
+                    border: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                    cursor: 'pointer',
+                    zIndex: 200,
+                    transition: 'transform 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            >
+                <Plus size={30} />
+            </button>
         </div>
     );
 };
