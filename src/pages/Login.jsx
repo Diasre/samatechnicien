@@ -222,7 +222,7 @@ const Login = () => {
                     <button style={{ padding: '1.2rem', borderRadius: '20px', background: '#1e293b', color: '#fff', border: 'none', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontSize: '1rem', cursor: 'pointer' }}>
                         <Smartphone size={20} /> Télécharger sur Android
                     </button>
-                    <button style={{ padding: '1.2rem', borderRadius: '20px', background: '#f1f5f9', color: '#1e293b', border: 'none', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontSize: '1rem', cursor: 'pointer', border: '1px solid #e2e8f0' }}>
+                    <button style={{ padding: '1.2rem', borderRadius: '20px', background: '#f1f5f9', color: '#1e293b', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontSize: '1rem', cursor: 'pointer', border: '1px solid #e2e8f0' }}>
                         iOS (Bientôt disponible)
                     </button>
                 </div>

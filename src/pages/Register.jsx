@@ -409,20 +409,46 @@ const Register = () => {
                         {formData.role === 'technician' && (
                             <>
                                 <div style={{ marginBottom: '1.2rem' }}>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b' }}>Votre Métier</label>
-                                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                                        <Hammer size={18} style={{ position: 'absolute', left: '1rem', color: '#10b981' }} />
-                                        <select 
-                                            name="specialty" 
-                                            value={formData.specialty} 
-                                            onChange={handleChange} 
-                                            style={{ width: '100%', padding: '1rem 1rem 1rem 2.8rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', color: '#1e293b', outline: 'none', appearance: 'none' }}
-                                        >
-                                            {specialtiesList.map(item => (
-                                                <option key={item} value={item}>{item}</option>
-                                            ))}
-                                        </select>
-                                        <div style={{ position: 'absolute', right: '1rem', pointerEvents: 'none' }}>▼</div>
+                                    <label style={{ display: 'block', marginBottom: '0.8rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b' }}>Votre Métier</label>
+                                    
+                                    {/* Barre de défilement horizontale */}
+                                    <div style={{ 
+                                        display: 'flex', 
+                                        overflowX: 'auto', 
+                                        gap: '12px', 
+                                        padding: '5px 5px 15px 5px',
+                                        msOverflowStyle: 'none',
+                                        scrollbarWidth: 'none',
+                                        WebkitOverflowScrolling: 'touch'
+                                    }}>
+                                        {specialtiesList.map(item => {
+                                            const isSelected = formData.specialty === item;
+                                            return (
+                                                <div 
+                                                    key={item}
+                                                    onClick={() => setFormData({ ...formData, specialty: item })}
+                                                    style={{
+                                                        flexShrink: 0,
+                                                        padding: '12px 20px',
+                                                        borderRadius: '18px',
+                                                        background: isSelected ? '#10b981' : '#fff',
+                                                        color: isSelected ? '#fff' : '#1e293b',
+                                                        border: `2px solid ${isSelected ? '#10b981' : '#f1f5f9'}`,
+                                                        fontWeight: '700',
+                                                        fontSize: '0.85rem',
+                                                        cursor: 'pointer',
+                                                        boxShadow: isSelected ? '0 8px 15px rgba(16, 185, 129, 0.2)' : '0 2px 4px rgba(0,0,0,0.02)',
+                                                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '8px'
+                                                    }}
+                                                >
+                                                    {isSelected && <CheckCircle2 size={16} />}
+                                                    {item}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
 

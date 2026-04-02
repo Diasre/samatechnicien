@@ -1412,31 +1412,21 @@ const ExpertDashboard = () => {
                                         };
 
                                         techTarget = await findQuote(extractedId);
-
+                                        
                                         if (techTarget) {
                                             openResponseForm(techTarget);
                                             setShowNotifModal(null);
                                             markAllRead(showNotifModal.id);
                                         } else {
-                                            // Fallback par Titre/Spécialité
-                                            const titlePart = showNotifModal.title.split(':').pop().trim();
-                                            techTarget = quotes.find(q => 
-                                                (q.title && q.title.includes(titlePart)) || 
-                                                (q.specialty && q.specialty.includes(titlePart))
-                                            );
-
-                                            if (techTarget) {
-                                                openResponseForm(techTarget);
+                                            // RECOURS : Si on a l'ID mais pas l'objet complet, on l'ouvre quand même
+                                            if (extractedId) {
+                                                console.log("🛠️ Ouverture forcée par ID:", extractedId);
+                                                openResponseForm(extractedId); 
                                                 setShowNotifModal(null);
+                                                markAllRead(showNotifModal.id);
                                             } else {
-                                                // DERNIER RECOURS (V146) : On ouvre quand même avec l'ID extrait
-                                                if (extractedId) {
-                                                    openResponseForm(extractedId); 
-                                                    setShowNotifModal(null);
-                                                } else {
-                                                    fetchData();
-                                                    alert("⌛ Synchronisation en cours... Réessayez.");
-                                                }
+                                                fetchData();
+                                                alert("⚠️ Données en cours de mise à jour. Veuillez réessayer dans un instant.");
                                             }
                                         }
                                     }}
@@ -1514,15 +1504,21 @@ const ExpertDashboard = () => {
                                                             setShowNotifsListModal(false);
                                                             markAllRead(notif.id);
                                                         } else {
+                                                            // Recherche serveur forcée sans jointures fragiles
                                                             const cleanId = quoteId ? quoteId.replace(/\D/g, '') : null;
-                                                            const { data: qServer } = await supabase.from('quotes').select('*, client:client_id(*)').eq('id', cleanId).maybeSingle();
-                                                            if (qServer) {
-                                                                openResponseForm(qServer);
-                                                                setShowNotifsListModal(false);
-                                                                markAllRead(notif.id);
-                                                            } else {
-                                                                fetchData();
-                                                                alert("⌛ Synchronisation...");
+                                                            try {
+                                                                const { data: qServer, error: qErr } = await supabase.from('quotes').select('*, client:client_id(*)').eq('id', cleanId).maybeSingle();
+                                                                if (qServer) {
+                                                                    openResponseForm(qServer);
+                                                                    setShowNotifsListModal(false);
+                                                                    markAllRead(notif.id);
+                                                                } else {
+                                                                    // Forçage même si profil client incomplet
+                                                                    openResponseForm(cleanId);
+                                                                    setShowNotifsListModal(false);
+                                                                }
+                                                            } catch (err) {
+                                                                openResponseForm(cleanId);
                                                             }
                                                         }
                                                     }}
