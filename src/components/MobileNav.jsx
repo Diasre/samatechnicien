@@ -14,7 +14,7 @@ const MobileNav = () => {
     }
     
     const userRole = (user?.role || "").toLowerCase();
-    const isTechnician = ['technician', 'technicien', 'expert', 'pro'].includes(userRole);
+    const isTechnician = userRole.includes('tech') || userRole.includes('expert') || userRole.includes('pro');
     const isLoggedIn = !!user;
 
     const isActive = (path) => location.pathname === path;

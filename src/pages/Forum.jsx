@@ -14,10 +14,10 @@ const Forum = () => {
     const navigate = useNavigate();
     const currentUser = JSON.parse(localStorage.getItem('user'));
 
-    const userRole = (currentUser?.role || "").toLowerCase().trim();
-    const isAuthorized = ['technician', 'technicien', 'expert', 'pro', 'expert-pro'].some(r => userRole.includes(r));
+    const userRole = (currentUser?.role || "").toLowerCase();
+    const isTech = userRole.includes('tech') || userRole.includes('expert') || userRole.includes('pro');
 
-    if (!currentUser || !isAuthorized) {
+    if (!currentUser || !isTech) {
         return <div style={{ textAlign: 'center', padding: '2rem' }}>⚠️ Accès réservé aux techniciens.</div>;
     }
 

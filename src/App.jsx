@@ -34,7 +34,7 @@ const TechnicianRoute = ({ children }) => {
     const user = JSON.parse(localStorage.getItem('user'));
 
     const userRole = (user?.role || "").toLowerCase().trim();
-    const isTech = ['technician', 'technicien', 'expert', 'pro', 'expert-pro'].some(r => userRole.includes(r));
+    const isTech = userRole.includes('tech') || userRole.includes('expert') || userRole.includes('pro');
 
     if (!user) {
         return <Navigate to="/login" replace />;
