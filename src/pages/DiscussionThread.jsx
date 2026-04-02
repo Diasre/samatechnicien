@@ -14,6 +14,17 @@ const DiscussionThread = () => {
     const [submitting, setSubmitting] = useState(false);
 
     const currentUser = JSON.parse(localStorage.getItem('user'));
+    const messagesEndRef = React.useRef(null);
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    useEffect(() => {
+        if (discussion?.messages) {
+            scrollToBottom();
+        }
+    }, [discussion?.messages]);
 
     // Protected by App.jsx Route
 
@@ -156,17 +167,6 @@ const DiscussionThread = () => {
         );
     }
 
-    const messagesEndRef = React.useRef(null);
-
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    };
-
-    useEffect(() => {
-        if (discussion?.messages) {
-            scrollToBottom();
-        }
-    }, [discussion?.messages]);
 
     return (
         <div style={{ 
