@@ -13,7 +13,8 @@ const MobileNav = () => {
         console.error('Mobile storage blocked:', e);
     }
     
-    const isTechnician = user?.role === 'technician';
+    const userRole = (user?.role || "").toLowerCase();
+    const isTechnician = ['technician', 'technicien', 'expert', 'pro'].includes(userRole);
     const isLoggedIn = !!user;
 
     const isActive = (path) => location.pathname === path;

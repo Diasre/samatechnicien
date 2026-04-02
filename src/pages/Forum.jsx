@@ -14,7 +14,12 @@ const Forum = () => {
     const navigate = useNavigate();
     const currentUser = JSON.parse(localStorage.getItem('user'));
 
-    // Protected by App.jsx Route
+    const userRole = (currentUser?.role || "").toLowerCase().trim();
+    const isAuthorized = ['technician', 'technicien', 'expert', 'pro', 'expert-pro'].some(r => userRole.includes(r));
+
+    if (!currentUser || !isAuthorized) {
+        return <div style={{ textAlign: 'center', padding: '2rem' }}>⚠️ Accès réservé aux techniciens.</div>;
+    }
 
     useEffect(() => {
         fetchDiscussions();
@@ -100,9 +105,7 @@ const Forum = () => {
         return date.toLocaleDateString('fr-FR');
     };
 
-    if (!currentUser || currentUser.role !== 'technician') {
-        return null;
-    }
+    // Identité déjà validée en haut du composant
 
     return (
         <div className="container" style={{ padding: '1rem' }}>

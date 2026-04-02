@@ -33,10 +33,16 @@ const AdminRoute = ({ children }) => {
 const TechnicianRoute = ({ children }) => {
     const user = JSON.parse(localStorage.getItem('user'));
 
-    const userRole = (user?.role || "").toLowerCase();
-    if (!user || (userRole !== 'technician' && userRole !== 'expert')) {
-        console.warn("🚫 Accès refusé (TechnicianRoute):", userRole);
+    const userRole = (user?.role || "").toLowerCase().trim();
+    const isTech = ['technician', 'technicien', 'expert', 'pro', 'expert-pro'].some(r => userRole.includes(r));
+
+    if (!user) {
         return <Navigate to="/login" replace />;
+    }
+
+    if (!isTech) {
+        console.warn("🚫 Rôle non reconnu pour accès Expert:", userRole);
+        return <Navigate to="/" replace />; // On renvoie à l'accueil plutôt que de déconnecter
     }
 
     return children;
@@ -115,11 +121,22 @@ function App() {
                         if (userData) {
                             console.log("✅ Profil identifié, mise à jour session...");
                             const finalUserData = userData || {}; 
+                            
+                            // 🛠️ RÉPARATION DU RÔLE (V180)
+                            // Si l'utilisateur était déjà connu comme tech, on garde ce rôle même si la DB est vide
+                            const oldUser = JSON.parse(localStorage.getItem('user') || '{}');
+                            const oldRole = (oldUser.role || "").toLowerCase();
+                            const isOldTech = ['technician', 'technicien', 'expert'].includes(oldRole);
+                            
+                            let finalRole = (finalUserData.role || "").toLowerCase().trim();
+                            if (!finalRole && isOldTech) finalRole = 'technician';
+                            if (!finalRole) finalRole = 'client';
+
                             const mappedUser = {
                                 ...finalUserData,
                                 fullName: finalUserData.fullname || finalUserData.full_name || finalUserData.fullName || "Utilisateur",
                                 isBlocked: (finalUserData.isblocked !== undefined ? finalUserData.isblocked : finalUserData.isBlocked) === 1,
-                                role: finalUserData.role || "client"
+                                role: finalRole
                             };
 
                             localStorage.setItem('user', JSON.stringify(mappedUser));
