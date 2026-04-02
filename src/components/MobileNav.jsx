@@ -22,7 +22,7 @@ const MobileNav = () => {
     const navItems = [
         { path: isTechnician ? '/expert-dashboard' : '/', icon: Home, label: 'Accueil' },
         ...(isTechnician ? [] : [{ path: '/technicians', icon: Users, label: 'Pros' }]),
-        { path: '/forum', icon: MessageCircle, label: 'Communauté' }, // Ajout Communauté
+        ...(isTechnician ? [{ path: '/forum', icon: MessageCircle, label: 'Communauté' }] : []),
         { path: '/marketplace', icon: ShoppingBag, label: 'Boutique' },
         { 
             path: isLoggedIn ? '/profile' : '/register', 
