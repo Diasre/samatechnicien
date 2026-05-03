@@ -655,7 +655,7 @@ const Marketplace = () => {
         .card-main-img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
             transition: transform 0.5s ease;
         }
         .market-card-premium:hover .card-main-img {
@@ -1302,7 +1302,7 @@ const Marketplace = () => {
 
             <div className="marketplace-grid" style={{ 
                 display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', 
+                gridTemplateColumns: window.innerWidth < 600 ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(200px, 1fr))', 
                 gap: '15px',
                 padding: '0 5px'
             }}>
