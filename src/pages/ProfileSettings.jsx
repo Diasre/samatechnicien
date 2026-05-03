@@ -90,6 +90,16 @@ const ProfileSettings = () => {
         fetchUserData();
     }, []);
 
+    // 🚀 AUTO-SCAN FROM SIDEBAR
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('scan') === 'true' && user) {
+            startScanner();
+            // Nettoyer l'URL
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+    }, [user]);
+
     const handleInputChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };

@@ -429,16 +429,41 @@ const Home = () => {
                             borderRadius: '28px',
                             maxHeight: 'calc(100vh - 2rem)'
                         }} onClick={e => e.stopPropagation()}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #374151', paddingBottom: '1rem' }}>
-                                <h2 style={{ margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <div style={{ backgroundColor: '#374151', padding: '8px', borderRadius: '50%' }}>
-                                        <Settings size={20} color="#60a5fa" />
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid #374151', paddingBottom: '1.5rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <h2 style={{ margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <div style={{ backgroundColor: '#374151', padding: '8px', borderRadius: '50%' }}>
+                                            <Settings size={20} color="#60a5fa" />
+                                        </div>
+                                        Paramètres
+                                    </h2>
+                                    <button onClick={() => setShowSidebar(false)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}>
+                                        <X size={24} />
+                                    </button>
+                                </div>
+
+                                {/* User Brief in Sidebar */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px', backgroundColor: '#1f2937', padding: '12px', borderRadius: '15px', border: '1px solid #374151' }}>
+                                    <div style={{ 
+                                        width: '50px', height: '50px', borderRadius: '15px', 
+                                        backgroundColor: 'var(--primary-color)', color: 'white',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: '1.2rem', fontWeight: '900', overflow: 'hidden',
+                                        boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
+                                    }}>
+                                        {user?.image ? (
+                                            <img src={user.image} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ) : (
+                                            (user?.fullname || user?.full_name || 'U').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+                                        )}
                                     </div>
-                                    Paramètres
-                                </h2>
-                                <button onClick={() => setShowSidebar(false)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}>
-                                    <X size={24} />
-                                </button>
+                                    <div style={{ flex: 1, overflow: 'hidden' }}>
+                                        <div style={{ fontWeight: '800', fontSize: '1rem', color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            {user?.fullname || user?.full_name || 'Utilisateur'}
+                                        </div>
+                                        <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{user?.role === 'technician' ? 'Expert Certifié' : 'Client Sama'}</div>
+                                    </div>
+                                </div>
                             </div>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -454,7 +479,31 @@ const Home = () => {
                                     onMouseOver={(e) => e.currentTarget.style.background = '#374151'}
                                     onMouseOut={(e) => e.currentTarget.style.background = '#1f2937'}
                                 >
-                                    <User size={18} color="#9ca3af" /> Mon Profil
+                                    <div style={{ 
+                                        width: '24px', height: '24px', borderRadius: '50%', 
+                                        backgroundColor: '#374151', overflow: 'hidden',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                    }}>
+                                        {user?.image ? (
+                                            <img src={user.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ) : (
+                                            <User size={14} color="#9ca3af" />
+                                        )}
+                                    </div>
+                                    Mon Profil
+                                </button>
+
+                                <button
+                                    onClick={() => { setShowSidebar(false); navigate('/profile-settings?scan=true'); }}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '12px',
+                                        width: '100%', padding: '12px', borderRadius: '10px',
+                                        background: '#007bff', color: 'white', border: 'none',
+                                        fontSize: '0.9rem', fontWeight: '800', cursor: 'pointer', textAlign: 'left',
+                                        boxShadow: '0 4px 12px rgba(0, 123, 255, 0.3)'
+                                    }}
+                                >
+                                    <QrCode size={18} color="white" /> Scanner un PC
                                 </button>
                                 
                                 <button
