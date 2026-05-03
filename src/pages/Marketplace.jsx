@@ -649,7 +649,7 @@ const Marketplace = () => {
         .card-image-wrapper {
             position: relative;
             aspect-ratio: 4/3;
-            max-height: 180px;
+            max-height: 160px;
             background: #f1f5f9;
         }
         .card-main-img {
@@ -1302,7 +1302,7 @@ const Marketplace = () => {
 
             <div className="marketplace-grid" style={{ 
                 display: 'grid', 
-                gridTemplateColumns: window.innerWidth < 600 ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(200px, 1fr))', 
+                gridTemplateColumns: window.innerWidth < 600 ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(170px, 1fr))', 
                 gap: '15px',
                 padding: '0 5px'
             }}>
