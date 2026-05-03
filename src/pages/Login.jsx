@@ -195,13 +195,14 @@ const Login = () => {
                     // 3. Stockage des informations (si pas admin)
                     localStorage.setItem('user', JSON.stringify(mappedUser));
 
-                    // 4. Redirection forcée
+                    // 4. Redirection forcée vers l'accueil ou le dashboard
                     setTimeout(() => {
-                        if (mappedUser.role === 'technician') window.location.href = '/expert-dashboard';
-                        else window.location.href = '/';
-                    }, 1000);
+                        if (mappedUser.role === 'technician') navigate('/expert-dashboard');
+                        else navigate('/');
+                    }, 500);
                 }
             } else {
+                console.error("❌ Utilisateur non trouvé");
                 setQrError("Profil introuvable en base. Veuillez réessayer.");
                 setSessionStatus('error');
             }
