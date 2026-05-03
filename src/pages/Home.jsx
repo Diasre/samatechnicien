@@ -8,7 +8,7 @@ import {
     Tv, Snowflake, BrickWall, Truck, Video, Layout, Shield, PlusCircle,
     Printer, Wifi, Palette, Leaf, Sprout, Eye, Wrench, FileText, Send, X,
     Bell, MessageSquare, Info, Image, Calendar, Clock, ArrowRight, Check, Trash2, MapPin,
-    Menu, LogOut, UserX, User, Flag
+    Menu, LogOut, UserX, User, Flag, QrCode
 } from 'lucide-react';
 import logo from '../assets/logo.png';
 
