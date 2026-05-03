@@ -648,13 +648,18 @@ const Marketplace = () => {
         
         .card-image-wrapper {
             position: relative;
-            height: 150px;
+            aspect-ratio: 4/3;
+            max-height: 180px;
             background: #f1f5f9;
         }
         .card-main-img {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+        .market-card-premium:hover .card-main-img {
+            transform: scale(1.05);
         }
         .badge-time {
             position: absolute;
@@ -1295,7 +1300,12 @@ const Marketplace = () => {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+            <div className="marketplace-grid" style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', 
+                gap: '15px',
+                padding: '0 5px'
+            }}>
                 {loading ? (
                     <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem' }}>
                         <div className="animate-spin" style={{ margin: '0 auto 1rem', width: '40px', height: '40px', border: '4px solid #f3f3f3', borderTop: '4px solid var(--primary-color)', borderRadius: '50%' }}></div>
