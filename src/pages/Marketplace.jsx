@@ -1380,7 +1380,7 @@ const Marketplace = () => {
                     </div>
 
                     {/* Image Carousel */}
-                    <div style={{ height: '350px', position: 'relative', background: '#000' }}>
+                    <div style={{ height: '500px', maxHeight: '70vh', position: 'relative', background: '#f8fafc' }}>
                         <ProductImageCarousel product={selectedProduct} />
                     </div>
 
@@ -1574,7 +1574,7 @@ const ProductImageCarousel = ({ product }) => {
                 src={images[idx]} 
                 onClick={() => setIsZoomed(true)}
                 alt={product.title}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'zoom-in', transition: 'transform 0.3s ease' }} 
+                style={{ width: '100%', height: '100%', objectFit: 'contain', cursor: 'zoom-in', transition: 'transform 0.3s ease' }} 
                 className="main-carousel-img"
             />
 
