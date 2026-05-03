@@ -468,7 +468,7 @@ const Home = () => {
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 <button
-                                    onClick={() => { setShowSidebar(false); navigate('/dashboard'); }}
+                                    onClick={() => { setShowSidebar(false); navigate('/profile'); }}
                                     style={{
                                         display: 'flex', alignItems: 'center', gap: '12px',
                                         width: '100%', padding: '12px', borderRadius: '10px',
@@ -494,7 +494,7 @@ const Home = () => {
                                 </button>
 
                                 <button
-                                    onClick={() => { setShowSidebar(false); navigate('/profile-settings?scan=true'); }}
+                                    onClick={() => { setShowSidebar(false); navigate('/profile?scan=true'); }}
                                     style={{
                                         display: 'flex', alignItems: 'center', gap: '12px',
                                         width: '100%', padding: '12px', borderRadius: '10px',
