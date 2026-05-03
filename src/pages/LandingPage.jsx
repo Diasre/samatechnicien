@@ -167,9 +167,41 @@ const LandingPage = () => {
                 <section className="container" style={{ marginBottom: '3rem', zIndex: 10, position: 'relative', marginTop: '-2rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', padding: '0 0.5rem' }}>
                         <h2 style={{ fontSize: '1.4rem', color: 'var(--text-primary)', margin: 0 }}>Derniers articles</h2>
-                        <Link to="/marketplace" style={{ color: 'var(--primary-color)', fontWeight: 'bold', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem' }}>
-                            Voir tout <ArrowRight size={16} />
-                        </Link>
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', gap: '5px', marginRight: '15px' }}>
+                                <button 
+                                    onClick={() => {
+                                        if (scrollContainerRef.current) {
+                                            scrollContainerRef.current.scrollBy({ left: -250, behavior: 'smooth' });
+                                        }
+                                    }}
+                                    style={{ 
+                                        width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #e2e8f0', 
+                                        background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        cursor: 'pointer', color: 'var(--primary-color)', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                                    }}
+                                >
+                                    <ArrowRight size={16} style={{ transform: 'rotate(180deg)' }} />
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        if (scrollContainerRef.current) {
+                                            scrollContainerRef.current.scrollBy({ left: 250, behavior: 'smooth' });
+                                        }
+                                    }}
+                                    style={{ 
+                                        width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #e2e8f0', 
+                                        background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        cursor: 'pointer', color: 'var(--primary-color)', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                                    }}
+                                >
+                                    <ArrowRight size={16} />
+                                </button>
+                            </div>
+                            <Link to="/marketplace" style={{ color: 'var(--primary-color)', fontWeight: 'bold', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem' }}>
+                                Voir tout <ArrowRight size={16} />
+                            </Link>
+                        </div>
                     </div>
                     <div ref={scrollContainerRef} style={{ 
                         display: 'flex', 
@@ -180,15 +212,16 @@ const LandingPage = () => {
                         paddingRight: '0.5rem',
                         scrollbarWidth: 'none',
                         msOverflowStyle: 'none',
-                        WebkitOverflowScrolling: 'touch'
+                        WebkitOverflowScrolling: 'touch',
+                        scrollBehavior: 'smooth'
                     }} className="hide-scrollbar">
                         <style>
                             {`.hide-scrollbar::-webkit-scrollbar { display: none; }`}
                         </style>
                         {products.map((product, idx) => (
                             <Link to={`/marketplace?id=${product.id}`} key={product.id} style={{ textDecoration: 'none', color: 'inherit', flex: '0 0 auto' }}>
-                                <div className="card feature-card" style={{ padding: '0', width: '180px', overflow: 'hidden', animationDelay: `${0.1 * (idx % 5)}s`, display: 'flex', flexDirection: 'column', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.08)' }}>
-                                    <div style={{ height: '130px', backgroundColor: '#f1f5f9', position: 'relative' }}>
+                                <div className="card feature-card" style={{ padding: '0', width: '200px', overflow: 'hidden', animationDelay: `${0.1 * (idx % 5)}s`, display: 'flex', flexDirection: 'column', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.08)', borderRadius: '15px' }}>
+                                    <div style={{ height: '150px', backgroundColor: '#f1f5f9', position: 'relative' }}>
                                         <img 
                                             src={[product.image, product.image2, product.image3].filter(Boolean)[0] || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.title || 'Produit')}&background=F1F5F9&color=007BFF&size=200`} 
                                             alt={product.title}
@@ -198,13 +231,13 @@ const LandingPage = () => {
                                             }}
                                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                         />
-                                        <div style={{ position: 'absolute', bottom: '6px', left: '6px', background: 'var(--primary-color)', color: 'white', fontWeight: '900', padding: '4px 8px', borderRadius: '8px', fontSize: '0.85rem', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+                                        <div style={{ position: 'absolute', bottom: '8px', left: '8px', background: 'var(--primary-color)', color: 'white', fontWeight: '900', padding: '5px 10px', borderRadius: '10px', fontSize: '0.85rem', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
                                             {Number(product.price).toLocaleString('fr-FR')} CFA
                                         </div>
                                     </div>
-                                    <div style={{ padding: '12px' }}>
-                                        <h4 style={{ fontSize: '0.9rem', fontWeight: '600', margin: '0 0 6px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#1e293b' }}>{product.title}</h4>
-                                        <p style={{ fontSize: '0.75rem', color: '#64748b', margin: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <div style={{ padding: '15px' }}>
+                                        <h4 style={{ fontSize: '0.95rem', fontWeight: '700', margin: '0 0 6px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#1e293b' }}>{product.title}</h4>
+                                        <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
                                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
                                             {product.address || 'Dakar'}
                                         </p>
