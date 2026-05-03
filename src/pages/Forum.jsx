@@ -228,8 +228,19 @@ const Forum = () => {
             background: '#f0f2f5', // Fond clair WhatsApp
             color: '#111b21', // Texte foncé WhatsApp
             fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-            position: 'relative'
+            position: 'relative',
+            overflowX: 'hidden'
         }}>
+            <div style={{
+                width: '100%',
+                maxWidth: '900px',
+                margin: '0 auto',
+                background: '#ffffff',
+                minHeight: '100vh',
+                boxShadow: '0 0 20px rgba(0,0,0,0.05)',
+                display: 'flex',
+                flexDirection: 'column'
+            }}>
             {/* Header WhatsApp Clair */}
             <header style={{
                 background: '#00a884',
@@ -531,6 +542,7 @@ const Forum = () => {
             >
                 <Edit2 size={26} />
             </button>
+            </div>
         </div>
     );
 };

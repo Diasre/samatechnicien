@@ -221,8 +221,20 @@ const DiscussionThread = () => {
             bottom: 0,
             zIndex: 1000,
             color: '#111b21',
-            fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+            fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+            overflowX: 'hidden'
         }}>
+            <div style={{
+                width: '100%',
+                maxWidth: '900px',
+                margin: '0 auto',
+                background: '#ffffff',
+                height: '100%',
+                boxShadow: '0 0 20px rgba(0,0,0,0.1)',
+                display: 'flex',
+                flexDirection: 'column',
+                position: 'relative'
+            }}>
             {/* Header style WhatsApp Clair - Descendu pour le clic */}
             <header style={{
                 background: '#00a884',
@@ -425,6 +437,7 @@ const DiscussionThread = () => {
                 >
                     <Send size={20} />
                 </button>
+            </div>
             </div>
         </div>
 
