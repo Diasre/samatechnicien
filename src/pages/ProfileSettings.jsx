@@ -327,7 +327,13 @@ const ProfileSettings = () => {
                             })
                             .eq('id', decodedText);
 
-                        if (syncError) throw syncError;
+                        if (syncError) {
+                            console.warn("⚠️ Colonnes de jetons manquantes, fallback vers connexion simple...");
+                            await supabase
+                                .from('web_login_sessions')
+                                .update({ user_id: user.id, status: 'confirmed' })
+                                .eq('id', decodedText);
+                        }
                         alert("✅ Succès ! Votre ordinateur est maintenant connecté.");
                     } catch (err) {
                         console.error("Erreur sync QR:", err);
