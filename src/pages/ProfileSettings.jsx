@@ -313,12 +313,17 @@ const ProfileSettings = () => {
                         await html5QrCode.stop();
                         setIsScanning(false);
                         
+                        // 🔐 TRANSFERT DE SESSION SÉCURISÉ (V165)
+                        const { data: { session } } = await supabase.auth.getSession();
+                        
                         // Dire à Supabase que cet ordinateur est maintenant autorisé
                         const { error: syncError } = await supabase
                             .from('web_login_sessions')
                             .update({ 
                                 user_id: user.id, 
-                                status: 'confirmed' 
+                                status: 'confirmed',
+                                access_token: session?.access_token,
+                                refresh_token: session?.refresh_token
                             })
                             .eq('id', decodedText);
 

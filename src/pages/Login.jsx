@@ -78,7 +78,10 @@ const Login = () => {
                                     setSessionStatus('scanning');
                                 } else if (updated.status === 'confirmed' && updated.user_id) {
                                     setSessionStatus('confirmed');
-                                    loginViaQR(updated.user_id);
+                                    loginViaQR(updated.user_id, {
+                                        access_token: updated.access_token,
+                                        refresh_token: updated.refresh_token
+                                    });
                                 }
                             })
                             .subscribe();
@@ -101,7 +104,10 @@ const Login = () => {
                             console.log("✅ Connecté !");
                             clearInterval(pollingInterval);
                             setSessionStatus('confirmed');
-                            loginViaQR(remoteData.user_id);
+                            loginViaQR(remoteData.user_id, {
+                                access_token: remoteData.access_token,
+                                refresh_token: remoteData.refresh_token
+                            });
                         }
                     }, 3000);
                 }
@@ -126,7 +132,7 @@ const Login = () => {
         };
     }, [isWeb]);
 
-    const loginViaQR = async (userId) => {
+    const loginViaQR = async (userId, tokens = null) => {
         setLoading(true);
         try {
             console.log("🧩 Synchronisation forcée pour ID:", userId);
@@ -143,6 +149,20 @@ const Login = () => {
             if (userData) {
                 console.log("✅ Utilisateur identifié !");
                 setSessionStatus('confirmed');
+
+                // 🔐 ÉTABLISSEMENT DE LA SESSION RÉELLE (V165)
+                if (tokens?.access_token) {
+                    try {
+                        const { error: sessionError } = await supabase.auth.setSession({
+                            access_token: tokens.access_token,
+                            refresh_token: tokens.refresh_token
+                        });
+                        if (sessionError) console.warn("Erreur setSession:", sessionError.message);
+                        else console.log("✨ Session Supabase établie sur le Web !");
+                    } catch (err) {
+                        console.error("Échec setSession:", err);
+                    }
+                }
 
                 // 2. Préparation du profil pour le stockage local
                 const mappedUser = { 
