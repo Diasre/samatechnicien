@@ -1,7 +1,7 @@
 :root {
   /* Brand Colors */
-  --primary-color: #2ECC71;
-  --primary-hover: #27AE60;
+  --primary-color: #007BFF;
+  --primary-hover: #0056b3;
   --secondary-color: #3498DB;
   --secondary-hover: #2980B9;
 
@@ -13,7 +13,7 @@
   --border-color: #E0E0E0;
 
   /* Status Colors */
-  --success-color: #2ECC71;
+  --success-color: #007bff;
   --warning-color: #F1C40F;
   --error-color: #E74C3C;
 
@@ -52,6 +52,7 @@ body {
   color: var(--text-primary);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 /* Typography Utilities */
@@ -246,7 +247,7 @@ p {
 }
 
 .nav-link:hover {
-  background-color: rgba(46, 204, 113, 0.1);
+  background-color: rgba(0, 123, 255, 0.1);
   color: var(--primary-color) !important;
   transform: translateY(-1px);
 }
@@ -254,7 +255,7 @@ p {
 .nav-link.active-link {
   background-color: var(--primary-color);
   color: white !important;
-  box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3);
+  box-shadow: 0 4px 10px rgba(0, 123, 255, 0.3);
 }
 
 /* 3D Effects for Marketplace */
@@ -423,3 +424,8 @@ p {
     display: none !important; 
   }
 }
+.badge-pro-mini { position: absolute; top: 10px; right: 10px; background: #e91e63; color: white; font-size: 0.65rem; font-weight: 900; padding: 2px 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(233,30,99,0.3); z-index: 5; }
+.badge-client-mini { position: absolute; top: 10px; right: 10px; background: #007bff; color: white; font-size: 0.65rem; font-weight: 900; padding: 2px 8px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0, 123, 255,0.3); z-index: 5; }
+
+input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0; width: 100%; height: 100%; position: absolute; left: 0; top: 0; cursor: pointer; }
+

@@ -41,20 +41,20 @@ const Footer = () => {
 
                 {/* Section Contact */}
                 <div>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: '800', marginBottom: '1.5rem', color: '#10b981' }}>Contactez-nous</h3>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: '800', marginBottom: '1.5rem', color: '#007bff' }}>Contactez-nous</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#cbd5e1' }}>
-                            <Mail size={18} color="#10b981" />
+                            <Mail size={18} color="#007bff" />
                             <a href="mailto:Dias@samatechnicien.com" style={{ color: 'inherit', textDecoration: 'none', fontWeight: '600' }}>
                                 Dias@samatechnicien.com
                             </a>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#cbd5e1' }}>
-                            <Phone size={18} color="#10b981" />
+                            <Phone size={18} color="#007bff" />
                             <span>+221 77 859 96 49</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#cbd5e1' }}>
-                            <MapPin size={18} color="#10b981" />
+                            <MapPin size={18} color="#007bff" />
                             <span>Dakar, Sénégal</span>
                         </div>
                     </div>
@@ -62,7 +62,7 @@ const Footer = () => {
 
                 {/* Section Liens Utiles */}
                 <div>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: '800', marginBottom: '1.5rem', color: '#10b981' }}>Liens Rapides</h3>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: '800', marginBottom: '1.5rem', color: '#007bff' }}>Liens Rapides</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         <a href="/" style={{ color: '#94a3b8', textDecoration: 'none', transition: '0.3s' }}>Accueil</a>
                         <a href="/login" style={{ color: '#94a3b8', textDecoration: 'none', transition: '0.3s' }}>Se connecter</a>
@@ -72,10 +72,10 @@ const Footer = () => {
                 </div>
 
                 {/* Section Confiance */}
-                <div style={{ background: 'rgba(16, 185, 129, 0.05)', padding: '1.5rem', borderRadius: '20px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
+                <div style={{ background: 'rgba(0, 123, 255, 0.05)', padding: '1.5rem', borderRadius: '20px', border: '1px solid rgba(0, 123, 255, 0.1)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                        <ShieldCheck size={24} color="#10b981" />
-                        <span style={{ fontWeight: '800', color: '#10b981' }}>100% Sécurisé</span>
+                        <ShieldCheck size={24} color="#007bff" />
+                        <span style={{ fontWeight: '800', color: '#007bff' }}>100% Sécurisé</span>
                     </div>
                     <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: 0 }}>
                         Toutes vos données et transactions sont protégées par notre système de sécurité avancé.

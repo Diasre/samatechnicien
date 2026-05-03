@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 
-const WelcomeOverlay = ({ userName, duration = 5000 }) => {
+const WelcomeOverlay = ({ userName, duration = 100 }) => {
     const [isVisible, setIsVisible] = useState(true);
     const [shouldRender, setShouldRender] = useState(true);
 

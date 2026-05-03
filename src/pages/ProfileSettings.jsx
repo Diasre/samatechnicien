@@ -110,12 +110,12 @@ const ProfileSettings = () => {
 
         try {
             const { error: uploadError } = await supabase.storage
-                .from('products') // Reuse products bucket for simplicity
+                .from('produits') // Reuse produits bucket for simplicity
                 .upload(fileName, imageFile);
 
             if (uploadError) throw uploadError;
 
-            const { data } = supabase.storage.from('products').getPublicUrl(fileName);
+            const { data } = supabase.storage.from('produits').getPublicUrl(fileName);
             return data.publicUrl;
         } catch (error) {
             console.error('Error uploading avatar:', error);
@@ -420,7 +420,7 @@ const ProfileSettings = () => {
                         {/* Image Upload */}
                         <div style={{ position: 'relative', width: '80px', height: '80px', marginBottom: '1rem' }}>
                             <img
-                                src={previewImage || user.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName)}&background=random&color=fff&size=150`}
+                                src={previewImage || user.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName)}&background=007bff&color=fff&size=150`}
                                 alt="Profile"
                                 style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: '2px solid #eee' }}
                             />
@@ -446,18 +446,18 @@ const ProfileSettings = () => {
                             <div
                                 onClick={startScanner}
                                 style={{
-                                    padding: '12px', border: '1px solid #10b981', borderRadius: '15px',
+                                    padding: '12px', border: '1px solid #007bff', borderRadius: '15px',
                                     cursor: 'pointer', backgroundColor: '#ecfdf5', transition: 'all 0.2s',
                                     display: 'flex', alignItems: 'center', gap: '12px', width: '100%'
                                 }}
                                 onMouseOver={e => e.currentTarget.style.backgroundColor = '#d1fae5'}
                                 onMouseOut={e => e.currentTarget.style.backgroundColor = '#ecfdf5'}
                             >
-                                <div style={{ background: '#10b981', padding: '8px', borderRadius: '10px', color: '#fff' }}>
+                                <div style={{ background: '#007bff', padding: '8px', borderRadius: '10px', color: '#fff' }}>
                                     <Smartphone size={20} />
                                 </div>
                                 <div style={{ textAlign: 'left' }}>
-                                    <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#10b981', display: 'block' }}>Connecter PC</span>
+                                    <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#007bff', display: 'block' }}>Connecter PC</span>
                                     <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Scanner un ordinateur</span>
                                 </div>
                             </div>
@@ -672,9 +672,14 @@ const ProfileSettings = () => {
                                     type="button"
                                     onClick={async () => {
                                         if (window.confirm("Voulez-vous vraiment vous déconnecter ?")) {
-                                            localStorage.removeItem('user');
-                                            await supabase.auth.signOut();
-                                            window.location.href = '/login';
+                                            try {
+                                                await supabase.auth.signOut();
+                                            } catch (err) {
+                                                console.error("SignOut error:", err);
+                                            } finally {
+                                                localStorage.clear();
+                                                window.location.href = '/login';
+                                            }
                                         }
                                     }}
                                     style={{ 

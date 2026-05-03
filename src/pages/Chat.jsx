@@ -440,7 +440,7 @@ const Chat = () => {
                                         width: '40px', height: '40px', borderRadius: '50%',
                                         backgroundColor: '#ddd', marginRight: '1rem',
                                         display: 'flex', justifyContent: 'center', alignItems: 'center',
-                                        overflow: 'hidden', border: conv.otherUser.role === 'technician' ? '2px solid #10b981' : 'none'
+                                        overflow: 'hidden', border: conv.otherUser.role === 'technician' ? '2px solid #007bff' : 'none'
                                     }}
                                 >
                                     {conv.otherUser.image ? (
@@ -452,7 +452,7 @@ const Chat = () => {
                                 <div>
                                     <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '5px' }}>
                                         {conv.otherUser.fullname || 'Utilisateur'}
-                                        {conv.otherUser.role === 'technician' && <CheckCircle size={12} color="#10b981" />}
+                                        {conv.otherUser.role === 'technician' && <CheckCircle size={12} color="#007bff" />}
                                     </div>
                                     <div style={{ fontSize: '0.8rem', color: '#888' }}>
                                         {conv.otherUser.role === 'technician' ? `Expert • ${conv.otherUser.specialty}` : 'Cliquez pour voir les messages'}
@@ -477,7 +477,7 @@ const Chat = () => {
                                     to={selectedConversation.otherUser.role === 'technician' ? `/technician/${selectedConversation.otherUser.id}` : '#'}
                                     style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', color: 'inherit' }}
                                 >
-                                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: selectedConversation.otherUser.role === 'technician' ? '2px solid #10b981' : 'none' }}>
+                                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: selectedConversation.otherUser.role === 'technician' ? '2px solid #007bff' : 'none' }}>
                                         {selectedConversation.otherUser.image ? (
                                             <img src={selectedConversation.otherUser.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                         ) : (
@@ -487,9 +487,9 @@ const Chat = () => {
                                     <div>
                                         <div style={{ fontWeight: '800', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
                                             {selectedConversation.otherUser.fullname}
-                                            {selectedConversation.otherUser.role === 'technician' && <ExternalLink size={12} color="#10b981" />}
+                                            {selectedConversation.otherUser.role === 'technician' && <ExternalLink size={12} color="#007bff" />}
                                         </div>
-                                        <div style={{ fontSize: '0.65rem', color: '#10b981' }}>{selectedConversation.otherUser.role === 'technician' ? selectedConversation.otherUser.specialty : 'En ligne'}</div>
+                                        <div style={{ fontSize: '0.65rem', color: '#007bff' }}>{selectedConversation.otherUser.role === 'technician' ? selectedConversation.otherUser.specialty : 'En ligne'}</div>
                                     </div>
                                 </Link>
                             </div>
@@ -498,7 +498,7 @@ const Chat = () => {
                             {user?.role === 'client' && (
                                 <button 
                                     onClick={validateProposal}
-                                    style={{ padding: '0.5rem 0.75rem', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', boxShadow: '0 2px 5px rgba(16, 185, 129, 0.3)' }}
+                                    style={{ padding: '0.5rem 0.75rem', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0, 123, 255, 0.3)' }}
                                 >
                                     <CheckCircle size={14} /> Valider l'Offre
                                 </button>
@@ -531,9 +531,9 @@ const Chat = () => {
                                         try {
                                             const devis = JSON.parse(msg.content.replace('JSON_DEVIS:', ''));
                                             return (
-                                                <div style={{ backgroundColor: 'white', border: '2px solid #10b981', borderRadius: '15px', padding: '1rem', color: '#1e293b', minWidth: '220px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.1)' }}>
+                                                <div style={{ backgroundColor: 'white', border: '2px solid #007bff', borderRadius: '15px', padding: '1rem', color: '#1e293b', minWidth: '220px', boxShadow: '0 4px 12px rgba(0, 123, 255, 0.1)' }}>
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #eee', pb: '8px', mb: '8px' }}>
-                                                        <span style={{ fontWeight: '900', color: '#10b981', fontSize: '0.9rem' }}>{devis.id}</span>
+                                                        <span style={{ fontWeight: '900', color: '#007bff', fontSize: '0.9rem' }}>{devis.id}</span>
                                                         <span style={{ fontSize: '0.65rem', backgroundColor: '#dcfce7', color: '#166534', px: '6px', borderRadius: '4px', height: 'fit-content' }}>PROPOSITION</span>
                                                     </div>
                                                     
@@ -557,7 +557,7 @@ const Chat = () => {
                                                         </div>
                                                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1rem', fontWeight: '900', color: '#1e293b', marginTop: '4px' }}>
                                                             <span>TOTAL TTC</span>
-                                                            <span style={{ color: '#10b981' }}>{devis.total_ttc.toLocaleString()} F</span>
+                                                            <span style={{ color: '#007bff' }}>{devis.total_ttc.toLocaleString()} F</span>
                                                         </div>
                                                     </div>
                                                     
@@ -568,7 +568,7 @@ const Chat = () => {
                                                     {user?.role === 'client' && (
                                                         <button 
                                                             onClick={validateProposal}
-                                                            style={{ width: '100%', padding: '0.6rem', background: '#10b981', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer' }}
+                                                            style={{ width: '100%', padding: '0.6rem', background: '#007bff', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer' }}
                                                         >
                                                             ✅ ACCEPTER CE DEVIS
                                                         </button>

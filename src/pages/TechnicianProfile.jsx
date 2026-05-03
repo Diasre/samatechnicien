@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { API_URL, WEB_URL } from '../config';
 import { supabase } from '../supabaseClient';
 import { technicians as mockTechnicians } from '../data/mockData';
-import { MapPin, Star, Phone, MessageCircle, MessageSquare, CheckCircle, ArrowLeft, AlertCircle, Edit, Share2, ShoppingBag, Flag } from 'lucide-react';
+import { MapPin, Star, Phone, MessageCircle, MessageSquare, CheckCircle, ArrowLeft, AlertCircle, Edit, Share2, ShoppingBag, Flag, ShieldCheck } from 'lucide-react';
 
 const TechnicianProfile = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const [tech, setTech] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const location = useLocation();
+    
+    // Attempt to use passed state for instant loading (Optimistic UI)
+    const [tech, setTech] = useState(location.state?.tech || null);
+    const [loading, setLoading] = useState(!location.state?.tech);
 
     // ... existing states ...
 
@@ -153,48 +156,37 @@ const TechnicianProfile = () => {
                     setTech({
                         ...techData,
                         name: techData.fullname || techData.fullName,
-                        image: techData.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(techData.fullname || techData.fullName)}&background=random&color=fff&size=200`,
+                        image: techData.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(techData.fullname || techData.fullName)}&background=007bff&color=fff&size=200`,
                         description: techData.description || 'Technicien professionnel référencé.',
                         is_verified: true,
+                        contrat_confiance: techData.contrat_confiance === true || techData.contrat_confiance === 'true' || techData.contrat_confiance === 1,
                         commentsEnabled: (techData.commentsenabled !== undefined ? techData.commentsenabled : techData.commentsEnabled) !== 0
+                    });
+
+                    // Incrémenter les vues du profil (Nouveau)
+                    supabase.rpc('increment_profile_views', { user_id: techData.id }).then(({ error }) => {
+                        if (error) console.error("Erreur incrément profil views:", error.message);
+                        else console.log("Vue profil incrémentée avec succès pour:", techData.id);
                     });
                 }
 
                 // Handle Reviews
-                const reviewsData = reviewsRes.data;
-                let calculatedRating = 0;
-                let calculatedCount = 0;
-
-                if (reviewsData) {
-                    const mappedReviews = reviewsData.map(r => ({
+                if (!reviewsRes.error && reviewsRes.data) {
+                    const mappedReviews = reviewsRes.data.map(r => ({
                         ...r,
                         clientName: r.client?.fullname || r.client_alt?.fullname || r.client?.fullName || 'Client Anonyme'
                     }));
                     setReviews(mappedReviews);
-
-                    calculatedCount = mappedReviews.length;
-                    if (calculatedCount > 0) {
-                        const total = mappedReviews.reduce((sum, r) => sum + r.rating, 0);
-                        calculatedRating = total / calculatedCount;
-                    }
-                }
-
-                // Update tech with calculated stats
-                if (techData) {
-                    setTech(prev => ({
-                        ...prev,
-                        rating: calculatedRating,
-                        reviews_count: calculatedCount
-                    }));
                 }
 
                 // Handle Products
-                if (productsRes.data) {
+                if (!productsRes.error && productsRes.data) {
                     setProducts(productsRes.data);
                 }
 
             } catch (error) {
                 console.error("Critical error loading technician profile:", error.message);
+                if (!tech) setLoading(false); // Only stop loading if we don't have tech data from state
             }
             setLoading(false);
         };
@@ -414,9 +406,14 @@ const TechnicianProfile = () => {
                         <Flag size={18} />
                     </button>
 
-                    <h2 style={{ marginTop: '0.5rem', marginBottom: '0.25rem', fontSize: '1.3rem' }}>
-                        {tech.name} {tech.is_verified && <CheckCircle size={18} color="var(--primary-color)" style={{ verticalAlign: 'middle' }} />}
+                    <h2 style={{ marginTop: '0.5rem', marginBottom: '0.25rem', fontSize: '1.3rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                        {tech.name} {tech.contrat_confiance && <ShieldCheck size={32} color="white" fill="#10b981" />}
                     </h2>
+                    {tech.contrat_confiance && (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#ecfdf5', padding: '4px 10px', borderRadius: '20px', color: '#059669', fontSize: '0.8rem', fontWeight: '800', marginTop: '0.3rem' }}>
+                            <ShieldCheck size={16} /> Contrat de Confiance Vérifié
+                        </div>
+                    )}
                     <p style={{ fontSize: '0.95rem', color: '#555' }}>{tech.specialty}</p>
                     <div style={{
                         display: 'flex', justifyContent: 'center', gap: '0.75rem', marginTop: '0.5rem',
@@ -432,6 +429,28 @@ const TechnicianProfile = () => {
                         }}>
                             <Star size={14} fill="gold" color="gold" /> {Number(tech.rating || 0).toFixed(1)} ({tech.reviews_count || 0})
                         </span>
+                        
+                        {/* 🟢 INDICATEUR DE PRÉSENCE AUTOMATIQUE */}
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            padding: '4px 10px',
+                            borderRadius: '20px',
+                            backgroundColor: tech.availability === 'available' ? '#f0fdf4' : '#fef2f2',
+                            border: `1px solid ${tech.availability === 'available' ? '#bbf7d0' : '#fecaca'}`,
+                            fontSize: '0.8rem',
+                            fontWeight: '800',
+                            color: tech.availability === 'available' ? '#16a34a' : '#dc2626'
+                        }}>
+                            <div style={{ 
+                                width: '8px', height: '8px', borderRadius: '50%', 
+                                backgroundColor: tech.availability === 'available' ? '#22c55e' : '#ef4444',
+                                boxShadow: tech.availability === 'available' ? '0 0 8px #22c55e' : 'none',
+                                animation: tech.availability === 'available' ? 'pulse 2s infinite' : 'none'
+                            }}></div>
+                            {tech.availability === 'available' ? 'EN LIGNE' : 'HORS-LIGNE'}
+                        </div>
                     </div>
                 </div>
 
@@ -584,14 +603,14 @@ const TechnicianProfile = () => {
                     <div style={{ padding: '1.5rem', borderTop: '1px solid #f0f0f0', backgroundColor: '#f9fafb' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <div style={{ backgroundColor: '#10b981', padding: '8px', borderRadius: '10px', color: 'white' }}>
+                                <div style={{ backgroundColor: '#007bff', padding: '8px', borderRadius: '10px', color: 'white' }}>
                                     <ShoppingBag size={20} />
                                 </div>
                                 <h3 style={{ fontSize: '1.2rem', fontWeight: '800', margin: 0, color: '#111' }}>
                                     Mes Publications & Articles
                                 </h3>
                             </div>
-                            <Link to="/marketplace" style={{ fontSize: '0.85rem', color: '#10b981', fontWeight: '600', textDecoration: 'none' }}>
+                            <Link to="/marketplace" style={{ fontSize: '0.85rem', color: '#007bff', fontWeight: '600', textDecoration: 'none' }}>
                                 Voir toute la boutique →
                             </Link>
                         </div>
@@ -623,6 +642,10 @@ const TechnicianProfile = () => {
                                         <img
                                             src={product.image || 'https://via.placeholder.com/150'}
                                             alt={product.title}
+                                            onError={(e) => {
+                                                e.target.onerror = null;
+                                                e.target.src = 'https://ui-avatars.com/api/?name=Produit&background=F1F5F9&color=64748B&size=200';
+                                            }}
                                             style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: '12px', marginBottom: '0.75rem' }}
                                         />
                                         {product.status === 'sold' && (
@@ -637,7 +660,7 @@ const TechnicianProfile = () => {
                                     <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#111', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                         {product.title}
                                     </div>
-                                    <div style={{ color: '#10b981', fontWeight: '800', fontSize: '1rem' }}>
+                                    <div style={{ color: '#007bff', fontWeight: '800', fontSize: '1rem' }}>
                                         {Number(product.price).toLocaleString()} <span style={{ fontSize: '0.7rem' }}>FCFA</span>
                                     </div>
                                     <div style={{

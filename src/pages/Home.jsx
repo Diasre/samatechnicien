@@ -7,7 +7,8 @@ import {
     ShieldCheck, Users, Monitor, Hammer, Droplets, Settings, Smartphone, 
     Tv, Snowflake, BrickWall, Truck, Video, Layout, Shield, PlusCircle,
     Printer, Wifi, Palette, Leaf, Sprout, Eye, Wrench, FileText, Send, X,
-    Bell, MessageSquare, Info, Image, Calendar, Clock, ChevronRight, Check, Trash2, MapPin
+    Bell, MessageSquare, Info, Image, Calendar, Clock, ArrowRight, Check, Trash2, MapPin,
+    Menu, LogOut, UserX, User, Flag
 } from 'lucide-react';
 import logo from '../assets/logo.png';
 
@@ -26,8 +27,11 @@ const Home = () => {
         photo_url: '' 
     });
     const [sendingQuote, setSendingQuote] = useState(false);
-    const [myQuotes, setMyQuotes] = useState([]);
-    const [loadingMyQuotes, setLoadingMyQuotes] = useState(false);
+    const [myQuotes, setMyQuotes] = useState(() => {
+        const saved = localStorage.getItem('ST_CACHE_QUOTES');
+        return saved ? JSON.parse(saved) : [];
+    });
+    const [loadingMyQuotes, setLoadingMyQuotes] = useState(myQuotes.length === 0);
     const [testSoundVisible, setTestSoundVisible] = useState(true);
     const [showNotifsListModal, setShowNotifsListModal] = useState(false);
     const [quoteToDelete, setQuoteToDelete] = useState(null); // Custom confirm modal
@@ -202,7 +206,7 @@ const Home = () => {
                     description: quoteData.description,
                     message: quoteData.description, // On garde message pour la rétro-compatibilité
                     billing_type: quoteData.billing_type,
-                    planned_date: quoteData.planned_date,
+                    planned_date: quoteData.planned_date || null,
                     photo_url: quoteData.photo_url,
                     address: quoteData.address,
                     status: 'en_attente',
@@ -234,6 +238,59 @@ const Home = () => {
     // SYSTÈME DE NOTIFICATIONS CLIENT (BELL & TOAST)
     const [notifications, setNotifications] = useState([]);
     const [devisNotifs, setDevisNotifs] = useState([]);
+    const [showSidebar, setShowSidebar] = useState(false);
+    const [feedbackMsg, setFeedbackMsg] = useState("");
+    const [sendingFeedback, setSendingFeedback] = useState(false);
+
+    const handleLogout = async () => {
+        if (!window.confirm("Voulez-vous vous déconnecter ?")) return;
+        await supabase.auth.signOut();
+        localStorage.removeItem('user');
+        localStorage.removeItem('ST_CACHE_TECH_DATA');
+        navigate('/login');
+    };
+
+    const handleDeleteAccount = async () => {
+        if (!window.confirm("⚠️ ATTENTION : Voulez-vous vraiment supprimer votre compte ? Cette action est irréversible.")) return;
+        if (!window.confirm("DERNIÈRE CONFIRMATION : Toutes vos données seront effacées.")) return;
+        
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const authUser = session?.user;
+            if (!authUser) return;
+
+            const { error } = await supabase.rpc('delete_user_account', { user_id: authUser.id });
+            if (error) throw error;
+
+            await supabase.auth.signOut();
+            localStorage.clear();
+            alert("Compte supprimé avec succès.");
+            navigate('/login');
+        } catch (err) {
+            alert("Erreur lors de la suppression : " + err.message);
+        }
+    };
+
+    const handleFeedbackSubmit = async (e) => {
+        if (e) e.preventDefault();
+        if (!feedbackMsg.trim()) return;
+        
+        setSendingFeedback(true);
+        try {
+            const { error } = await supabase.from('feedbacks').insert([{
+                user_id: user?.id,
+                message: feedbackMsg,
+                type: 'client_problem'
+            }]);
+            if (error) throw error;
+            alert("Merci ! Votre signalement a été envoyé.");
+            setFeedbackMsg("");
+        } catch (err) {
+            alert("Erreur : " + err.message);
+        } finally {
+            setSendingFeedback(false);
+        }
+    };
 
     const fetchNotifs = async () => {
         if (!user?.id) return;
@@ -346,7 +403,7 @@ const Home = () => {
         { name: 'Agriculture', icon: Sprout, color: '#16a34a' },
         { name: 'Vidéo Surveillance', icon: Eye, color: '#64748b' },
         { name: 'Maintenancier', icon: Wrench, color: '#f59e0b' },
-        { name: 'Autre', icon: PlusCircle, color: '#10b981' }
+        { name: 'Autre', icon: PlusCircle, color: '#007bff' }
     ];
 
     // Logged-in Home View
@@ -355,12 +412,127 @@ const Home = () => {
             <div className="container animate-fade-in" style={{ padding: '1rem', paddingBottom: '80px' }}>
                 <WelcomeOverlay userName={user?.fullName} duration={1500} />
 
+                {/* SIDEBAR OVERLAY */}
+                {showSidebar && (
+                    <div style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 20000,
+                        animation: 'fadeIn 0.2s ease-out'
+                    }} onClick={() => setShowSidebar(false)}>
+                        <div style={{
+                            position: 'absolute', top: '1rem', left: '1rem', bottom: 'auto',
+                            width: '280px', backgroundColor: '#111827', color: 'white',
+                            padding: '1.5rem 1rem', overflowY: 'auto',
+                            animation: 'slideInLeft 0.3s ease-out',
+                            boxShadow: '8px 8px 30px rgba(0,0,0,0.5)',
+                            display: 'flex', flexDirection: 'column', gap: '1.25rem',
+                            borderRadius: '28px',
+                            maxHeight: 'calc(100vh - 2rem)'
+                        }} onClick={e => e.stopPropagation()}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #374151', paddingBottom: '1rem' }}>
+                                <h2 style={{ margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <div style={{ backgroundColor: '#374151', padding: '8px', borderRadius: '50%' }}>
+                                        <Settings size={20} color="#60a5fa" />
+                                    </div>
+                                    Paramètres
+                                </h2>
+                                <button onClick={() => setShowSidebar(false)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}>
+                                    <X size={24} />
+                                </button>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                <button
+                                    onClick={() => { setShowSidebar(false); navigate('/dashboard'); }}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '12px',
+                                        width: '100%', padding: '12px', borderRadius: '10px',
+                                        background: '#1f2937', color: 'white', border: '1px solid #374151',
+                                        fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer', textAlign: 'left',
+                                        transition: 'background 0.2s'
+                                    }}
+                                    onMouseOver={(e) => e.currentTarget.style.background = '#374151'}
+                                    onMouseOut={(e) => e.currentTarget.style.background = '#1f2937'}
+                                >
+                                    <User size={18} color="#9ca3af" /> Mon Profil
+                                </button>
+                                
+                                <button
+                                    onClick={() => { setShowSidebar(false); handleLogout(); }}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '12px',
+                                        width: '100%', padding: '12px', borderRadius: '10px',
+                                        background: '#1f2937', color: '#fca5a5', border: '1px solid #374151',
+                                        fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer', textAlign: 'left',
+                                        transition: 'background 0.2s'
+                                    }}
+                                    onMouseOver={(e) => e.currentTarget.style.background = '#374151'}
+                                    onMouseOut={(e) => e.currentTarget.style.background = '#1f2937'}
+                                >
+                                    <LogOut size={18} color="#f87171" /> Déconnexion
+                                </button>
+
+                                <div style={{ borderTop: '1px solid #374151', margin: '10px 0' }}></div>
+                                <h4 style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px' }}>Avancé & Support</h4>
+
+                                <button
+                                    onClick={() => { setShowSidebar(false); handleDeleteAccount(); }}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '12px',
+                                        width: '100%', padding: '12px', borderRadius: '10px',
+                                        background: '#7f1d1d', color: '#fecaca', border: '1px solid #991b1b',
+                                        fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer', textAlign: 'left',
+                                        transition: 'background 0.2s'
+                                    }}
+                                    onMouseOver={(e) => e.currentTarget.style.background = '#991b1b'}
+                                    onMouseOut={(e) => e.currentTarget.style.background = '#7f1d1d'}
+                                >
+                                    <UserX size={18} color="#fca5a5" /> Supprimer mon compte
+                                </button>
+
+                                <div style={{ marginTop: '1rem', background: '#1f2937', padding: '1rem', borderRadius: '10px', border: '1px solid #374151' }}>
+                                    <p style={{ fontSize: '0.8rem', color: '#9ca3af', marginBottom: '10px' }}>Un problème ? Signalez-le ici :</p>
+                                    <form onSubmit={handleFeedbackSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        <textarea
+                                            value={feedbackMsg}
+                                            onChange={(e) => setFeedbackMsg(e.target.value)}
+                                            placeholder="Décrivez votre problème..."
+                                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #4b5563', fontSize: '0.85rem', minHeight: '80px', resize: 'none', backgroundColor: '#374151', color: 'white' }}
+                                        />
+                                        <button
+                                            type="submit"
+                                            disabled={sendingFeedback}
+                                            style={{
+                                                padding: '10px', borderRadius: '8px', border: 'none',
+                                                background: '#3b82f6', color: 'white', fontWeight: 'bold', cursor: 'pointer',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                                            }}
+                                        >
+                                            <Flag size={16} /> {sendingFeedback ? 'Envoi...' : "Envoyer"}
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                     <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
                         <img src={logo} alt="SamaTechnicien" style={{ height: '35px' }} />
-                        <span style={{ fontSize: '1.1rem', fontWeight: '900', color: '#1e293b' }}>SamaTechnicien Live 🚀</span>
+                        <span style={{ fontSize: '1.1rem', fontWeight: '900', color: '#1e293b' }}>SamaTechnicien</span>
                     </Link>
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <button 
+                            onClick={() => setShowSidebar(true)} 
+                            style={{ 
+                                backgroundColor: '#1e293b', padding: '10px 12px', borderRadius: '12px', 
+                                border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', 
+                                justifyContent: 'center', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' 
+                            }}
+                        >
+                            <Menu size={24} color="white" />
+                        </button>
                         {/* UNE SEULE CLOCHE PUISSANTE */}
                         <div style={{ position: 'relative' }}>
                             <button 
@@ -432,10 +604,10 @@ const Home = () => {
                         <button 
                             onClick={() => setShowQuoteModal(true)}
                             style={{ 
-                                width: '100%', padding: '1.2rem', background: '#10b981', color: '#fff', 
+                                width: '100%', padding: '1.2rem', background: '#007bff', color: '#fff', 
                                 border: 'none', borderRadius: '24px', fontWeight: '900', fontSize: '1.1rem', 
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
-                                boxShadow: '0 10px 20px rgba(16, 185, 129, 0.25)', cursor: 'pointer',
+                                boxShadow: '0 10px 20px rgba(0, 123, 255, 0.25)', cursor: 'pointer',
                                 marginBottom: '1.5rem', marginTop: '0.5rem'
                             }}
                         >
@@ -445,7 +617,7 @@ const Home = () => {
                 </div>
 
                 <div style={{ marginBottom: '1.5rem', marginTop: '1rem' }}>
-                    <h2 style={{ fontSize: '1.8rem', fontWeight: '900', color: '#1e293b', marginBottom: '0.2rem' }}>Espace Services</h2>
+                    <h2 style={{ fontSize: '1.8rem', fontWeight: '900', color: '#1e293b', marginBottom: '0.2rem' }}>Nos Services</h2>
                     <p style={{ fontSize: '1rem', color: '#64748b', fontWeight: '500' }}>Trouvez le bon technicien en un clic</p>
                 </div>
 
@@ -455,11 +627,11 @@ const Home = () => {
                         style={{ 
                             textDecoration: 'none', padding: '1.2rem', display: 'flex', flexDirection: 'column', 
                             alignItems: 'center', justifyContent: 'center', aspectRatio: '1 / 1', 
-                            borderRadius: '50%', border: '4px solid #10b981', background: 'white',
-                            boxShadow: '0 15px 35px rgba(16, 185, 129, 0.2)', transition: 'transform 0.2s'
+                            borderRadius: '50%', border: '4px solid #007bff', background: 'white',
+                            boxShadow: '0 15px 35px rgba(0, 123, 255, 0.2)', transition: 'transform 0.2s'
                         }}
                     >
-                        <div style={{ backgroundColor: '#10b981', color: 'white', width: '54px', height: '54px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.8rem' }}>
+                        <div style={{ backgroundColor: '#007bff', color: 'white', width: '54px', height: '54px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.8rem' }}>
                             <Users size={32} />
                         </div>
                         <h3 style={{ fontSize: '1rem', margin: 0, fontWeight: '800', color: '#1e293b', lineHeight: '1.1' }}>Trouver un<br />expert</h3>
@@ -477,7 +649,7 @@ const Home = () => {
                         <div style={{ backgroundColor: '#2196f3', color: 'white', width: '54px', height: '54px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.8rem' }}>
                             <ShieldCheck size={32} />
                         </div>
-                        <h3 style={{ fontSize: '1rem', margin: 0, fontWeight: '800', color: '#1e293b', lineHeight: '1.1' }}>Boutique<br />Pros</h3>
+                        <h3 style={{ fontSize: '1rem', margin: 0, fontWeight: '800', color: '#1e293b', lineHeight: '1.1' }}>Sama<br />Boutique</h3>
                     </Link>
 
                     <Link to="/invite" style={{ textDecoration: 'none', padding: '1.1rem', background: '#fff', border: '1px solid #f1f5f9', gridColumn: '1 / -1', display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', borderRadius: '100px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
@@ -491,7 +663,7 @@ const Home = () => {
                 <div style={{ textAlign: 'left', maxWidth: '440px', margin: '0 auto', width: '100%' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', padding: '0 10px' }}>
                         <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#1e293b' }}>Nos Métiers</h3>
-                        <Link to="/technicians" style={{ fontSize: '0.85rem', fontWeight: '700', color: '#10b981', textDecoration: 'none' }}>Tout voir →</Link>
+                        <Link to="/technicians" style={{ fontSize: '0.85rem', fontWeight: '700', color: '#007bff', textDecoration: 'none' }}>Tout voir →</Link>
                     </div>
                 </div>
 
@@ -500,7 +672,7 @@ const Home = () => {
                         <div style={{ marginBottom: '2rem', textAlign: 'left' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                                 <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#1e293b', margin: 0 }}>Mes Demandes Récents</h3>
-                                <div style={{ backgroundColor: '#10b981', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 'bold' }}>{myQuotes.length}</div>
+                                <div style={{ backgroundColor: '#007bff', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 'bold' }}>{myQuotes.length}</div>
                             </div>
                             
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px', padding: '5px 0 15px' }}>
@@ -593,7 +765,7 @@ const Home = () => {
                             </button>
                             
                             <div style={{ textAlign: 'center', marginBottom: '1.2rem' }}>
-                                <div style={{ backgroundColor: '#f0fdf4', width: '44px', height: '44px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.8rem', color: '#10b981' }}>
+                                <div style={{ backgroundColor: '#f0fdf4', width: '44px', height: '44px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.8rem', color: '#007bff' }}>
                                     <FileText size={24} />
                                 </div>
                                 <h2 style={{ fontSize: '1.3rem', fontWeight: '900', marginBottom: '0.2rem', color: '#1e293b' }}>Nouvelle Demande</h2>
@@ -603,7 +775,7 @@ const Home = () => {
                             <form onSubmit={(e) => { e.preventDefault(); handleSendQuote(); }} style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                                 <div style={{ marginBottom: '0.8rem' }}>
                                     <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: '900', color: '#1e293b', marginBottom: '0.6rem' }}>
-                                        <Settings size={16} color="#10b981" /> Choisir la Rubrique
+                                        <Settings size={16} color="#007bff" /> Choisir la Rubrique
                                     </label>
                                     <div style={{ 
                                         display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '10px',
@@ -620,14 +792,14 @@ const Home = () => {
                                                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
                                                     padding: '10px 15px', borderRadius: '18px',
                                                     background: quoteData.specialty === spec.name ? '#f0fdf4' : '#f8fafc',
-                                                    border: `2px solid ${quoteData.specialty === spec.name ? '#10b981' : '#f1f5f9'}`,
+                                                    border: `2px solid ${quoteData.specialty === spec.name ? '#007bff' : '#f1f5f9'}`,
                                                     cursor: 'pointer', transition: '0.2s',
-                                                    boxShadow: quoteData.specialty === spec.name ? '0 4px 12px rgba(16, 185, 129, 0.15)' : 'none'
+                                                    boxShadow: quoteData.specialty === spec.name ? '0 4px 12px rgba(0, 123, 255, 0.15)' : 'none'
                                                 }}
                                             >
                                                 <div style={{ 
                                                     width: '32px', height: '32px', borderRadius: '10px', 
-                                                    backgroundColor: quoteData.specialty === spec.name ? '#10b981' : '#fff',
+                                                    backgroundColor: quoteData.specialty === spec.name ? '#007bff' : '#fff',
                                                     color: quoteData.specialty === spec.name ? '#fff' : spec.color,
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center'
                                                 }}>
@@ -643,7 +815,7 @@ const Home = () => {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
                                     <div>
                                         <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: '900', color: '#1e293b', marginBottom: '0.6rem' }}>
-                                            <Clock size={16} color="#10b981" /> Type de Contrat
+                                            <Clock size={16} color="#007bff" /> Type de Contrat
                                         </label>
                                         <div style={{ display: 'flex', gap: '10px' }}>
                                             {['journalier', 'mensuel'].map(type => (
@@ -653,7 +825,7 @@ const Home = () => {
                                                     onClick={() => setQuoteData({ ...quoteData, billing_type: type })}
                                                     style={{ 
                                                         flex: 1, padding: '0.8rem', borderRadius: '14px', 
-                                                        border: `2px solid ${quoteData.billing_type === type ? '#10b981' : '#f1f5f9'}`,
+                                                        border: `2px solid ${quoteData.billing_type === type ? '#007bff' : '#f1f5f9'}`,
                                                         background: quoteData.billing_type === type ? '#f0fdf4' : '#f8fafc',
                                                         color: quoteData.billing_type === type ? '#065f46' : '#64748b',
                                                         fontWeight: '900', fontSize: '0.85rem', cursor: 'pointer',
@@ -681,10 +853,10 @@ const Home = () => {
                                 </div>
                                 <div style={{ marginBottom: '0.8rem' }}>
                                     <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: '900', color: '#1e293b', marginBottom: '0.6rem' }}>
-                                        <MapPin size={16} color="#10b981" /> Adresse d'intervention
+                                        <MapPin size={16} color="#007bff" /> Adresse d'intervention
                                     </label>
                                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                                        <MapPin size={18} style={{ position: 'absolute', left: '15px', color: '#10b981' }} />
+                                        <MapPin size={18} style={{ position: 'absolute', left: '15px', color: '#007bff' }} />
                                         <input 
                                             type="text"
                                             value={quoteData.address}
@@ -701,7 +873,7 @@ const Home = () => {
                                                 fontWeight: '600',
                                                 transition: 'all 0.2s'
                                             }}
-                                            onFocus={(e) => e.target.style.borderColor = '#10b981'}
+                                            onFocus={(e) => e.target.style.borderColor = '#007bff'}
                                             onBlur={(e) => e.target.style.borderColor = '#f1f5f9'}
                                         />
                                         <button 
@@ -744,10 +916,10 @@ const Home = () => {
                                             }}
                                             style={{ 
                                                 position: 'absolute', right: '10px', 
-                                                background: '#10b981', color: 'white', 
+                                                background: '#007bff', color: 'white', 
                                                 border: 'none', borderRadius: '12px', padding: '6px 10px', 
                                                 fontSize: '0.7rem', fontWeight: '900', cursor: 'pointer',
-                                                boxShadow: '0 4px 8px rgba(16, 185, 129, 0.2)'
+                                                boxShadow: '0 4px 8px rgba(0, 123, 255, 0.2)'
                                             }}
                                         >
                                             📍 Ma Position
@@ -772,12 +944,16 @@ const Home = () => {
                                         <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: '800', color: '#1e293b', marginBottom: '0.2rem' }}>
                                             <Calendar size={14} /> Planification
                                         </label>
-                                        <input 
-                                            type="date"
-                                            value={quoteData.planned_date}
-                                            onChange={(e) => setQuoteData({ ...quoteData, planned_date: e.target.value })}
-                                            style={{ width: '100%', padding: '0.7rem', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '0.8rem', outline: 'none' }}
-                                        />
+                                        <div style={{ position: 'relative' }}>
+                                            <input 
+                                                type="date"
+                                                className="custom-date-input"
+                                                value={quoteData.planned_date}
+                                                onChange={(e) => setQuoteData({ ...quoteData, planned_date: e.target.value })}
+                                                style={{ width: '100%', padding: '0.7rem', paddingRight: '2.5rem', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '0.8rem', outline: 'none' }}
+                                            />
+                                            <Calendar size={18} color="#94a3b8" style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                                        </div>
                                     </div>
                                     <div>
                                         <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: '800', color: '#1e293b', marginBottom: '0.2rem' }}>
@@ -798,7 +974,7 @@ const Home = () => {
                                             {quoteData.photo_url ? (
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                     <img src={quoteData.photo_url} style={{ width: '24px', height: '24px', borderRadius: '4px', objectFit: 'cover' }} alt="Thumb" />
-                                                    <span style={{ color: '#10b981', fontWeight: 'bold' }}> Photo OK</span>
+                                                    <span style={{ color: '#007bff', fontWeight: 'bold' }}> Photo OK</span>
                                                 </div>
                                             ) : (
                                                 <><PlusCircle size={14} /> Ajouter</>
@@ -811,10 +987,10 @@ const Home = () => {
                                     type="submit"
                                     disabled={sendingQuote}
                                     style={{ 
-                                        width: '100%', padding: '0.9rem', background: '#10b981', color: '#fff', 
+                                        width: '100%', padding: '0.9rem', background: '#007bff', color: '#fff', 
                                         border: 'none', borderRadius: '18px', fontWeight: '900', fontSize: '1rem', 
                                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                                        boxShadow: '0 8px 16px rgba(16, 185, 129, 0.2)', cursor: 'pointer',
+                                        boxShadow: '0 8px 16px rgba(0, 123, 255, 0.2)', cursor: 'pointer',
                                         marginTop: '0.3rem', transition: 'all 0.2s'
                                     }}
                                     onMouseOver={e => e.currentTarget.style.transform = 'translateY(-2px)'}
@@ -861,7 +1037,7 @@ const Home = () => {
                                                         {isOffer ? (
                                                             <div style={{ width: '40px', height: '40px', borderRadius: '12px', overflow: 'hidden', border: '2px solid #fbbf24' }}>
                                                                 <img 
-                                                                    src={notif.tech?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(notif.tech?.fullname || 'Expert')}&background=random&color=fff`} 
+                                                                    src={notif.tech?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(notif.tech?.fullname || 'Expert')}&background=007bff&color=fff`} 
                                                                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                                                 />
                                                             </div>
@@ -995,18 +1171,18 @@ const QuoteCard = ({ quote, navigate, onDelete, onRejectOffer }) => {
     };
 
     useEffect(() => {
+        let timer;
         fetchOffers();
-        const timer = setTimeout(fetchOffers, 1500);
         const sub = supabase.channel(`devis-sync-${quote.id}`)
             .on('postgres_changes', { event: 'INSERT', table: 'devis', filter: `demande_id=eq.${quote.id}` }, () => {
                 fetchOffers();
-                setTimeout(fetchOffers, 1000);
+                timer = setTimeout(fetchOffers, 1000);
             })
             .on('postgres_changes', { event: 'UPDATE', table: 'devis', filter: `demande_id=eq.${quote.id}` }, () => fetchOffers())
             .subscribe();
             
         return () => {
-            clearTimeout(timer);
+            if (timer) clearTimeout(timer);
             supabase.removeChannel(sub);
         };
     }, [quote.id]);
@@ -1015,6 +1191,15 @@ const QuoteCard = ({ quote, navigate, onDelete, onRejectOffer }) => {
         if (!confirm("Voulez-vous accepter ce devis et ouvrir le chat avec le technicien ?")) return;
         await supabase.from('devis').update({ statut: 'validé' }).eq('id', offer.id);
         await supabase.from('quotes').update({ status: 'fermée' }).eq('id', quote.id);
+        
+        await supabase.from('notifications').insert([{
+            user_id: offer.technicien_id,
+            title: `✅ Devis Accepté !`,
+            content: `Le client a validé votre offre pour la demande "${quote.title || 'sans titre'}". Vous êtes maintenant connectés !`,
+            type: 'offer_accepted',
+            seen: false
+        }]);
+
         navigate(`/chat?userId=${offer.technicien_id}`);
     };
 
@@ -1056,8 +1241,8 @@ const QuoteCard = ({ quote, navigate, onDelete, onRejectOffer }) => {
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: quote.status === 'fermée' ? '#ef4444' : '#10b981', animation: quote.status === 'fermée' ? 'none' : 'pulse 2s infinite' }}></div>
-                    <span style={{ fontSize: '0.75rem', color: quote.status === 'fermée' ? '#ef4444' : '#10b981', fontWeight: '800' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: quote.status === 'fermée' ? '#ef4444' : '#007bff', animation: quote.status === 'fermée' ? 'none' : 'pulse 2s infinite' }}></div>
+                    <span style={{ fontSize: '0.75rem', color: quote.status === 'fermée' ? '#ef4444' : '#007bff', fontWeight: '800' }}>
                         {quote.status === 'fermée' ? 'Demande Terminée' : 'Recherche Experts...'}
                     </span>
                 </div>
@@ -1097,9 +1282,9 @@ const QuoteCard = ({ quote, navigate, onDelete, onRejectOffer }) => {
                                             to={`/technician/${offer.technician?.id}`}
                                             style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none' }}
                                         >
-                                            <div style={{ width: '45px', height: '45px', borderRadius: '15px', overflow: 'hidden', border: '2px solid #10b981', backgroundColor: '#f1f5f9' }}>
+                                            <div style={{ width: '45px', height: '45px', borderRadius: '15px', overflow: 'hidden', border: '2px solid #007bff', backgroundColor: '#f1f5f9' }}>
                                                 <img 
-                                                    src={offer.technician?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(offer.technician?.fullname || 'Expert')}&background=random&color=fff`} 
+                                                    src={offer.technician?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(offer.technician?.fullname || 'Expert')}&background=007bff&color=fff`} 
                                                     alt="Expert" 
                                                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                                 />
@@ -1118,7 +1303,7 @@ const QuoteCard = ({ quote, navigate, onDelete, onRejectOffer }) => {
                                             <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: '700' }}>Prix Total</span>
                                         </div>
                                     </div>
-                                    <div style={{ backgroundColor: '#f8fafc', padding: '10px', borderRadius: '12px', marginBottom: '1.2rem', borderLeft: '4px solid #10b981' }}>
+                                    <div style={{ backgroundColor: '#f8fafc', padding: '10px', borderRadius: '12px', marginBottom: '1.2rem', borderLeft: '4px solid #007bff' }}>
                                         <p style={{ fontSize: '0.8rem', color: '#475569', margin: 0, fontStyle: 'italic', lineHeight: '1.5' }}>
                                             "{offer.note || 'Prêt à intervenir rapidement avec mon matériel.'}"
                                         </p>
@@ -1135,7 +1320,7 @@ const QuoteCard = ({ quote, navigate, onDelete, onRejectOffer }) => {
                                         </button>
                                         <button 
                                             onClick={() => handleAccept(offer)}
-                                            style={{ flex: 1.5, padding: '0.8rem', fontSize: '0.8rem', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '15px', fontWeight: '900', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.25)', cursor: 'pointer' }}
+                                            style={{ flex: 1.5, padding: '0.8rem', fontSize: '0.8rem', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '15px', fontWeight: '900', boxShadow: '0 4px 10px rgba(0, 123, 255, 0.25)', cursor: 'pointer' }}
                                         >
                                             ✅ Accepter & Contacter
                                         </button>

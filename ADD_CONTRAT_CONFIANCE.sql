@@ -1,0 +1,1 @@
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS contrat_confiance BOOLEAN DEFAULT FALSE;

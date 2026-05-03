@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import API_URL from '../config';
 import { supabase } from '../supabaseClient';
 import { technicians } from '../data/mockData';
-import { Search, MapPin, Star, Phone, MessageCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { Search, MapPin, Star, Phone, MessageCircle, AlertCircle, RefreshCw, ShieldCheck } from 'lucide-react';
 
 const TechniciansList = () => {
     const [searchParams] = useSearchParams();
@@ -11,8 +11,11 @@ const TechniciansList = () => {
     
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedSpecialty, setSelectedSpecialty] = useState(specialtyParam || '');
-    const [allTechnicians, setAllTechnicians] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [allTechnicians, setAllTechnicians] = useState(() => {
+        const saved = localStorage.getItem('ST_CACHE_TECHS');
+        return saved ? JSON.parse(saved) : [];
+    });
+    const [loading, setLoading] = useState(allTechnicians.length === 0);
     const [errorMsg, setErrorMsg] = useState(null);
 
     useEffect(() => {
@@ -88,10 +91,11 @@ const TechniciansList = () => {
                             city: user.city || 'Dakar',
                             district: user.district || '-',
                             phone: user.phone || null,
-                            image: user.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullname || user.fullName || 'T')}&background=random&color=fff&size=200`,
+                            image: user.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullname || user.fullName || 'T')}&background=007bff&color=fff&size=200`,
                             description: user.description || 'Expert professionnel disponible sur la plateforme.',
                             isBlocked: (user.isblocked == 1 || user.isBlocked == 1 || user.is_blocked === true),
-                            availability: user.availability || 'available'
+                            availability: user.availability || 'unavailable',
+                            contrat_confiance: user.contrat_confiance === true || user.contrat_confiance === 'true' || user.contrat_confiance === 1
                         };
                     });
 
@@ -103,6 +107,7 @@ const TechniciansList = () => {
                     });
                     
                     setAllTechnicians(realTechs);
+                    localStorage.setItem('ST_CACHE_TECHS', JSON.stringify(realTechs));
                 } else {
                     console.warn("No data returned from users table for role technician.");
                     setAllTechnicians([]);
@@ -245,11 +250,7 @@ const TechniciansList = () => {
             </div>
 
             {/* List */}
-            {loading ? (
-                <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
-                    <div className="animate-pulse">Chargement des techniciens...</div>
-                </div>
-            ) : errorMsg ? (
+            {errorMsg ? (
                 <div style={{ textAlign: 'center', padding: '3rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
                     <div style={{ backgroundColor: '#fef2f2', color: '#dc2626', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.5rem' }}>
                         <AlertCircle size={30} />
@@ -266,7 +267,7 @@ const TechniciansList = () => {
                         <RefreshCw size={18} /> Réessayer
                     </button>
                 </div>
-            ) : filteredTechnicians.length === 0 ? (
+            ) : filteredTechnicians.length === 0 && !loading ? (
                 <div className="card" style={{ padding: '3rem 2rem', textAlign: 'center', backgroundColor: '#fff', borderRadius: '25px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
                     <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🙏</div>
                     <p style={{ color: '#1e293b', marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: '700', lineHeight: '1.4' }}>
@@ -314,13 +315,20 @@ const TechniciansList = () => {
 
                             {/* Header Info */}
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '0.2rem' }}>
-                                <img
-                                    src={tech.image}
-                                    alt={tech.name}
-                                    style={{ width: '45px', height: '45px', borderRadius: '50%', objectFit: 'cover', marginBottom: '0.2rem', border: '1px solid #eee' }}
-                                />
+                                <div style={{ position: 'relative', marginBottom: '0.2rem' }}>
+                                    <img
+                                        src={tech.image}
+                                        alt={tech.name}
+                                        style={{ width: '45px', height: '45px', borderRadius: '50%', objectFit: 'cover', border: '1px solid #eee' }}
+                                    />
+                                </div>
                                 <div style={{ textAlign: 'center', width: '100%' }}>
-                                    <h3 style={{ fontSize: '0.8rem', margin: '0 0 0.1rem 0', fontWeight: 'bold' }}>{tech.name}</h3>
+                                    <h3 style={{ fontSize: '0.8rem', margin: '0 0 0.1rem 0', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                                        {tech.name}
+                                        {tech.contrat_confiance && (
+                                            <ShieldCheck size={28} color="#fff" fill="#10b981" title="Contrat de Confiance Vérifié" />
+                                        )}
+                                    </h3>
                                     <p style={{ margin: 0, color: 'var(--primary-color)', fontWeight: '600', fontSize: '0.7rem' }}>{tech.specialty}</p>
                                     {Number(tech.rating || 0) > 0 && (
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.2rem', fontSize: '0.75rem', color: '#f1c40f', marginTop: '0.1rem' }}>
@@ -353,7 +361,14 @@ const TechniciansList = () => {
                             {/* Actions (Always at the bottom) */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                                 <div style={{ display: 'flex', gap: '0.15rem' }}>
-                                    <Link to={`/technician/${tech.id}`} className="btn btn-outline" style={{ flex: 1, textAlign: 'center', textDecoration: 'none', padding: '0.15rem', fontSize: '0.65rem' }}>Profil</Link>
+                                    <Link 
+                                        to={`/technician/${tech.id}`} 
+                                        state={{ tech }}
+                                        className="btn btn-outline" 
+                                        style={{ flex: 1, textAlign: 'center', textDecoration: 'none', padding: '0.15rem', fontSize: '0.65rem' }}
+                                    >
+                                        Profil
+                                    </Link>
                                     <button
                                         className="btn btn-primary"
                                         style={{ flex: 1, padding: '0.15rem', fontSize: '0.65rem' }}

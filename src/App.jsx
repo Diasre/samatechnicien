@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { StatusBar, Style } from '@capacitor/status-bar';
 import { supabase } from './supabaseClient'; // Import supabase
 import Layout from './components/Layout';
 import Home from './pages/Home';
@@ -20,15 +21,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import UpdatePassword from './pages/UpdatePassword';
 import Terms from './pages/Terms';
 
-const AdminRoute = ({ children }) => {
-    const user = JSON.parse(localStorage.getItem('user'));
-
-    if (!user || user.email !== 'Diassecke@gmail.com') {
-        return <Navigate to="/" replace />;
-    }
-
-    return children;
-};
+// Dashboard is now open to all authenticated users
 
 const TechnicianRoute = ({ children }) => {
     const user = JSON.parse(localStorage.getItem('user'));
@@ -64,95 +57,129 @@ function App() {
     // 🌍 GESTIONNAIRE D'AUTHENTIFICATION GLOBAL
     // Écoute les connexions Supabase (ex: après clic email) sur TOUTES les pages
     useEffect(() => {
-        // Vérifier si l'utilisateur existe encore en base de données
-        // verifyProfile a été mis en pause car il provoquait des déconnexions intempestives (V98)
-        /*
-        const verifyProfile = async () => {
-            const stored = localStorage.getItem('user');
-            if (stored) {
-                try {
-                    const u = JSON.parse(stored);
-                    if (u?.id) {
-                        const { data, error } = await supabase.from('users').select('id').eq('id', u.id).maybeSingle();
-                        if (!data && !error) {
-                            console.warn('Profil introuvable, déconnexion...');
-                            localStorage.clear(); 
-                            await supabase.auth.signOut();
-                            window.location.reload();
-                        }
-                    }
-                } catch (e) { console.error(e); }
+        // 🔋 CONFIGURATION BARRE DE STATUT (V155)
+        const initStatusBar = async () => {
+            try {
+                // Définit le style des icônes (Sombre pour fond clair)
+                await StatusBar.setStyle({ style: Style.Light }); // Light style means DARK icons
+                // Assure que la barre est visible
+                await StatusBar.show();
+            } catch (e) {
+                console.log("StatusBar plugin not available");
             }
         };
-        verifyProfile();
-        */
+        initStatusBar();
+
+        // 🛠️ RÉCUPÉRATION DE SESSION AU CHARGEMENT (Persistent Session Guard)
+        const checkInitialSession = async () => {
+            const { data: { session }, error } = await supabase.auth.getSession();
+            
+            if (error || !session) {
+                if (localStorage.getItem('user')) {
+                    console.log("⚠️ Session expirée ou invalide. Nettoyage du cache...");
+                    localStorage.removeItem('user');
+                    if (!['/login', '/register', '/'].includes(window.location.pathname)) {
+                        window.location.href = '/login';
+                    }
+                }
+            } else if (session && !localStorage.getItem('user')) {
+                console.log("🛠️ Restauration de session locale depuis Supabase...");
+                await syncUserProfile(session.user);
+            }
+        };
+        
+        const syncUserProfile = async (authUser) => {
+            if (!authUser) return;
+            try {
+                // 2. On récupère le profil complet via l'ID
+                let { data: userData, error: fetchError } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('id', authUser.id)
+                    .maybeSingle();
+
+                // 🛡️ SECOURS : Recherche par téléphone si l'ID échoue (fréquent sur mobile)
+                if (!userData && authUser.phone) {
+                    console.log("🔍 Secours: Recherche profil par téléphone...");
+                    const cleanPhone = authUser.phone.replace('+', '');
+                    const { data: fallbackData } = await supabase
+                        .from('users')
+                        .select('*')
+                        .or(`phone.eq.${cleanPhone},phone.eq.${authUser.phone}`)
+                        .maybeSingle();
+                    if (fallbackData) userData = fallbackData;
+                }
+
+                if (userData) {
+                    console.log("✅ Profil identifié, mise à jour session...");
+                    const finalUserData = userData || {}; 
+                    
+                    // 🛠️ RÉPARATION DU RÔLE (V185)
+                    const oldUser = JSON.parse(localStorage.getItem('user') || '{}');
+                    const oldRole = (oldUser.role || "").toLowerCase();
+                    const isOldTech = ['technician', 'technicien', 'expert'].includes(oldRole);
+                    
+                    let finalRole = (finalUserData.role || "").toLowerCase().trim();
+                    if (!finalRole && isOldTech) finalRole = 'technician';
+                    if (!finalRole) finalRole = 'client';
+
+                    const mappedUser = {
+                        ...finalUserData,
+                        fullName: finalUserData.fullname || finalUserData.full_name || finalUserData.fullName || "Utilisateur",
+                        isBlocked: (finalUserData.isblocked !== undefined ? finalUserData.isblocked : finalUserData.isBlocked) === 1,
+                        role: finalRole
+                    };
+
+                    localStorage.setItem('user', JSON.stringify(mappedUser));
+                    
+                    // Ne pas recharger si on est déjà sur une page publique
+                    if (!['/login', '/register'].includes(window.location.pathname)) {
+                        window.location.reload();
+                    }
+                }
+            } catch (err) {
+                console.error("💥 Erreur lors de la synchronisation:", err);
+            }
+        };
+
+        checkInitialSession();
 
         const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log("🔔 Global Auth Event:", event);
+            console.log("🔔 Événement Auth:", event);
 
-            if (event === 'SIGNED_IN' && session) {
-                // L'utilisateur vient d'être connecté via Supabase (Magic Link ou autre)
-                // On vérifie si on a déjà la session locale "Legacy"
+            if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+                console.log("👋 Déconnexion détectée, nettoyage...");
+                localStorage.removeItem('user');
+                if (!['/login', '/register', '/'].includes(window.location.pathname)) {
+                    window.location.href = '/login';
+                }
+            } else if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
                 const localUser = localStorage.getItem('user');
-
-                if (!localUser) {
-                    try {
-                        console.log("🔄 Session Supabase détectée, synchronisation du profil pour ID:", session.user.id);
-
-                        // 2. On récupère le profil complet via l'ID
-                        let { data: userData, error: fetchError } = await supabase
-                            .from('users')
-                            .select('*')
-                            .eq('id', session.user.id)
-                            .maybeSingle();
-
-                        // 🛡️ SECOURS : Recherche par téléphone si l'ID échoue (fréquent sur mobile)
-                        if (!userData && session.user.phone) {
-                            console.log("🔍 Secours: Recherche profil par téléphone...");
-                            const cleanPhone = session.user.phone.replace('+', '');
-                            const { data: fallbackData } = await supabase
-                                .from('users')
-                                .select('*')
-                                .or(`phone.eq.${cleanPhone},phone.eq.${session.user.phone}`)
-                                .maybeSingle();
-                            if (fallbackData) userData = fallbackData;
-                        }
-
-                        if (userData) {
-                            console.log("✅ Profil identifié, mise à jour session...");
-                            const finalUserData = userData || {}; 
-                            
-                            // 🛠️ RÉPARATION DU RÔLE (V180)
-                            // Si l'utilisateur était déjà connu comme tech, on garde ce rôle même si la DB est vide
-                            const oldUser = JSON.parse(localStorage.getItem('user') || '{}');
-                            const oldRole = (oldUser.role || "").toLowerCase();
-                            const isOldTech = ['technician', 'technicien', 'expert'].includes(oldRole);
-                            
-                            let finalRole = (finalUserData.role || "").toLowerCase().trim();
-                            if (!finalRole && isOldTech) finalRole = 'technician';
-                            if (!finalRole) finalRole = 'client';
-
-                            const mappedUser = {
-                                ...finalUserData,
-                                fullName: finalUserData.fullname || finalUserData.full_name || finalUserData.fullName || "Utilisateur",
-                                isBlocked: (finalUserData.isblocked !== undefined ? finalUserData.isblocked : finalUserData.isBlocked) === 1,
-                                role: finalRole
-                            };
-
-                            localStorage.setItem('user', JSON.stringify(mappedUser));
-                            
-                            if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
-                                window.location.reload();
-                            }
-                        }
-                    } catch (err) {
-                        console.error("💥 Erreur critique lors de la synchronisation:", err);
-                    }
+                // On synchronise si localUser est absent OU si c'est un refresh (pour éviter les données obsolètes)
+                if (!localUser || event === 'TOKEN_REFRESHED') {
+                    await syncUserProfile(session.user);
                 }
             }
         });
 
+        // 🌍 SYSTÈME DE PRÉSENCE GLOBAL (V160)
+        const updateGlobalPresence = async (status) => {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user?.id) return;
+            try {
+                await supabase.from('users').update({ availability: status }).eq('id', user.id);
+            } catch (e) { /* ignore */ }
+        };
+
+        // En ligne à l'ouverture de l'app
+        updateGlobalPresence('available');
+        
+        // Heartbeat toutes les 60s
+        const globalHeartbeat = setInterval(() => updateGlobalPresence('available'), 60000);
+
         return () => {
+            clearInterval(globalHeartbeat);
+            updateGlobalPresence('unavailable');
             authListener?.subscription.unsubscribe();
         };
     }, []);
@@ -172,9 +199,9 @@ function App() {
                     <Route path="/update-password" element={<UpdatePassword />} />
                     <Route path="/terms" element={<Terms />} />
                     <Route path="/dashboard" element={
-                        <AdminRoute>
+                        <ProtectedRoute>
                             <Dashboard />
-                        </AdminRoute>
+                        </ProtectedRoute>
                     } />
                     <Route path="/expert-dashboard" element={
                         <TechnicianRoute>
@@ -182,14 +209,14 @@ function App() {
                         </TechnicianRoute>
                     } />
                     <Route path="/forum" element={
-                        <TechnicianRoute>
+                        <ProtectedRoute>
                             <Forum />
-                        </TechnicianRoute>
+                        </ProtectedRoute>
                     } />
                     <Route path="/forum/:id" element={
-                        <TechnicianRoute>
+                        <ProtectedRoute>
                             <DiscussionThread />
-                        </TechnicianRoute>
+                        </ProtectedRoute>
                     } />
                     <Route path="/profile" element={
                         <ProtectedRoute>

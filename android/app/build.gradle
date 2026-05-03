@@ -4,7 +4,7 @@ android {
     namespace "com.samatechnicien.app"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.samatechnicien.app"
+        applicationId "com.samatechnicien.aopp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 102

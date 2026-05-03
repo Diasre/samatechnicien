@@ -23,6 +23,13 @@ const Login = () => {
     const [sessionId, setSessionId] = useState('');
     const [sessionStatus, setSessionStatus] = useState('pending'); // 'pending', 'scanning', 'confirmed', 'error'
 
+    // States 2FA Admin
+    const [showAdmin2FA, setShowAdmin2FA] = useState(false);
+    const [otpCode, setOtpCode] = useState('');
+    const [tempAdminData, setTempAdminData] = useState(null);
+    const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+    const [otpError, setOtpError] = useState('');
+
     // 🌐 LOGIQUE WEB (Génération du QR Code et attente du scan)
     const [qrError, setQrError] = useState('');
 
@@ -144,15 +151,36 @@ const Login = () => {
                     role: userData.role || 'client'
                 };
 
-                // 3. Stockage des informations
-                localStorage.setItem('user', JSON.stringify(mappedUser));
+                // Vérification si c'est l'administrateur
+                const isAdmin = mappedUser.role === 'admin' 
+                    || mappedUser?.email?.toLowerCase() === 'diassecke@gmail.com'
+                    || mappedUser?.phone === '+221778599644'
+                    || mappedUser?.phone === '778599644';
 
-                // 4. Redirection forcée (Hard Reload) vers le bon dashboard
-                setTimeout(() => {
-                    if (mappedUser.role === 'admin') window.location.href = '/dashboard';
-                    else if (mappedUser.role === 'technician') window.location.href = '/expert-dashboard';
-                    else window.location.href = '/';
-                }, 1000);
+                if (isAdmin) {
+                    // Forcer les bonnes données pour le backend (même si la DB a un rôle différent)
+                    const adminData = { ...mappedUser, role: 'admin', email: 'Diassecke@gmail.com' };
+                    setTempAdminData(adminData);
+                    try {
+                        const { error: otpError } = await supabase.auth.signInWithOtp({
+                            email: 'Diassecke@gmail.com',
+                        });
+                        if (otpError) throw otpError;
+                        setShowAdmin2FA(true);
+                    } catch (err) {
+                        console.error("Erreur OTP Admin:", err);
+                        alert("Erreur lors de l'envoi du code 2FA: " + err.message);
+                    }
+                } else {
+                    // 3. Stockage des informations (si pas admin)
+                    localStorage.setItem('user', JSON.stringify(mappedUser));
+
+                    // 4. Redirection forcée
+                    setTimeout(() => {
+                        if (mappedUser.role === 'technician') window.location.href = '/expert-dashboard';
+                        else window.location.href = '/';
+                    }, 1000);
+                }
             } else {
                 setQrError("Profil introuvable en base. Veuillez réessayer.");
                 setSessionStatus('error');
@@ -163,6 +191,33 @@ const Login = () => {
             setSessionStatus('error');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const verifyAdminOtp = async () => {
+        if (!otpCode || otpCode.length < 4) {
+            setOtpError("Veuillez entrer le code valide.");
+            return;
+        }
+        setIsVerifyingOtp(true);
+        setOtpError('');
+        try {
+            const { data, error } = await supabase.auth.verifyOtp({
+                email: tempAdminData.email || 'Diassecke@gmail.com',
+                token: otpCode,
+                type: 'email'
+            });
+
+            if (error) throw error;
+
+            console.log("✅ 2FA réussi");
+            localStorage.setItem('user', JSON.stringify(tempAdminData));
+            window.location.href = '/dashboard';
+        } catch (error) {
+            console.error("Erreur de vérification OTP:", error);
+            setOtpError("Code incorrect ou expiré.");
+        } finally {
+            setIsVerifyingOtp(false);
         }
     };
 
@@ -204,6 +259,47 @@ const Login = () => {
         }
     };
 
+    // --- 🔐 RENDU ADMIN 2FA ---
+    if (showAdmin2FA) {
+        return (
+            <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', textAlign: 'center', fontFamily: "'Outfit', sans-serif" }}>
+                <div style={{ width: '80px', height: '80px', background: '#ecfdf5', borderRadius: '25px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '2rem', border: '2px solid #34d399' }}>
+                    <Lock size={40} color="#10b981" />
+                </div>
+                <h1 style={{ fontSize: '1.8rem', fontWeight: '900', color: '#1e293b', marginBottom: '1rem' }}>Sécurité Administrateur</h1>
+                <p style={{ color: '#64748b', fontSize: '1rem', marginBottom: '2rem', maxWidth: '320px' }}>
+                    Un code de sécurité a été envoyé à <b>{tempAdminData?.email || 'votre email'}</b>.
+                </p>
+
+                {otpError && <div style={{ color: '#ef4444', marginBottom: '1rem', fontWeight: 'bold' }}>{otpError}</div>}
+
+                <input 
+                    type="text" 
+                    maxLength="8" 
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                    placeholder="Entrez le code"
+                    style={{ width: '100%', maxWidth: '300px', padding: '1rem', fontSize: '1.5rem', textAlign: 'center', borderRadius: '15px', border: '2px solid #cbd5e1', marginBottom: '2rem', letterSpacing: '8px', fontWeight: '900' }}
+                />
+
+                <button 
+                    onClick={verifyAdminOtp}
+                    disabled={isVerifyingOtp}
+                    style={{ width: '100%', maxWidth: '300px', padding: '1.2rem', borderRadius: '20px', background: isVerifyingOtp ? '#9ca3af' : '#10b981', color: '#fff', border: 'none', fontWeight: '800', fontSize: '1.1rem', cursor: 'pointer' }}
+                >
+                    {isVerifyingOtp ? 'Vérification...' : 'Valider l\'accès'}
+                </button>
+
+                <button 
+                    onClick={() => { setShowAdmin2FA(false); setTempAdminData(null); supabase.auth.signOut(); }}
+                    style={{ marginTop: '1.5rem', background: 'none', border: 'none', color: '#64748b', fontWeight: '600', fontSize: '0.9rem', cursor: 'pointer', textDecoration: 'underline' }}
+                >
+                    Annuler
+                </button>
+            </div>
+        );
+    }
+
     // --- 📱 RENDU MOBILE BROWSER (Forcer le téléchargement) ---
     const isMobileBrowser = !isNative && window.innerWidth <= 768;
 
@@ -211,7 +307,7 @@ const Login = () => {
         return (
             <div style={{ minHeight: '100vh', background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', textAlign: 'center', fontFamily: "'Outfit', sans-serif" }}>
                 <div style={{ width: '100px', height: '100px', background: '#ecfdf5', borderRadius: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '2rem' }}>
-                    <Download size={50} color="#10b981" />
+                    <Download size={50} color="#007bff" />
                 </div>
                 <h1 style={{ fontSize: '1.8rem', fontWeight: '900', color: '#1e293b', marginBottom: '1rem' }}>Utilisez l'application SamaTechnicien</h1>
                 <p style={{ color: '#64748b', fontSize: '1.1rem', marginBottom: '3rem', maxWidth: '300px' }}>
@@ -229,7 +325,7 @@ const Login = () => {
 
                 <div style={{ marginTop: '4rem' }}>
                     <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Déjà sur l'application ?</p>
-                    <button onClick={() => window.location.reload()} style={{ background: 'none', border: 'none', color: '#10b981', fontWeight: '700', marginTop: '5px' }}>Rafraîchir la page</button>
+                    <button onClick={() => window.location.reload()} style={{ background: 'none', border: 'none', color: '#007bff', fontWeight: '700', marginTop: '5px' }}>Rafraîchir la page</button>
                 </div>
             </div>
         );
@@ -247,15 +343,15 @@ const Login = () => {
                         
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '25px', marginTop: '40px' }}>
                             <div style={{ display: 'flex', gap: '15px' }}>
-                                <div style={{ minWidth: '40px', height: '40px', borderRadius: '50%', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: '#10b981' }}>1</div>
+                                <div style={{ minWidth: '40px', height: '40px', borderRadius: '50%', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: '#007bff' }}>1</div>
                                 <p style={{ fontSize: '1.1rem', color: '#64748b' }}>Ouvrez l'application <b>SamaTechnicien</b> sur votre téléphone.</p>
                             </div>
                             <div style={{ display: 'flex', gap: '15px' }}>
-                                <div style={{ minWidth: '40px', height: '40px', borderRadius: '50%', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: '#10b981' }}>2</div>
-                                <p style={{ fontSize: '1.1rem', color: '#64748b' }}>Allez sur votre profil et appuyez sur <br/><b style={{ color: '#10b981' }}>Connecter PC</b>.</p>
+                                <div style={{ minWidth: '40px', height: '40px', borderRadius: '50%', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: '#007bff' }}>2</div>
+                                <p style={{ fontSize: '1.1rem', color: '#64748b' }}>Allez sur votre profil et appuyez sur <br/><b style={{ color: '#007bff' }}>Connecter PC</b>.</p>
                             </div>
                             <div style={{ display: 'flex', gap: '15px' }}>
-                                <div style={{ minWidth: '40px', height: '40px', borderRadius: '50%', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: '#10b981' }}>3</div>
+                                <div style={{ minWidth: '40px', height: '40px', borderRadius: '50%', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: '#007bff' }}>3</div>
                                 <p style={{ fontSize: '1.1rem', color: '#64748b' }}>Scannez ce code QR pour une connexion instantanée.</p>
                             </div>
                         </div>
@@ -270,7 +366,7 @@ const Login = () => {
                         {sessionStatus === 'confirmed' ? (
                             <div style={{ textAlign: 'center' }}>
                                 <div style={{ background: '#ecfdf5', padding: '20px', borderRadius: '50%', marginBottom: '20px' }}>
-                                    <CheckCircle2 size={60} color="#10b981" />
+                                    <CheckCircle2 size={60} color="#007bff" />
                                 </div>
                                 <h3 style={{ fontSize: '1.5rem', fontWeight: '800' }}>Connexion réussie !</h3>
                                 <p style={{ color: '#64748b' }}>Préparation de votre tableau de bord...</p>
@@ -284,7 +380,7 @@ const Login = () => {
                                 <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '20px' }}>{qrError || "Impossible de générer le code QR. Vérifiez votre connexion."}</p>
                                 <button 
                                     onClick={() => window.location.reload()} 
-                                    style={{ padding: '0.8rem 1.5rem', background: '#10b981', color: '#fff', border: 'none', borderRadius: '15px', fontWeight: '800', cursor: 'pointer' }}
+                                    style={{ padding: '0.8rem 1.5rem', background: '#007bff', color: '#fff', border: 'none', borderRadius: '15px', fontWeight: '800', cursor: 'pointer' }}
                                 >
                                     Réessayer
                                 </button>
@@ -310,14 +406,14 @@ const Login = () => {
                                     ) : (
                                         <div style={{ width: 260, height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                             <div style={{ textAlign: 'center' }}>
-                                                <Loader2 className="animate-spin" size={40} color="#10b981" />
+                                                <Loader2 className="animate-spin" size={40} color="#007bff" />
                                                 <p style={{ marginTop: '10px', fontSize: '0.85rem', color: '#64748b' }}>Génération...</p>
                                             </div>
                                         </div>
                                     )}
                                     {sessionStatus === 'scanning' && (
                                         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(255,255,255,0.9)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRadius: '25px' }}>
-                                            <Loader2 className="animate-spin" size={50} color="#10b981" />
+                                            <Loader2 className="animate-spin" size={50} color="#007bff" />
                                             <p style={{ marginTop: '15px', fontWeight: '800', color: '#1e293b' }}>Scan validé...</p>
                                         </div>
                                     )}
@@ -341,7 +437,7 @@ const Login = () => {
     // --- 📱 RENDU MOBILE APP NATIVE (Formulaire classique de ton image) ---
     return (
         <div style={{ minHeight: '100vh', background: `linear-gradient(rgba(255,255,255,0.4), rgba(255,255,255,0.6)), url('/light-bg.png')`, backgroundSize: 'cover', backgroundPosition: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', color: '#1e293b', fontFamily: "'Outfit', sans-serif" }}>
-            <div style={{ width: '60px', height: '60px', background: '#10b981', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem', boxShadow: '0 10px 20px rgba(16, 185, 129, 0.3)' }}>
+            <div style={{ width: '60px', height: '60px', background: '#007bff', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem', boxShadow: '0 10px 20px rgba(0, 123, 255, 0.3)' }}>
                 <Lock size={30} strokeWidth={2.5} color="#fff" />
             </div>
 
@@ -349,30 +445,33 @@ const Login = () => {
 
             <div style={{ width: '100%', maxWidth: '380px' }}>
                 <div style={{ display: 'flex', gap: '10px', marginBottom: '2rem' }}>
-                    <button onClick={() => setRole('client')} style={{ flex: 1, padding: '0.8rem', borderRadius: '18px', border: `2px solid ${role === 'client' ? '#10b981' : 'transparent'}`, background: role === 'client' ? '#10b981' : '#fff', color: role === 'client' ? '#fff' : '#1e293b', fontWeight: '800', cursor: 'pointer', transition: 'all 0.2s' }}>Client</button>
-                    <button onClick={() => setRole('technician')} style={{ flex: 1, padding: '0.8rem', borderRadius: '18px', border: `2px solid ${role === 'technician' ? '#10b981' : 'transparent'}`, background: role === 'technician' ? '#10b981' : '#fff', color: role === 'technician' ? '#fff' : '#1e293b', fontWeight: '800', cursor: 'pointer', transition: 'all 0.2s' }}>Technicien</button>
+                    <button onClick={() => setRole('client')} style={{ flex: 1, padding: '0.8rem', borderRadius: '18px', border: `2px solid ${role === 'client' ? '#007bff' : 'transparent'}`, background: role === 'client' ? '#007bff' : '#fff', color: role === 'client' ? '#fff' : '#1e293b', fontWeight: '800', cursor: 'pointer', transition: 'all 0.2s' }}>Client</button>
+                    <button onClick={() => setRole('technician')} style={{ flex: 1, padding: '0.8rem', borderRadius: '18px', border: `2px solid ${role === 'technician' ? '#007bff' : 'transparent'}`, background: role === 'technician' ? '#007bff' : '#fff', color: role === 'technician' ? '#fff' : '#1e293b', fontWeight: '800', cursor: 'pointer', transition: 'all 0.2s' }}>Technicien</button>
                 </div>
 
-                <div style={{ position: 'relative', borderBottom: '2px solid #10b981', marginBottom: '2rem', paddingBottom: '0.8rem', display: 'flex', alignItems: 'center' }}>
-                    <Phone size={20} style={{ position: 'absolute', left: '0', color: '#10b981' }} />
-                    <span style={{ position: 'absolute', left: '2rem', fontWeight: '900', fontSize: '1.2rem' }}>+221</span>
-                    <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} style={{ width: '100%', paddingLeft: '5.5rem', background: 'transparent', border: 'none', fontSize: '1.2rem', outline: 'none', fontWeight: '700' }} placeholder="77 000 00 00" />
+                <div style={{ position: 'relative', borderBottom: '2px solid #007bff', marginBottom: '2rem', paddingBottom: '0.8rem', display: 'flex', alignItems: 'center' }}>
+                    <div style={{ position: 'absolute', left: '0', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                        <span style={{ fontSize: '1.2rem', lineHeight: '1' }}>🇸🇳</span>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: '2px' }}><path d="m6 9 6 6 6-6"/></svg>
+                    </div>
+                    {/* Indicatif supprimé */}
+                    <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} style={{ width: '100%', paddingLeft: '3.5rem', background: 'transparent', border: 'none', fontSize: '1.2rem', outline: 'none', fontWeight: '500', color: '#1e293b', letterSpacing: '1px' }} placeholder="770000000" />
                 </div>
 
-                <div style={{ position: 'relative', borderBottom: '2px solid #10b981', marginBottom: '2.5rem', paddingBottom: '0.8rem' }}>
-                    <Lock size={20} style={{ position: 'relative', top: '10px', color: '#10b981' }} />
+                <div style={{ position: 'relative', borderBottom: '2px solid #007bff', marginBottom: '2.5rem', paddingBottom: '0.8rem' }}>
+                    <Lock size={20} style={{ position: 'relative', top: '10px', color: '#007bff' }} />
                     <input type={showPassword ? "text" : "password"} value={password} maxLength="4" onChange={(e) => setPassword(e.target.value.replace(/\D/g, ''))} style={{ width: '100%', paddingLeft: '2.5rem', background: 'transparent', border: 'none', fontSize: '1.2rem', outline: 'none', fontWeight: '700', letterSpacing: password ? '4px' : 'normal' }} placeholder="Code secret" />
                     <button onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: 0, top: '10px', background: 'none', border: 'none', cursor: 'pointer' }}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                 </div>
 
-                <button onClick={performLoginLogic} disabled={loading} style={{ width: '100%', padding: '1.2rem', background: '#10b981', color: '#fff', border: 'none', borderRadius: '20px', fontWeight: '900', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 10px 20px rgba(16, 185, 129, 0.2)' }}>
+                <button onClick={performLoginLogic} disabled={loading} style={{ width: '100%', padding: '1.2rem', background: '#007bff', color: '#fff', border: 'none', borderRadius: '20px', fontWeight: '900', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 10px 20px rgba(0, 123, 255, 0.2)' }}>
                     {loading ? 'Connexion en cours...' : 'Se connecter'}
                 </button>
 
                 <div style={{ marginTop: '2.5rem', textAlign: 'center' }}>
                     <p style={{ color: '#64748b', fontSize: '1rem', fontWeight: '500' }}>
                         Pas encore de compte ? <br/>
-                        <Link to="/register" style={{ color: '#10b981', fontWeight: '900', textDecoration: 'none', fontSize: '1.1rem' }}>
+                        <Link to="/register" style={{ color: '#007bff', fontWeight: '900', textDecoration: 'none', fontSize: '1.1rem' }}>
                             S'inscrire maintenant
                         </Link>
                     </p>

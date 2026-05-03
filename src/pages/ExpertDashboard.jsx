@@ -5,27 +5,36 @@ import { supabase } from '../supabaseClient';
 import { 
     User, Users, Settings, Star, MessageSquare, Phone, MapPin, CheckCircle, Save, 
     ArrowLeft, PlusCircle, ShoppingBag, Send, MessageCircle, Shield, Share2, 
-    Flag, Bell, Info, Clock, Calendar, Home, X
+    Flag, Bell, Info, Clock, Calendar, Home, X, LogOut, UserX, BarChart2, Trash2, Eye, ArrowRight, ShieldCheck, Upload, Menu, Edit
 } from 'lucide-react';
 import WelcomeOverlay from '../components/WelcomeOverlay';
 
 const ExpertDashboard = () => {
     const user = JSON.parse(localStorage.getItem('user'));
-    const [techData, setTechData] = useState(null);
+    const [techData, setTechData] = useState(() => {
+        const saved = localStorage.getItem('ST_CACHE_TECH_DATA');
+        return saved ? JSON.parse(saved) : null;
+    });
     const [reviews, setReviews] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!techData);
     const [isSaving, setIsSaving] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const [feedbackMsg, setFeedbackMsg] = useState('');
     const [sendingFeedback, setSendingFeedback] = useState(false);
-    const [products, setProducts] = useState([]);
-    const [quotes, setQuotes] = useState([]);
+    const [products, setProducts] = useState(() => {
+        const saved = localStorage.getItem('ST_CACHE_PRODS');
+        return saved ? JSON.parse(saved) : [];
+    });
+    const [quotes, setQuotes] = useState(() => {
+        const saved = localStorage.getItem('ST_CACHE_QUOTES');
+        return saved ? JSON.parse(saved) : [];
+    });
     const [activeConversations, setActiveConversations] = useState([]);
     const [loadingQuotes, setLoadingQuotes] = useState(false);
     const [sendingQuickMsg, setSendingQuickMsg] = useState(null);
     const [sentOffers, setSentOffers] = useState([]);
     const [loadingSent, setLoadingSent] = useState(false);
-    const [contactPhone, setContactPhone] = useState("");
+    const [contactPhone, setContactPhone] = useState(techData?.phone || "");
     const [showResponseModal, setShowResponseModal] = useState(false);
     const [selectedQuote, setSelectedQuote] = useState(null);
     const [customResponse, setCustomResponse] = useState("");
@@ -35,12 +44,40 @@ const ExpertDashboard = () => {
     const [showNotifModal, setShowNotifModal] = useState(null); 
     const [showNotifsListModal, setShowNotifsListModal] = useState(false); 
     const [devisLines, setDevisLines] = useState([{ desc: "Prestation", qty: 1, price: 0 }]); // Restored (V132)
+    const [showFeedback, setShowFeedback] = useState(false);
+    const [showAdvanced, setShowAdvanced] = useState(false);
+    const [showSidebar, setShowSidebar] = useState(false);
+    
+    // KYC States
+    const [kycFileRecto, setKycFileRecto] = useState(null);
+    const [kycFileVerso, setKycFileVerso] = useState(null);
+    const [uploadingKYC, setUploadingKYC] = useState(false);
+    const [kycError, setKycError] = useState('');
+    // 🟢 SYSTÈME DE PRÉSENCE AUTOMATIQUE (V150)
+    useEffect(() => {
+        if (!user?.id) return;
 
-    // Import Supabase client if not already imported at top (I will add import in next step or assume it) 
-    // Wait, I need to check imports. 
-    // The previous file content shows API_URL import but NOT supabase. 
-    // I will fix imports in a separate call or try to merge if I can, but replace_file_content targets specific block.
-    // I'll stick to replacing the logic block first.
+        const updatePresence = async (status) => {
+            try {
+                await supabase.from('users').update({ availability: status }).eq('id', user.id);
+                setTechData(prev => prev ? { ...prev, availability: status } : null);
+            } catch (e) {
+                console.log("Presence update failed");
+            }
+        };
+
+        // En ligne dès l'ouverture
+        updatePresence('available');
+
+        // Heartbeat toutes les 30s pour confirmer l'activité
+        const heartbeat = setInterval(() => updatePresence('available'), 30000);
+
+        // Hors-ligne si on quitte la page/dashboard
+        return () => {
+            clearInterval(heartbeat);
+            updatePresence('unavailable');
+        };
+    }, [user?.id]);
 
     // Form state
     const [formData, setFormData] = useState({
@@ -81,8 +118,17 @@ const ExpertDashboard = () => {
     ];
 
     useEffect(() => {
-        if (user?.id) {
-            fetchData();
+        if (!user?.id) {
+            setLoading(false);
+            return;
+        }
+        
+        fetchData();
+        
+        // Timeout de sécurité au cas où fetchData bloque indéfiniment
+        const failsafe = setTimeout(() => {
+            setLoading(false);
+        }, 8000);
             
             // ABONNEMENT TEMPS RÉEL (NOTIFICATIONS SONORES)
             const sub = supabase.channel('expert_notifs')
@@ -98,6 +144,7 @@ const ExpertDashboard = () => {
                     if (payload.new.user_id === user.id) {
                         playNotifSound();
                         fetchSysNotifs();
+                        fetchData(); // 🚀 Force le rechargement du profil pour afficher le badge instantanément
                     }
                 })
                 .on('postgres_changes', { event: 'INSERT', table: 'direct_messages' }, (payload) => {
@@ -108,8 +155,10 @@ const ExpertDashboard = () => {
                 })
                 .subscribe();
                 
-            return () => supabase.removeChannel(sub);
-        }
+        return () => {
+            supabase.removeChannel(sub);
+            clearTimeout(failsafe);
+        };
     }, [user?.id]);
 
     const fetchData = async () => {
@@ -147,7 +196,6 @@ const ExpertDashboard = () => {
                     throw techError;
                 }
             }
-
             // 2. Utiliser SA spécialité en base pour charger les devis et discussions
             const cleanSpec = (tech.specialty || 'Autre').trim();
             // Créer une recherche qui attrape avec ou sans accent (ex: Macon, Maçon, Maconnerie...)
@@ -193,18 +241,20 @@ const ExpertDashboard = () => {
             }
 
             const isStandard = standardSpecialties.includes(tech.specialty);
-            setTechData({
+            const formattedTechData = {
                 ...tech,
                 fullName: tech.fullname || tech.fullName,
                 reviews_count: reviewsData ? reviewsData.length : 0,
                 rating: reviewsData && reviewsData.length > 0
                     ? (reviewsData.reduce((acc, curr) => acc + (curr.rating || 0), 0) / reviewsData.length)
-                    : 0
-            });
+                    : 0,
+                contrat_confiance: tech.contrat_confiance === true || tech.contrat_confiance === 'true' || tech.contrat_confiance === 1
+            };
+            setTechData(formattedTechData);
+            localStorage.setItem('ST_CACHE_TECH_DATA', JSON.stringify(formattedTechData));
 
             setFormData({
                 fullName: tech.fullname || tech.fullName || '',
-                email: tech.email || '',
                 currentPassword: '',
                 password: '',
                 confirmPassword: '',
@@ -250,11 +300,135 @@ const ExpertDashboard = () => {
                 setActiveConversations(formatted);
             }
 
+            // SAVE CACHE FOR INSTANT LOAD (V145)
+            if (techData || tech) localStorage.setItem('ST_CACHE_TECH_DATA', JSON.stringify(techData || tech));
+            if (productsData) localStorage.setItem('ST_CACHE_PRODS', JSON.stringify(productsData));
+            if (quotesData) localStorage.setItem('ST_CACHE_QUOTES', JSON.stringify(quotesData));
+
         } catch (error) {
             console.error("Error fetching expert data:", error);
         }
         setLoading(false);
         fetchSysNotifs();
+    };
+
+    const handleLogout = async () => {
+        if (window.confirm("Voulez-vous vraiment vous déconnecter ?")) {
+            try {
+                await supabase.auth.signOut();
+            } catch (err) {
+                console.error("SignOut error:", err);
+            } finally {
+                localStorage.clear();
+                window.location.href = '/login';
+            }
+        }
+    };
+
+    const handleKYCUpload = async () => {
+        if (!kycFileRecto || !kycFileVerso) {
+            setKycError("Veuillez sélectionner le recto et le verso de votre pièce d'identité.");
+            return;
+        }
+
+        setUploadingKYC(true);
+        setKycError('');
+
+        try {
+            const uploadFile = async (file, side) => {
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${user.id}_${side}_${Date.now()}.${fileExt}`;
+                const { data, error } = await supabase.storage
+                    .from('kyc_documents')
+                    .upload(`${user.id}/${fileName}`, file, { cacheControl: '3600', upsert: false });
+
+                if (error) throw error;
+                const { data: publicUrlData } = supabase.storage.from('kyc_documents').getPublicUrl(data.path);
+                return publicUrlData.publicUrl;
+            };
+
+            const rectoUrl = await uploadFile(kycFileRecto, 'recto');
+            const versoUrl = await uploadFile(kycFileVerso, 'verso');
+
+            const { error: updateError } = await supabase
+                .from('users')
+                .update({ 
+                    id_card_recto: rectoUrl,
+                    id_card_verso: versoUrl,
+                    verification_status: 'pending'
+                })
+                .eq('id', user.id);
+
+            if (updateError) throw updateError;
+
+            // Update local state
+            setTechData(prev => ({ ...prev, verification_status: 'pending' }));
+            alert("Vos documents ont été envoyés avec succès. Notre équipe va les vérifier.");
+        } catch (error) {
+            console.error("Erreur KYC upload:", error);
+            setKycError("Une erreur est survenue lors de l'envoi. " + error.message);
+        } finally {
+            setUploadingKYC(false);
+        }
+    };
+
+
+    const handleDeleteAccount = async () => {
+        const confirm = window.confirm(
+            "⚠️ ATTENTION : Cette action est IRREVERSIBLE.\n\n" +
+            "Toutes vos annonces, messages et informations de profil seront supprimés définitivement.\n\n" +
+            "Voulez-vous vraiment supprimer votre compte ?"
+        );
+        
+        if (confirm) {
+            try {
+                // Delete user from our database table
+                const { error: dbError } = await supabase
+                    .from('users')
+                    .delete()
+                    .eq('id', user.id);
+                
+                if (dbError) throw dbError;
+
+                // Sign out
+                await supabase.auth.signOut();
+                localStorage.clear();
+                alert("Votre compte a été supprimé avec succès.");
+                window.location.href = '/register';
+            } catch (error) {
+                console.error("Erreur suppression compte:", error);
+                alert("Erreur lors de la suppression : " + error.message);
+            }
+        }
+    };
+
+    const handleStatusToggle = async (product) => {
+        const newStatus = product.status === 'sold' ? 'active' : 'sold';
+        try {
+            const { error } = await supabase
+                .from('products')
+                .update({ status: newStatus })
+                .eq('id', product.id);
+
+            if (error) throw error;
+            setProducts(products.map(p => p.id === product.id ? { ...p, status: newStatus } : p));
+        } catch (error) {
+            console.error(error);
+            alert("Erreur maj statut");
+        }
+    };
+
+    const handleDeleteProduct = async (product) => {
+        if (window.confirm("🗑️ Supprimer cet article définitivement ?")) {
+            try {
+                const { error } = await supabase.from('products').delete().eq('id', product.id);
+                if (error) throw error;
+                setProducts(products.filter(p => p.id !== product.id));
+            } catch (error) {
+                console.error(error);
+                alert("Erreur suppression");
+            }
+        }
     };
 
     const fetchSysNotifs = async () => {
@@ -467,7 +641,6 @@ const ExpertDashboard = () => {
         try {
             const payload = {
                 fullname: formData.fullName,
-                email: formData.email,
                 specialty: formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty,
                 city: formData.city,
                 district: formData.district,
@@ -514,7 +687,6 @@ const ExpertDashboard = () => {
                 ...user, 
                 fullname: formData.fullName, // Nom de la table
                 fullName: formData.fullName, // Compatibilité UI
-                email: formData.email,
                 city: formData.city,
                 district: formData.district,
                 specialty: formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty,
@@ -585,12 +757,171 @@ const ExpertDashboard = () => {
         </div>
     );
 
-    const avatarUrl = techData.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(techData.fullName)}&background=random&color=fff&size=150`;
+    const avatarUrl = techData.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(techData.fullName)}&background=007bff&color=fff&size=150`;
 
     return (
         <div className="container animate-fade-in" style={{ padding: '1.5rem 1rem' }}>
-            <WelcomeOverlay userName={techData.fullName} duration={2000} />
             
+            {/* SIDEBAR OVERLAY */}
+            {showSidebar && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999,
+                    animation: 'fadeIn 0.2s ease-out'
+                }} onClick={() => setShowSidebar(false)}>
+                    <div style={{
+                        position: 'absolute', top: '1rem', left: '1rem', bottom: 'auto',
+                        width: '280px', backgroundColor: '#111827', color: 'white',
+                        padding: '1.5rem 1rem', overflowY: 'auto',
+                        animation: 'slideInLeft 0.3s ease-out',
+                        boxShadow: '8px 8px 30px rgba(0,0,0,0.5)',
+                        display: 'flex', flexDirection: 'column', gap: '1.25rem',
+                        borderRadius: '28px',
+                        maxHeight: 'calc(100vh - 2rem)'
+                    }} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #374151', paddingBottom: '1rem' }}>
+                            <h2 style={{ margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{ backgroundColor: '#374151', padding: '8px', borderRadius: '50%' }}>
+                                    <Settings size={20} color="#60a5fa" />
+                                </div>
+                                Paramètres
+                            </h2>
+                            <button onClick={() => setShowSidebar(false)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}>
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <button
+                                onClick={() => { setShowSidebar(false); setEditMode(false); }}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '12px',
+                                    width: '100%', padding: '12px', borderRadius: '10px',
+                                    background: '#1f2937', color: 'white', border: '1px solid #374151',
+                                    fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer', textAlign: 'left',
+                                    transition: 'background 0.2s'
+                                }}
+                                onMouseOver={(e) => e.currentTarget.style.background = '#374151'}
+                                onMouseOut={(e) => e.currentTarget.style.background = '#1f2937'}
+                            >
+                                <User size={18} color="#9ca3af" /> Mon profil
+                            </button>
+                            
+                            <button
+                                onClick={() => { setShowSidebar(false); handleLogout(); }}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '12px',
+                                    width: '100%', padding: '12px', borderRadius: '10px',
+                                    background: '#1f2937', color: '#fca5a5', border: '1px solid #374151',
+                                    fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer', textAlign: 'left',
+                                    transition: 'background 0.2s'
+                                }}
+                                onMouseOver={(e) => e.currentTarget.style.background = '#374151'}
+                                onMouseOut={(e) => e.currentTarget.style.background = '#1f2937'}
+                            >
+                                <LogOut size={18} color="#f87171" /> Déconnexion
+                            </button>
+
+                            <div style={{ borderTop: '1px solid #374151', margin: '10px 0' }}></div>
+                            <h4 style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px' }}>Avancé & Support</h4>
+
+                            <button
+                                onClick={() => { setShowSidebar(false); handleDeleteAccount(); }}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '12px',
+                                    width: '100%', padding: '12px', borderRadius: '10px',
+                                    background: '#7f1d1d', color: '#fecaca', border: '1px solid #991b1b',
+                                    fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer', textAlign: 'left',
+                                    transition: 'background 0.2s'
+                                }}
+                                onMouseOver={(e) => e.currentTarget.style.background = '#991b1b'}
+                                onMouseOut={(e) => e.currentTarget.style.background = '#7f1d1d'}
+                            >
+                                <UserX size={18} color="#fca5a5" /> Supprimer mon compte
+                            </button>
+
+                            <div style={{ marginTop: '1rem', background: '#1f2937', padding: '1rem', borderRadius: '10px', border: '1px solid #374151' }}>
+                                <p style={{ fontSize: '0.8rem', color: '#9ca3af', marginBottom: '10px' }}>Un problème ? Signalez-le ici :</p>
+                                <form onSubmit={(e) => { 
+                                    e.preventDefault(); 
+                                    handleFeedbackSubmit(e); 
+                                    if(feedbackMsg.trim()) { setShowSidebar(false); }
+                                }} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    <textarea
+                                        value={feedbackMsg}
+                                        onChange={(e) => setFeedbackMsg(e.target.value)}
+                                        placeholder="Décrivez votre problème..."
+                                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #4b5563', fontSize: '0.85rem', minHeight: '80px', resize: 'none', backgroundColor: '#374151', color: 'white' }}
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={sendingFeedback}
+                                        style={{
+                                            padding: '10px', borderRadius: '8px', border: 'none',
+                                            background: '#3b82f6', color: 'white', fontWeight: 'bold', cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                                        }}
+                                    >
+                                        <Flag size={16} /> {sendingFeedback ? 'Envoi...' : "Envoyer"}
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
+            {/* KYC UPLOAD SECTION */}
+            {!techData.contrat_confiance && techData.verification_status !== 'verified' && (
+                <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem', background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)', border: '1px solid #bae6fd', borderRadius: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '1rem' }}>
+                        <div style={{ backgroundColor: '#0ea5e9', padding: '10px', borderRadius: '12px', color: '#fff' }}>
+                            <Shield size={24} />
+                        </div>
+                        <div>
+                            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#0369a1' }}>Devenez Technicien de Confiance</h3>
+                            <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#0c4a6e' }}>Obtenez le badge certifié pour rassurer vos clients.</p>
+                        </div>
+                    </div>
+                    
+                    {techData.verification_status === 'pending' ? (
+                        <div style={{ background: '#fff', padding: '1rem', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '10px', color: '#d97706', border: '1px solid #fde68a' }}>
+                            <Clock size={20} />
+                            <span style={{ fontSize: '0.9rem', fontWeight: '700' }}>Vos documents sont en cours de vérification par notre équipe.</span>
+                        </div>
+                    ) : (
+                        <>
+                            {kycError && <div style={{ color: '#ef4444', fontSize: '0.85rem', marginBottom: '1rem', padding: '10px', background: '#fef2f2', borderRadius: '10px' }}>{kycError}</div>}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '1rem' }}>
+                                <div>
+                                    <label style={{ fontSize: '0.85rem', fontWeight: '700', color: '#0369a1', marginBottom: '5px', display: 'block' }}>Photo Carte Identité (Recto)</label>
+                                    <input type="file" accept="image/*" onChange={(e) => setKycFileRecto(e.target.files[0])} style={{ width: '100%', padding: '0.5rem', background: '#fff', borderRadius: '10px', border: '1px solid #bae6fd' }} />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.85rem', fontWeight: '700', color: '#0369a1', marginBottom: '5px', display: 'block' }}>Photo Carte Identité (Verso)</label>
+                                    <input type="file" accept="image/*" onChange={(e) => setKycFileVerso(e.target.files[0])} style={{ width: '100%', padding: '0.5rem', background: '#fff', borderRadius: '10px', border: '1px solid #bae6fd' }} />
+                                </div>
+                            </div>
+                            <button 
+                                onClick={handleKYCUpload} 
+                                disabled={uploadingKYC}
+                                style={{ width: '100%', padding: '1rem', background: uploadingKYC ? '#9ca3af' : '#0ea5e9', color: '#fff', border: 'none', borderRadius: '15px', fontWeight: '800', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}
+                            >
+                                {uploadingKYC ? 'Envoi en cours...' : 'Envoyer pour vérification'}
+                                {!uploadingKYC && <Upload size={18} />}
+                            </button>
+                        </>
+                    )}
+                </div>
+            )}
+
+            {(techData.contrat_confiance || techData.verification_status === 'verified') && (
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#ecfdf5', padding: '12px 1rem', borderRadius: '15px', color: '#059669', marginBottom: '1.5rem', border: '1px solid #a7f3d0' }}>
+                     <ShieldCheck size={26} style={{ flexShrink: 0 }} />
+                     <span style={{ fontSize: '0.95rem', fontWeight: '800', lineHeight: '1.4' }}>Voici votre badge, vous êtes maintenant partenaire de Sama Technicien</span>
+                 </div>
+            )}
+
             {/* ALERTE DE NOUVELLE DEMANDE (BANNER) */}
             {quotes.length > 0 && (
                 <div 
@@ -616,12 +947,15 @@ const ExpertDashboard = () => {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <button onClick={() => setShowSidebar(true)} style={{ backgroundColor: '#1e293b', padding: '10px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+                        <Menu size={28} color="white" />
+                    </button>
                     <div style={{ backgroundColor: 'var(--primary-color)', color: 'white', padding: '10px', borderRadius: '15px' }}>
                         <Shield size={28} />
                     </div>
                     <div>
                         <h1 style={{ fontSize: '1.5rem', marginBottom: '0.25rem', fontWeight: '900' }}>
-                            Espace Expert <span style={{ fontSize: '0.7rem', color: 'var(--primary-color)', opacity: 0.6 }}>(V143)</span>
+                            Profil Expert <span style={{ fontSize: '0.7rem', color: 'var(--primary-color)', opacity: 0.6 }}>(V143)</span>
                         </h1>
                         <p style={{ fontSize: '0.85rem', color: '#666' }}>Gérez votre profil et vos interventions.</p>
                     </div>
@@ -706,9 +1040,9 @@ const ExpertDashboard = () => {
                                     />
                                 </label>
                             )}
-                            {!editMode && techData.is_verified !== false && (
-                                <div style={{ position: 'absolute', bottom: 5, right: 5, backgroundColor: 'white', borderRadius: '50%', padding: '2px' }}>
-                                    <CheckCircle size={20} color="var(--primary-color)" fill="white" />
+                            {!editMode && techData.contrat_confiance && (
+                                <div style={{ position: 'absolute', bottom: 5, right: 5, backgroundColor: 'white', borderRadius: '50%', padding: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <ShieldCheck size={20} color="white" fill="#10b981" stroke="white" strokeWidth={2} />
                                 </div>
                             )}
                         </div>
@@ -730,11 +1064,62 @@ const ExpertDashboard = () => {
                             </div>
                         </div>
 
+                        {/* 🟢 STATUT AUTOMATIQUE (V150) */}
+                        <div style={{ 
+                            margin: '1.25rem 0', 
+                            padding: '14px', 
+                            borderRadius: '16px', 
+                            backgroundColor: '#f8fafc',
+                            border: '1px solid #e2e8f0',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{ 
+                                    width: '12px', height: '12px', borderRadius: '50%', 
+                                    backgroundColor: '#22c55e',
+                                    boxShadow: '0 0 10px #22c55e',
+                                    animation: 'pulse 2s infinite'
+                                }}></div>
+                                <div>
+                                    <span style={{ fontSize: '0.85rem', fontWeight: '900', color: '#1e293b', display: 'block' }}>
+                                        DÉTECTION AUTOMATIQUE
+                                    </span>
+                                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Vous êtes visible par vos clients</span>
+                                </div>
+                            </div>
+                            <div style={{ 
+                                padding: '6px 12px', 
+                                borderRadius: '8px', 
+                                backgroundColor: '#f0fdf4', 
+                                color: '#16a34a', 
+                                fontSize: '0.7rem', 
+                                fontWeight: 'bold',
+                                border: '1px solid #bbf7d0'
+                            }}>
+                                EN LIGNE 🟢
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => setEditMode(true)}
+                            className="btn btn-primary"
+                            style={{
+                                marginTop: '1rem', width: '100%',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                gap: '8px', fontSize: '0.85rem', fontWeight: 'bold'
+                            }}
+                        >
+                            <Edit size={16} /> Modifier mon profil
+                        </button>
+
                         <button
                             onClick={handleShare}
                             className="btn btn-outline"
                             style={{
-                                marginTop: '1.25rem', width: '100%',
+                                marginTop: '0.75rem', width: '100%',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 gap: '8px', fontSize: '0.85rem', borderColor: 'var(--primary-color)',
                                 color: 'var(--primary-color)', fontWeight: 'bold'
@@ -742,43 +1127,9 @@ const ExpertDashboard = () => {
                         >
                             <Share2 size={16} /> Partager mon profil
                         </button>
-
-                        <div style={{ marginTop: '1.5rem', textAlign: 'center', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
-                            <p style={{ fontSize: '0.7rem', color: '#999', marginBottom: '0.5rem' }}>Une réclamation ou un problème ?</p>
-                            <form onSubmit={handleFeedbackSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                <textarea
-                                    value={feedbackMsg}
-                                    onChange={(e) => setFeedbackMsg(e.target.value)}
-                                    placeholder="Décrivez votre problème ici..."
-                                    style={{
-                                        width: '100%', padding: '0.5rem', borderRadius: '8px',
-                                        border: '1px solid #ddd', fontSize: '0.8rem', minHeight: '60px',
-                                        resize: 'none'
-                                    }}
-                                />
-                                <button
-                                    type="submit"
-                                    disabled={sendingFeedback}
-                                    className="btn"
-                                    style={{
-                                        padding: '0.4rem', fontSize: '0.75rem', display: 'flex',
-                                        alignItems: 'center', justifyContent: 'center', gap: '5px',
-                                        backgroundColor: 'var(--primary-color)',
-                                        color: 'white',
-                                        cursor: 'pointer',
-                                        border: 'none',
-                                        transition: 'all 0.3s ease',
-                                        opacity: sendingFeedback ? 0.7 : 1
-                                    }}
-                                >
-                                    <Flag size={12} /> {sendingFeedback ? 'Envoi...' : "Envoyer"}
-                                </button>
-                            </form>
-                        </div>
                     </div>
 
-
-                    {/* Personal Info Summary */}
+                    {/* Informations de contact */}
                     <div className="card" style={{ padding: '1.25rem' }}>
                         <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Informations de contact</h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem' }}>
@@ -791,108 +1142,306 @@ const ExpertDashboard = () => {
                         </div>
                     </div>
 
-                    {/* ESPACE DEVIS SUPPRIMÉ V70 */}
 
-                    {/* DEMANDES DE DEVIS DISPONIBLES (NOUVEAU V144) - RÉVOLUTION UX */}
-                    {!editMode && quotes.length > 0 && (
-                        <div style={{ marginBottom: '2rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#1e293b', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <div style={{ backgroundColor: '#10b981', color: 'white', padding: '6px', borderRadius: '10px' }}><Clock size={18} /></div>
-                                    Appels d'offres ({quotes.length})
-                                </h3>
+                    {/* Les paramètres ont été déplacés dans la Sidebar */}
+                </div>
+
+                {/* Right Column: Quotes, Marketplace, Profile - V147 */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+                    {editMode ? (
+                        <div className="card" style={{ padding: '1.5rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                                <h3 style={{ fontSize: '1.1rem', margin: 0 }}>Modifier mon profil</h3>
+                                <button onClick={() => setEditMode(false)} style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer' }}>
+                                    Annuler
+                                </button>
                             </div>
-                            
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                {quotes.map(quote => (
-                                    <div 
-                                        key={quote.id} 
-                                        className="card" 
-                                        style={{ 
-                                            padding: '16px', border: '2px solid #f0fdf4', borderRadius: '25px', cursor: 'pointer',
-                                            transition: 'all 0.3s ease', boxShadow: '0 4px 15px rgba(0,0,0,0.05)'
-                                        }}
-                                        onClick={() => openResponseForm(quote)}
-                                    >
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                                                    <span style={{ backgroundColor: '#f0fdf4', color: '#10b981', padding: '2px 8px', borderRadius: '10px', fontSize: '0.65rem', fontWeight: '900', textTransform: 'uppercase' }}>
-                                                        {quote.specialty}
-                                                    </span>
-                                                    <span style={{ color: '#94a3b8', fontSize: '0.7rem' }}>#{quote.id}</span>
+
+                            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem' }}>Nom complet</label>
+                                    <input
+                                        type="text" name="fullName" value={formData.fullName} onChange={handleInputChange}
+                                        style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem' }}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.4rem', color: '#856404' }}>Mot de passe actuel (requis pour modification)</label>
+                                    <input
+                                        type="password" name="currentPassword"
+                                        value={formData.currentPassword || ''}
+                                        onChange={(e) => setFormData({ ...formData, currentPassword: e.target.value })}
+                                        placeholder="Votre mot de passe actuel"
+                                        style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ffeeba', backgroundColor: '#fff9c4', fontSize: '0.9rem' }}
+                                    />
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem' }}>Nouveau code secret (4 chiffres)</label>
+                                        <input
+                                            type="password" name="password"
+                                            maxLength="4"
+                                            inputMode="numeric"
+                                            pattern="\d*"
+                                            value={formData.password}
+                                            onChange={(e) => {
+                                                const val = e.target.value.replace(/\D/g, '');
+                                                setFormData({ ...formData, password: val });
+                                            }}
+                                            placeholder="Nouveau code"
+                                            style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem', letterSpacing: formData.password ? '4px' : 'normal', fontWeight: 'bold' }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem' }}>Confirmer le code</label>
+                                        <input
+                                            type="password" name="confirmPassword"
+                                            maxLength="4"
+                                            inputMode="numeric"
+                                            pattern="\d*"
+                                            value={formData.confirmPassword}
+                                            onChange={(e) => {
+                                                const val = e.target.value.replace(/\D/g, '');
+                                                setFormData({ ...formData, confirmPassword: val });
+                                            }}
+                                            placeholder="Confirmer"
+                                            style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem', letterSpacing: formData.confirmPassword ? '4px' : 'normal', fontWeight: 'bold' }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem' }}>Spécialité</label>
+                                        <select
+                                            name="specialty" value={formData.specialty} onChange={handleInputChange}
+                                            style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem', backgroundColor: 'white' }}
+                                        >
+                                            {standardSpecialties.map(s => <option key={s} value={s}>{s}</option>)}
+                                            <option value="Autre">Autre</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem' }}>Ville</label>
+                                        <input
+                                            type="text" name="city" value={formData.city} onChange={handleInputChange}
+                                            style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem' }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {formData.specialty === 'Autre' && (
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem' }}>Précisez votre métier</label>
+                                        <input
+                                            type="text" name="otherSpecialty" value={formData.otherSpecialty} onChange={handleInputChange}
+                                            placeholder="Ex: Plombier, Menuisier..."
+                                            style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem' }}
+                                        />
+                                    </div>
+                                )}
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem' }}>Quartier / Zone</label>
+                                        <input
+                                            type="text" name="district" value={formData.district} onChange={handleInputChange}
+                                            placeholder="Ex: Plateau, Almadies"
+                                            style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem' }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem' }}>Téléphone</label>
+                                        <input
+                                            type="text" name="phone" value={formData.phone} onChange={handleInputChange}
+                                            style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem' }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem' }}>Ma Biographie</label>
+                                    <textarea
+                                        name="description" value={formData.description} onChange={handleInputChange}
+                                        placeholder="Parlez de votre parcours..."
+                                        style={{ width: '100%', padding: '10px', borderRadius: '15px', border: '1px solid #ddd', fontSize: '0.8rem', minHeight: '120px', resize: 'vertical' }}
+                                    />
+                                </div>
+
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <input 
+                                        type="checkbox" 
+                                        id="commentsEnabled" 
+                                        checked={formData.commentsEnabled}
+                                        onChange={(e) => setFormData({ ...formData, commentsEnabled: e.target.checked })}
+                                        style={{ width: '18px', height: '18px' }}
+                                    />
+                                    <label htmlFor="commentsEnabled" style={{ fontSize: '0.85rem', fontWeight: '600' }}>
+                                        Autoriser les avis clients sur mon profil
+                                    </label>
+                                </div>
+
+                                <button type="submit" disabled={isSaving} className="btn btn-primary" style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                                    {isSaving ? 'Enregistrement...' : <><Save size={18} /> Sauvegarder les modifications</>}
+                                </button>
+                            </form>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Ma Boutique (Marketplace) */}
+                            <div className="card" style={{ padding: '1.5rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                    <h3 style={{ fontSize: '1.1rem', margin: 0, fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <ShoppingBag size={20} color="var(--primary-color)" /> Ma Boutique
+                                    </h3>
+                                    <Link to="/marketplace" className="btn btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px', textDecoration: 'none' }}>
+                                        <PlusCircle size={16} /> Vendre
+                                    </Link>
+                                </div>
+
+                                {products.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '2rem', border: '2px dashed #eee', borderRadius: '15px' }}>
+                                        <ShoppingBag size={30} color="#ccc" style={{ marginBottom: '1rem' }} />
+                                        <p style={{ color: '#666', fontSize: '0.85rem' }}>Aucun article en vente.</p>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                        {products.map(product => (
+                                            <div key={product.id} className="card-premium-list" style={{ 
+                                                display: 'flex', 
+                                                alignItems: 'center',
+                                                gap: '15px', 
+                                                padding: '1rem', 
+                                                backgroundColor: 'white', 
+                                                borderRadius: '24px', 
+                                                border: '1px solid #f1f5f9', 
+                                                boxShadow: '0 4px 12px rgba(0,0,0,0.03)' 
+                                            }}>
+                                                <div style={{ 
+                                                    width: '56px', 
+                                                    height: '56px', 
+                                                    borderRadius: '50%', // Premium circle
+                                                    overflow: 'hidden', 
+                                                    backgroundColor: '#f1f5f9', 
+                                                    border: '2px solid white',
+                                                    boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
+                                                    position: 'relative',
+                                                    flexShrink: 0
+                                                }}>
+                                                    {product.image ? (
+                                                        <img 
+                                                            src={product.image} 
+                                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                                            alt={product.title} 
+                                                            onError={(e) => {
+                                                                e.target.onerror = null;
+                                                                e.target.style.display = 'none';
+                                                            }}
+                                                        />
+                                                    ) : null}
+                                                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f9ff', color: '#0ea5e9', zIndex: -1 }}>
+                                                        <ShoppingBag size={20} />
+                                                    </div>
                                                 </div>
-                                                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '800', color: '#1e293b' }}>{quote.title || 'Demande de service'}</h4>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <h4 style={{ margin: '0 0 2px 0', fontSize: '1rem', fontWeight: '850', color: '#1e293b' }}>{product.title}</h4>
+                                                    <div style={{ fontSize: '1.1rem', fontWeight: '900', color: '#007bff' }}>{Number(product.price).toLocaleString()} F</div>
+                                                    <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                                                        <button onClick={() => handleStatusToggle(product)} style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '6px', border: 'none', backgroundColor: product.status === 'sold' ? '#22c55e' : '#64748b', color: 'white' }}>
+                                                            {product.status === 'sold' ? 'Vendre à nouveau' : 'Marquer Vendu'}
+                                                        </button>
+                                                        <button onClick={() => handleDeleteProduct(product)} style={{ border: 'none', background: 'none', color: '#64748b' }}>
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div style={{ textAlign: 'right' }}>
-                                                <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{new Date(quote.created_at).toLocaleDateString()}</div>
-                                            </div>
-                                        </div>
-                                        
-                                        <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0 0 12px 0', lineHeight: '1.4', display: '-webkit-box', WebkitLineClamp: '2', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                            {quote.description || quote.message}
-                                        </p>
-                                        
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: '16px' }}>
-                                            <div style={{ display: 'flex', gap: '10px', fontSize: '0.75rem', color: '#475569', fontWeight: 'bold' }}>
-                                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={14} /> {quote.city || 'Dakar'}</span>
-                                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={14} /> {quote.billing_type?.toUpperCase() || 'JOUR'}</span>
-                                            </div>
-                                            <button 
-                                                className="btn"
-                                                style={{ padding: '6px 14px', fontSize: '0.75rem', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '900' }}
-                                            >
-                                                RÉPONDRE
-                                            </button>
-                                        </div>
+                                        ))}
                                     </div>
-                                ))}
+                                )}
                             </div>
-                        </div>
-                    )}
-                    {!editMode && sentOffers.length > 0 && (
-                        <div style={{ marginBottom: '2rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#1e293b', margin: 0 }}>Mes Réponses aux Devis</h3>
-                                <div style={{ backgroundColor: '#10b981', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 'bold' }}>{sentOffers.length}</div>
-                            </div>
-                            
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                {sentOffers.map(offer => (
-                                    <div key={offer.id} className="card" style={{ padding: '12px', border: '1px solid #e2e8f0', position: 'relative' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                                            <div style={{ flex: 1 }}>
-                                                <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: '800', color: '#10b981' }}>{offer.quote?.title || 'Demande de devis'}</h4>
-                                                <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: '#64748b' }}>
-                                                    Proposé le {new Date(offer.created_at).toLocaleDateString()}
-                                                </p>
-                                            </div>
-                                            <button 
-                                                onClick={() => handleDeleteOffer(offer.id)}
-                                                style={{ padding: '8px', background: '#ffe4e6', border: 'none', borderRadius: '10px', color: '#e11d48', cursor: 'pointer', display: 'flex' }}
-                                                title="Supprimer mon offre"
-                                            >
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2m-6 0h6"></path><path d="M10 11v6m4-6v6"></path></svg>
-                                            </button>
-                                        </div>
-                                        
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '8px 12px', borderRadius: '10px' }}>
-                                            <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#64748b' }}>Votre prix :</span>
-                                            <span style={{ fontSize: '0.95rem', fontWeight: '900', color: '#1e293b' }}>{Number(offer.montant).toLocaleString()} F</span>
-                                        </div>
-                                        
-                                        {offer.statut === 'validé' && (
-                                            <div style={{ marginTop: '8px', padding: '10px', background: '#dcfce7', borderRadius: '12px', textAlign: 'center', fontSize: '0.8rem', fontWeight: '900', color: '#166534', border: '1px solid #bbf7d0', animation: 'bounce 2s infinite' }}>
-                                                🏆 OFFRE VALIDÉE PAR LE CLIENT ! 🎉
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
 
-                    {/* MODAL DE RÉPONSE PERSONNALISÉE */}
+                            {/* Bio Card */}
+                            <div className="card" style={{ padding: '1.5rem' }}>
+                                <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem' }}>À propos de moi</h3>
+                                <p style={{ fontSize: '0.9rem', lineHeight: '1.6', color: '#444', fontStyle: techData.description ? 'normal' : 'italic' }}>
+                                    {techData.description || "Vous n'avez pas encore rédigé de description."}
+                                </p>
+                            </div>
+
+                            {/* Recent Reviews */}
+                            <div className="card" style={{ padding: '1.5rem' }}>
+                                <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Avis récents ({reviews.length})</h3>
+                                <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                                    {reviews.length === 0 ? (
+                                        <p style={{ fontSize: '0.85rem', color: '#999', textAlign: 'center' }}>Aucun avis reçu.</p>
+                                    ) : (
+                                        reviews.map(review => (
+                                            <div key={review.id} style={{ borderBottom: '1px solid #eee', paddingBottom: '0.75rem', marginBottom: '0.75rem' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <span style={{ fontWeight: '600', fontSize: '0.85rem' }}>{review.clientName}</span>
+                                                    <div style={{ display: 'flex', gap: '2px' }}>
+                                                        {[1, 2, 3, 4, 5].map(s => (
+                                                            <Star key={s} size={10} fill={s <= review.rating ? "#f1c40f" : "none"} color={s <= review.rating ? "#f1c40f" : "#ccc"} />
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                <p style={{ fontSize: '0.8rem', color: '#555', margin: '4px 0' }}>{review.comment}</p>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Appels d'offres */}
+                            {quotes.length > 0 && (
+                                <div style={{ marginBottom: '2rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                        <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#1e293b', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <div style={{ backgroundColor: '#007bff', color: 'white', padding: '6px', borderRadius: '10px' }}><Clock size={18} /></div>
+                                            Appels d'offres ({quotes.length})
+                                        </h3>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                        {quotes.map(quote => (
+                                            <div key={quote.id} className="card" style={{ padding: '16px', border: '2px solid #f0fdf4', borderRadius: '25px', cursor: 'pointer' }} onClick={() => openResponseForm(quote)}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                                    <span style={{ backgroundColor: '#f0fdf4', color: '#007bff', padding: '2px 8px', borderRadius: '10px', fontSize: '0.65rem', fontWeight: '900' }}>{quote.specialty}</span>
+                                                </div>
+                                                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '800' }}>{quote.title || 'Service demandé'}</h4>
+                                                <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '8px 0' }}>{quote.description || quote.message}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Mes Réponses */}
+                            {sentOffers.length > 0 && (
+                                <div style={{ marginBottom: '2rem' }}>
+                                    <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#1e293b', marginBottom: '1rem' }}>Mes Réponses ({sentOffers.length})</h3>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                        {sentOffers.map(offer => (
+                                            <div key={offer.id} className="card" style={{ padding: '12px', border: '1px solid #e2e8f0' }}>
+                                                <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: '800', color: '#007bff' }}>{offer.quote?.title || 'Offre envoyée'}</h4>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', background: '#f8fafc', padding: '8px', borderRadius: '10px' }}>
+                                                    <span style={{ fontSize: '0.8rem' }}>Prix :</span>
+                                                    <span style={{ fontSize: '0.9rem', fontWeight: '900' }}>{Number(offer.montant).toLocaleString()} F</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    )}
+                    </div>
+                </div>
+
+                {/* MODAL DE RÉPONSE PERSONNALISÉE */}
                     {showResponseModal && (
                         <div style={{ 
                             position: 'fixed', inset: 0, 
@@ -1009,20 +1558,20 @@ const ExpertDashboard = () => {
                                             onChange={(e) => updateDevisLine(0, 'price', e.target.value)}
                                             style={{ 
                                                 width: '100%', padding: '12px 15px', fontSize: '1.8rem', fontWeight: '900', 
-                                                borderRadius: '15px', border: '1px solid #10b981', color: '#10b981',
+                                                borderRadius: '15px', border: '1px solid #007bff', color: '#007bff',
                                                 outline: 'none', textAlign: 'center', backgroundColor: 'white',
                                                 boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)'
                                             }}
                                             placeholder="0"
                                         />
-                                        <span style={{ position: 'absolute', right: '15px', fontSize: '1.2rem', fontWeight: '900', color: '#10b981' }}>FCFA</span>
+                                        <span style={{ position: 'absolute', right: '15px', fontSize: '1.2rem', fontWeight: '900', color: '#007bff' }}>FCFA</span>
                                     </div>
                                     
                                     <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Basé sur 1 prestation d'urgence</span>
                                         <button 
                                             onClick={() => setDevisLines([...devisLines, { desc: "Accessoires", qty: 1, price: 0 }])}
-                                            style={{ background: 'none', border: 'none', color: '#10b981', fontSize: '0.7rem', fontWeight: 'bold', textDecoration: 'underline', cursor: 'pointer' }}
+                                            style={{ background: 'none', border: 'none', color: '#007bff', fontSize: '0.7rem', fontWeight: 'bold', textDecoration: 'underline', cursor: 'pointer' }}
                                         >
                                             + Ajouter des détails
                                         </button>
@@ -1054,7 +1603,7 @@ const ExpertDashboard = () => {
                                         onClick={handleSendFinalReply} 
                                         disabled={sendingQuickMsg}
                                         className="btn" 
-                                        style={{ flex: 2, backgroundColor: '#10b981', color: 'white', border: 'none' }}
+                                        style={{ flex: 2, backgroundColor: '#007bff', color: 'white', border: 'none' }}
                                     >
                                         {sendingQuickMsg ? 'Envoi...' : 'Envoyer la réponse'}
                                     </button>
@@ -1063,305 +1612,6 @@ const ExpertDashboard = () => {
                         </div>
                     )}
 
-                    {/* Publications Card - DÉPLACÉE ICI */}
-                    {!editMode && (
-                        <div className="card" style={{ padding: '1.5rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <div style={{ backgroundColor: 'var(--primary-color)', padding: '8px', borderRadius: '10px', color: 'white' }}>
-                                        <ShoppingBag size={20} />
-                                    </div>
-                                    <h3 style={{ fontSize: '1.1rem', fontWeight: '800', margin: 0 }}>
-                                        Mes Publications
-                                    </h3>
-                                </div>
-                                <Link to="/marketplace" style={{ fontSize: '0.8rem', color: 'var(--primary-color)', fontWeight: '600', textDecoration: 'none' }}>
-                                    Gérer ma boutique →
-                                </Link>
-                            </div>
-
-                            <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
-                                gap: '0.75rem'
-                            }}>
-                                {products.length === 0 ? (
-                                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '1rem', color: '#999', backgroundColor: '#f9fafb', borderRadius: '10px' }}>
-                                        <p style={{ margin: 0, fontSize: '0.8rem' }}>Aucun article en vente.</p>
-                                    </div>
-                                ) : (
-                                    products.map(product => (
-                                        <Link 
-                                            key={product.id} 
-                                            to={`/marketplace?id=${product.id}`}
-                                            style={{
-                                                textDecoration: 'none',
-                                                color: 'inherit',
-                                                backgroundColor: 'white',
-                                                borderRadius: '10px',
-                                                padding: '6px',
-                                                border: '1px solid #eee',
-                                                position: 'relative',
-                                                display: 'block',
-                                                transition: 'transform 0.2s ease'
-                                            }}
-                                            onMouseOver={e => e.currentTarget.style.transform = 'translateY(-3px)'}
-                                            onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
-                                        >
-                                            <img
-                                                src={product.image || 'https://via.placeholder.com/150'}
-                                                alt={product.title}
-                                                style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '6px', marginBottom: '6px' }}
-                                            />
-                                            <div style={{ fontWeight: 'bold', fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '2px' }}>
-                                                {product.title}
-                                            </div>
-                                            <div style={{ color: 'var(--primary-color)', fontWeight: 'bold', fontSize: '0.8rem' }}>
-                                                {Number(product.price).toLocaleString()} F
-                                            </div>
-                                            {product.status === 'sold' && (
-                                                <div style={{
-                                                    position: 'absolute', top: '4px', right: '4px',
-                                                    backgroundColor: '#ef4444', color: 'white',
-                                                    padding: '1px 4px', borderRadius: '3px',
-                                                    fontSize: '0.55rem', fontWeight: 'bold'
-                                                }}>VENDU</div>
-                                            )}
-                                        </Link>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Right Column: Settings or Bio */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-
-                    {editMode ? (
-                        <div className="card" style={{ padding: '1.5rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                                <h3 style={{ fontSize: '1.1rem', margin: 0 }}>Modifier mon profil</h3>
-                                <button onClick={() => setEditMode(false)} style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer' }}>
-                                    Annuler
-                                </button>
-                            </div>
-
-                            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem' }}>Nom complet</label>
-                                    <input
-                                        type="text" name="fullName" value={formData.fullName} onChange={handleInputChange}
-                                        style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem' }}
-                                    />
-                                </div>
-
-
-
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.4rem', color: '#856404' }}>Mot de passe actuel (requis pour modification)</label>
-                                    <input
-                                        type="password" name="currentPassword"
-                                        value={formData.currentPassword || ''}
-                                        onChange={(e) => setFormData({ ...formData, currentPassword: e.target.value })}
-                                        placeholder="Votre mot de passe actuel"
-                                        style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ffeeba', backgroundColor: '#fff9c4', fontSize: '0.9rem' }}
-                                    />
-                                </div>
-
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem' }}>Nouveau code secret (4 chiffres)</label>
-                                        <input
-                                            type="password" name="password"
-                                            maxLength="4"
-                                            inputMode="numeric"
-                                            pattern="\d*"
-                                            value={formData.password}
-                                            onChange={(e) => {
-                                                const val = e.target.value.replace(/\D/g, '');
-                                                setFormData({ ...formData, password: val });
-                                            }}
-                                            placeholder="Nouveau code"
-                                            style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem', letterSpacing: formData.password ? '4px' : 'normal', fontWeight: 'bold' }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem' }}>Confirmer le code</label>
-                                        <input
-                                            type="password" name="confirmPassword"
-                                            maxLength="4"
-                                            inputMode="numeric"
-                                            pattern="\d*"
-                                            value={formData.confirmPassword}
-                                            onChange={(e) => {
-                                                const val = e.target.value.replace(/\D/g, '');
-                                                setFormData({ ...formData, confirmPassword: val });
-                                            }}
-                                            placeholder="Confirmer"
-                                            style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem', letterSpacing: formData.confirmPassword ? '4px' : 'normal', fontWeight: 'bold' }}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem' }}>Spécialité</label>
-                                        <select
-                                            name="specialty" value={formData.specialty} onChange={handleInputChange}
-                                            style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem', backgroundColor: 'white' }}
-                                        >
-                                            {standardSpecialties.map(s => <option key={s} value={s}>{s}</option>)}
-                                            <option value="Autre">Autre</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem' }}>Ville</label>
-                                        <input
-                                            type="text" name="city" value={formData.city} onChange={handleInputChange}
-                                            style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem' }}
-                                        />
-                                    </div>
-                                </div>
-
-                                {formData.specialty === 'Autre' && (
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem' }}>Précisez votre métier</label>
-                                        <input
-                                            type="text" name="otherSpecialty" value={formData.otherSpecialty} onChange={handleInputChange}
-                                            placeholder="Ex: Plombier, Menuisier..."
-                                            style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem' }}
-                                        />
-                                    </div>
-                                )}
-
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem' }}>Quartier / Zone</label>
-                                        <input
-                                            type="text" name="district" value={formData.district} onChange={handleInputChange}
-                                            placeholder="Ex: Plateau, Almadies"
-                                            style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem' }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem' }}>Téléphone</label>
-                                        <input
-                                            type="text" name="phone" value={formData.phone} onChange={handleInputChange}
-                                            style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem' }}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem' }}>Photo de profil (Upload)</label>
-                                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={async (e) => {
-                                                const file = e.target.files[0];
-                                                if (!file) return;
-
-                                                try {
-                                                    const fileExt = file.name.split('.').pop();
-                                                    const fileName = `avatars/${techData.id}_${Date.now()}.${fileExt}`;
-
-                                                    const { error: uploadError } = await supabase.storage
-                                                        .from('produits') // Using 'produits' bucket as it is public
-                                                        .upload(fileName, file);
-
-                                                    if (uploadError) throw uploadError;
-
-                                                    const { data } = supabase.storage.from('produits').getPublicUrl(fileName);
-
-                                                    if (data.url || data.publicUrl) {
-                                                        setFormData(prev => ({ ...prev, image: data.publicUrl || data.url }));
-                                                    }
-                                                } catch (err) {
-                                                    console.error("Upload error:", err);
-                                                    alert("Erreur lors de l'upload de l'image (Vérifiez que le bucket 'produits' est Public).");
-                                                }
-                                            }}
-                                            style={{ fontSize: '0.8rem' }}
-                                        />
-                                        {formData.image && (
-                                            <img src={formData.image} alt="Preview" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
-                                        )}
-                                    </div>
-                                </div>
-
-
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem' }}>Ma Biographie</label>
-                                    <textarea
-                                        name="description" value={formData.description} onChange={handleInputChange}
-                                        placeholder="Parlez de votre parcours, de vos certifications et de votre approche du service client..."
-                                        style={{ width: '100%', padding: '10px', borderRadius: '15px', border: '1px solid #ddd', fontSize: '0.8rem', minHeight: '120px', resize: 'vertical' }}
-                                    />
-                                </div>
-
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '0.5rem' }}>
-                                    <input
-                                        type="checkbox"
-                                        id="commentsEnabled"
-                                        checked={formData.commentsEnabled}
-                                        onChange={(e) => setFormData({ ...formData, commentsEnabled: e.target.checked })}
-                                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                                    />
-                                    <label htmlFor="commentsEnabled" style={{ fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer' }}>
-                                        Autoriser les clients à laisser des avis sur mon profil
-                                    </label>
-                                </div>
-
-                                <button type="submit" disabled={isSaving} className="btn btn-primary" style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                                    {isSaving ? 'Enregistrement...' : <><Save size={18} /> Sauvegarder les modifications</>}
-                                </button>
-                            </form>
-                        </div>
-                    ) : (
-                        <>
-                            {/* Bio Card */}
-                            <div className="card" style={{ padding: '1.5rem' }}>
-                                <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem' }}>À propos de moi</h3>
-                                <p style={{ fontSize: '0.9rem', lineHeight: '1.6', color: '#444', fontStyle: techData.description ? 'normal' : 'italic' }}>
-                                    {techData.description || "Vous n'avez pas encore rédigé de description. Cliquez sur 'Paramètres' pour vous présenter à vos clients."}
-                                </p>
-                                <div style={{ marginTop: '1.5rem' }}>
-                                    <Link to={`/technician/${techData.id}`} style={{ textDecoration: 'none', color: 'var(--primary-color)', fontSize: '0.85rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                        Voir mon profil public <ArrowLeft size={14} style={{ transform: 'rotate(180deg)' }} />
-                                    </Link>
-                                </div>
-                            </div>
-
-                            {/* Recent Reviews Audit */}
-                            <div className="card" style={{ padding: '1.5rem' }}>
-                                <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Avis récents ({reviews.length})</h3>
-                                <div style={{ maxHeight: '300px', overflowY: 'auto', paddingRight: '0.5rem' }}>
-                                    {reviews.length === 0 ? (
-                                        <p style={{ fontSize: '0.85rem', color: '#999', textAlign: 'center', padding: '1rem' }}>Aucun avis reçu pour le moment.</p>
-                                    ) : (
-                                        reviews.map(review => (
-                                            <div key={review.id} style={{ borderBottom: '1px solid #eee', paddingBottom: '0.75rem', marginBottom: '0.75rem' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-                                                    <span style={{ fontWeight: '600', fontSize: '0.85rem' }}>{review.clientName}</span>
-                                                    <div style={{ display: 'flex', gap: '2px' }}>
-                                                        {[1, 2, 3, 4, 5].map(s => (
-                                                            <Star key={s} size={10} fill={s <= review.rating ? "#f1c40f" : "none"} color={s <= review.rating ? "#f1c40f" : "#ccc"} />
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                                <p style={{ fontSize: '0.8rem', color: '#555', margin: '0.25rem 0' }}>{review.comment}</p>
-                                                <span style={{ fontSize: '0.7rem', color: '#999' }}>{new Date(review.createdAt || review.created_at).toLocaleDateString()}</span>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
-                        </>
-                    )}
-                </div>
-            </div>
             {/* MODAL DE NOTIFICATIONS SYSTÈME (ACTIONNABLE) */}
             {showNotifModal && (
                 <div style={{ 
@@ -1431,9 +1681,9 @@ const ExpertDashboard = () => {
                                         }
                                     }}
                                     style={{ 
-                                        width: '100%', padding: '1rem', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
+                                        width: '100%', padding: '1rem', background: 'linear-gradient(135deg, #007bff 0%, #059669 100%)', 
                                         color: 'white', border: 'none', borderRadius: '15px', fontWeight: '900', fontSize: '1rem',
-                                        boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.3)', cursor: 'pointer'
+                                        boxShadow: '0 10px 15px -3px rgba(0, 123, 255, 0.3)', cursor: 'pointer'
                                     }}
                                 >
                                     💰 Proposer mon prix
@@ -1474,7 +1724,7 @@ const ExpertDashboard = () => {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                 {sysNotifs.map(notif => (
                                     <div key={notif.id} style={{ 
-                                        padding: '1rem', borderRadius: '20px', border: notif.seen ? '1px solid #f1f5f9' : '2px solid #10b981', 
+                                        padding: '1rem', borderRadius: '20px', border: notif.seen ? '1px solid #f1f5f9' : '2px solid #007bff', 
                                         background: notif.seen ? '#fff' : '#f0fdf4', 
                                         position: 'relative'
                                     }}>
@@ -1522,7 +1772,7 @@ const ExpertDashboard = () => {
                                                             }
                                                         }
                                                     }}
-                                                    style={{ flex: 2, padding: '0.65rem', background: '#10b981', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '900', fontSize: '0.8rem' }}
+                                                    style={{ flex: 2, padding: '0.65rem', background: '#007bff', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '900', fontSize: '0.8rem' }}
                                                 >
                                                     ✍️ Action
                                                 </button>
@@ -1539,7 +1789,7 @@ const ExpertDashboard = () => {
                                     </div>
                                 ))}
                                 {sysNotifs.some(n => !n.seen) && (
-                                    <button onClick={() => markAllRead()} style={{ marginTop: '1rem', background: 'none', border: 'none', color: '#10b981', fontWeight: 'bold', textDecoration: 'underline', width: '100%', fontSize: '0.9rem' }}>
+                                    <button onClick={() => markAllRead()} style={{ marginTop: '1rem', background: 'none', border: 'none', color: '#007bff', fontWeight: 'bold', textDecoration: 'underline', width: '100%', fontSize: '0.9rem' }}>
                                         Tout marquer comme lu
                                     </button>
                                 )}

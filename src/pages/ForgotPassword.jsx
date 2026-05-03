@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { Mail } from 'lucide-react';
+import { Mail, ArrowLeft, Phone, ShieldCheck, Smartphone, CheckCircle, Smartphone as PhoneIcon } from 'lucide-react';
 
 const ForgotPassword = () => {
     const [phone, setPhone] = useState('');
@@ -106,7 +106,7 @@ const ForgotPassword = () => {
                 </div>
 
                 {message && (
-                    <div style={{ padding: '1rem', backgroundColor: '#d1fae5', color: '#065f46', borderRadius: '15px', marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: 'bold', textAlign: 'center', border: '1px solid #10b981' }}>
+                    <div style={{ padding: '1rem', backgroundColor: '#d1fae5', color: '#065f46', borderRadius: '15px', marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: 'bold', textAlign: 'center', border: '1px solid #007bff' }}>
                         {message}
                     </div>
                 )}
@@ -153,7 +153,7 @@ const ForgotPassword = () => {
                             />
                         </div>
                         
-                        <button type="submit" disabled={loading} style={{ width: '100%', padding: '1.1rem', backgroundColor: '#10b981', color: 'white', fontWeight: '900', borderRadius: '15px', border: 'none', cursor: 'pointer' }}>
+                        <button type="submit" disabled={loading} style={{ width: '100%', padding: '1.1rem', backgroundColor: '#007bff', color: 'white', fontWeight: '900', borderRadius: '15px', border: 'none', cursor: 'pointer' }}>
                             {loading ? 'Validation en cours...' : 'Changer mon PIN'}
                         </button>
                         

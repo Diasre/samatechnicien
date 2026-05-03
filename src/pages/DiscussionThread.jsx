@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import API_URL from '../config';
 import { supabase } from '../supabaseClient';
-import { ArrowLeft, Send, User, Clock } from 'lucide-react';
+import { ArrowLeft, Send, User, Clock, Image } from 'lucide-react';
 
 const DiscussionThread = () => {
     const { id } = useParams();
@@ -12,6 +12,7 @@ const DiscussionThread = () => {
     const [error, setError] = useState(null);
     const [message, setMessage] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [pendingImage, setPendingImage] = useState(null);
 
     const currentUser = JSON.parse(localStorage.getItem('user'));
     const messagesEndRef = React.useRef(null);
@@ -70,19 +71,29 @@ const DiscussionThread = () => {
                     id: m.id,
                     message: m.content,
                     createdAt: m.created_at,
-                    authorName: m.users?.fullname || m.users?.fullName || 'Utilisateur inconnu',
+                    authorName: m.users?.[0]?.fullname || m.users?.[0]?.fullName || 'Expert', // Souvent un tableau si jointure complexe
+                    authorSpecialty: m.users?.[0]?.specialty || '',
+                    authorImage: m.users?.[0]?.image,
+                    image_url: m.image_url // ✅ ON AJOUTE ÇA
+                })) : (messagesData ? messagesData.map(m => ({
+                    id: m.id,
+                    message: m.content,
+                    createdAt: m.created_at,
+                    authorName: m.users?.fullname || m.users?.fullName || 'Technicien',
                     authorSpecialty: m.users?.specialty || '',
-                    authorImage: m.users?.image
-                })) : [];
+                    authorImage: m.users?.image,
+                    image_url: m.image_url // ✅ ON AJOUTE ÇA
+                })) : []);
 
                 setDiscussion({
                     id: discussionData.id,
                     title: discussionData.title,
                     content: discussionData.content,
                     createdAt: discussionData.created_at,
-                    authorName: discussionData.users?.fullname || discussionData.users?.fullName || 'Auteur inconnu',
-                    authorSpecialty: discussionData.users?.specialty || '',
-                    authorImage: discussionData.users?.image,
+                    authorName: discussionData.users?.fullname || discussionData.users?.[0]?.fullname || 'Auteur',
+                    authorSpecialty: discussionData.users?.specialty || discussionData.users?.[0]?.specialty || '',
+                    authorImage: discussionData.users?.image || discussionData.users?.[0]?.image,
+                    imageUrl: discussionData.image_url, // ✅ ON AJOUTE ÇA
                     messages: messages
                 });
             }
@@ -96,24 +107,48 @@ const DiscussionThread = () => {
 
     const handlePostMessage = async (e) => {
         e.preventDefault();
-        if (!message.trim()) {
-            alert("Veuillez écrire un message.");
+        if (!message.trim() && !pendingImage) {
+            alert("Veuillez écrire un message ou joindre une photo.");
             return;
         }
 
         setSubmitting(true);
         try {
+            let imageUrl = null;
+
+            // 1. Gérer l'upload de l'image si présente
+            if (pendingImage) {
+                const fileExt = pendingImage.name.split('.').pop();
+                const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+                const filePath = `messages/${fileName}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('forum')
+                    .upload(filePath, pendingImage);
+
+                if (uploadError) throw uploadError;
+
+                const { data: publicUrlData } = supabase.storage
+                    .from('forum')
+                    .getPublicUrl(filePath);
+                
+                imageUrl = publicUrlData.publicUrl;
+            }
+
+            // 2. Insérer le message en base
             const { error } = await supabase
                 .from('discussion_messages')
                 .insert([{
                     discussion_id: id,
                     user_id: currentUser.id,
-                    content: message
+                    content: message,
+                    image_url: imageUrl
                 }]);
 
             if (error) throw error;
 
             setMessage('');
+            setPendingImage(null);
             fetchDiscussion(); // Refresh to show new message
 
         } catch (error) {
@@ -121,6 +156,12 @@ const DiscussionThread = () => {
             alert("Erreur lors de l'envoi : " + error.message);
         }
         setSubmitting(false);
+    };
+
+    const handleFileChange = (e) => {
+        if (e.target.files && e.target.files[0]) {
+            setPendingImage(e.target.files[0]);
+        }
     };
 
     const formatDate = (dateString) => {
@@ -139,10 +180,9 @@ const DiscussionThread = () => {
     };
 
     const userRole = (currentUser?.role || "").toLowerCase();
-    const isTech = userRole.includes('tech') || userRole.includes('expert') || userRole.includes('pro');
 
-    if (!currentUser || !isTech) {
-        return <div style={{ textAlign: 'center', padding: '2rem' }}>⚠️ Accès réservé aux techniciens.</div>;
+    if (!currentUser) {
+        return <div style={{ textAlign: 'center', padding: '2rem' }}>⚠️ Veuillez vous connecter pour accéder à la discussion.</div>;
     }
 
     if (loading) {
@@ -173,40 +213,41 @@ const DiscussionThread = () => {
             display: 'flex', 
             flexDirection: 'column', 
             height: '100vh', 
-            background: '#efe7de', // Fond WhatsApp classique
+            background: '#e5ddd5', // Fond de chat clair WhatsApp
             position: 'fixed',
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
             zIndex: 1000,
+            color: '#111b21',
             fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
         }}>
-            {/* Header style WhatsApp */}
+            {/* Header style WhatsApp Clair - Descendu pour le clic */}
             <header style={{
-                background: '#075e54',
-                color: '#fff',
-                padding: '12px 16px',
+                background: '#00a884',
+                color: '#ffffff',
+                padding: '60px 16px 16px 16px', // Augmenté à 60px pour un clic facile
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
                 boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
                 zIndex: 10
             }}>
-                <button onClick={() => navigate('/forum')} style={{ background: 'none', border: 'none', color: '#fff', padding: '5px', cursor: 'pointer' }}>
+                <button onClick={() => navigate('/forum')} style={{ background: 'none', border: 'none', color: '#ffffff', padding: '5px', cursor: 'pointer' }}>
                     <ArrowLeft size={24} />
                 </button>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                    <h2 style={{ fontSize: '1.1rem', margin: 0, fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <h2 style={{ fontSize: '1.1rem', margin: 0, fontWeight: '700', color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {discussion.title}
                     </h2>
-                    <div style={{ fontSize: '0.75rem', opacity: 0.9 }}>
+                    <div style={{ fontSize: '0.75rem', color: '#ffffff' }}>
                         {discussion.authorName} • {discussion.authorSpecialty}
                     </div>
                 </div>
             </header>
 
-            {/* Messages Area */}
+            {/* Messages Area Clair */}
             <div style={{ 
                 flex: 1, 
                 overflowY: 'auto', 
@@ -214,25 +255,34 @@ const DiscussionThread = () => {
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '10px',
-                backgroundImage: 'url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png")', // Subtile pattern
+                backgroundColor: '#e5ddd5',
+                backgroundImage: 'url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png")',
                 backgroundBlendMode: 'overlay'
             }}>
                 {/* Premier message (Auteur) */}
                 <div style={{
                     alignSelf: 'flex-start',
-                    background: '#fff',
+                    background: '#ffffff',
                     padding: '8px 12px',
                     borderRadius: '0 10px 10px 10px',
                     maxWidth: '85%',
-                    boxShadow: '0 1px 1px rgba(0,0,0,0.1)',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
                     position: 'relative',
                     marginBottom: '10px',
-                    borderLeft: '4px solid #10b981'
+                    borderLeft: '4px solid #00a884'
                 }}>
-                    <div style={{ fontWeight: '700', fontSize: '0.75rem', color: '#10b981', marginBottom: '4px' }}>
+                    <div style={{ fontWeight: '700', fontSize: '0.75rem', color: '#00a884', marginBottom: '4px' }}>
                         {discussion.authorName} (Auteur)
                     </div>
-                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#111', lineHeight: '1.4', whiteSpace: 'pre-line' }}>{discussion.content}</p>
+                    {discussion.imageUrl && (
+                        <img 
+                            src={discussion.imageUrl} 
+                            alt="Discussion media" 
+                            style={{ maxWidth: '100%', borderRadius: '10px', marginBottom: '8px', cursor: 'pointer' }}
+                            onClick={() => window.open(discussion.imageUrl, '_blank')}
+                        />
+                    )}
+                    <p style={{ margin: 0, fontSize: '0.95rem', color: '#111b21', lineHeight: '1.4', whiteSpace: 'pre-line' }}>{discussion.content}</p>
                     <div style={{ textAlign: 'right', fontSize: '0.65rem', color: '#667781', marginTop: '4px' }}>
                         {formatDate(discussion.createdAt)}
                     </div>
@@ -246,11 +296,11 @@ const DiscussionThread = () => {
                             key={msg.id}
                             style={{
                                 alignSelf: isMe ? 'flex-end' : 'flex-start',
-                                background: isMe ? '#dcf8c6' : '#fff', // Vert WhatsApp pour moi
+                                background: isMe ? '#d9fdd3' : '#ffffff', // Vert clair vs Blanc
                                 padding: '8px 12px',
                                 borderRadius: isMe ? '10px 0 10px 10px' : '0 10px 10px 10px',
                                 maxWidth: '85%',
-                                boxShadow: '0 1px 1px rgba(0,0,0,0.1)',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
                                 position: 'relative'
                             }}
                         >
@@ -259,17 +309,45 @@ const DiscussionThread = () => {
                                     {msg.authorName} • {msg.authorSpecialty}
                                 </div>
                             )}
-                            <p style={{ margin: 0, fontSize: '0.9rem', color: '#111', lineHeight: '1.4', whiteSpace: 'pre-line' }}>{msg.message}</p>
+
+                            {/* Image dans le message (si existe) */}
+                            {msg.image_url && (
+                                <img 
+                                    src={msg.image_url} 
+                                    alt="Message media" 
+                                    style={{ maxWidth: '100%', borderRadius: '10px', marginBottom: '8px', cursor: 'pointer' }}
+                                    onClick={() => window.open(msg.image_url, '_blank')}
+                                />
+                            )}
+
+                            <p style={{ margin: 0, fontSize: '0.95rem', color: '#111b21', lineHeight: '1.4', whiteSpace: 'pre-line' }}>{msg.message}</p>
                             <div style={{ textAlign: 'right', fontSize: '0.65rem', color: '#667781', marginTop: '4px' }}>
                                 {formatDate(msg.createdAt)}
                             </div>
                         </div>
                     );
                 })}
-                <div ref={messagesEndRef} style={{ height: '70px' }}></div> {/* Spacer & Scroll target */}
+                <div ref={messagesEndRef} style={{ height: '80px' }}></div>
             </div>
 
-            {/* Input Bar floating */}
+            {/* Zone de prévisualisation de l'image sélectionnée */}
+            {pendingImage && (
+                <div style={{
+                    background: '#f0f2f5',
+                    padding: '8px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    borderTop: '1px solid #e9edef'
+                }}>
+                    <div style={{ fontSize: '0.8rem', color: '#00a884', flex: 1 }}>
+                        📷 Image prête : {pendingImage.name}
+                    </div>
+                    <button onClick={() => setPendingImage(null)} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '1.2rem', cursor: 'pointer' }}>×</button>
+                </div>
+            )}
+
+            {/* Input Bar Claire */}
             <div style={{
                 position: 'fixed',
                 bottom: 0,
@@ -282,11 +360,22 @@ const DiscussionThread = () => {
                 gap: '8px',
                 zIndex: 20
             }}>
+                {/* Bouton Camera */}
+                <label style={{ cursor: 'pointer', color: '#667781', padding: '5px' }}>
+                    <Image size={24} />
+                    <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleFileChange} 
+                        style={{ display: 'none' }} 
+                    />
+                </label>
+
                 <div style={{ 
                     flex: 1, 
-                    background: '#fff', 
+                    background: '#ffffff', 
                     borderRadius: '25px', 
-                    padding: '0 10px',
+                    padding: '0 12px',
                     display: 'flex',
                     alignItems: 'center',
                     minHeight: '45px'
@@ -298,6 +387,8 @@ const DiscussionThread = () => {
                         style={{
                             flex: 1,
                             border: 'none',
+                            background: 'transparent',
+                            color: '#111b21',
                             outline: 'none',
                             padding: '10px 5px',
                             fontSize: '0.95rem',
@@ -315,26 +406,28 @@ const DiscussionThread = () => {
                 </div>
                 <button
                     onClick={handlePostMessage}
-                    disabled={submitting || !message.trim()}
+                    disabled={submitting || (!message.trim() && !pendingImage)}
                     style={{
                         width: '45px',
                         height: '45px',
                         borderRadius: '50%',
-                        background: '#075e54',
-                        color: '#fff',
+                        background: '#00a884',
+                        color: '#ffffff',
                         border: 'none',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         cursor: 'pointer',
-                        boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
-                        transition: 'transform 0.2s'
+                        boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+                        transition: 'transform 0.2s',
+                        opacity: (!message.trim() && !pendingImage) ? 0.5 : 1
                     }}
                 >
                     <Send size={20} />
                 </button>
             </div>
         </div>
+
     );
 };
 

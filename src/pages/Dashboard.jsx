@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import API_URL from '../config';
 import { supabase } from '../supabaseClient';
-import { Users, Wrench, ShoppingBag, BarChart2, Edit, X, Lock, Unlock, MessageCircle, Clock } from 'lucide-react';
-import WelcomeOverlay from '../components/WelcomeOverlay';
+import { Users, Wrench, ShoppingBag, BarChart2, Edit, X, Lock, Unlock, MessageCircle, Clock, Trash2, PlusCircle, ArrowRight, LogOut, UserX, Settings, Eye, Heart } from 'lucide-react';
 
 const StatCard = ({ title, value, color, icon }) => (
     <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem' }}>
@@ -20,50 +19,66 @@ const StatCard = ({ title, value, color, icon }) => (
 );
 
 const Dashboard = () => {
-    const [activeTab, setActiveTab] = useState('admin'); // 'admin' or 'tech'
+    const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')));
+    const isAdmin = user?.email === 'Diassecke@gmail.com';
+    const [activeTab, setActiveTab] = useState(isAdmin ? 'admin' : 'sales'); 
     const [technicians, setTechnicians] = useState([]);
     const [clients, setClients] = useState([]);
     const [feedback, setFeedback] = useState([]);
+    const [myProducts, setMyProducts] = useState([]);
+    const [loadingProducts, setLoadingProducts] = useState(false);
     const [adminSubTab, setAdminSubTab] = useState('techs'); // 'techs', 'clients', 'feedback'
     const [isEditing, setIsEditing] = useState(false);
     const [techStats, setTechStats] = useState({ rating: 0, reviews_count: 0 });
     const [currentTech, setCurrentTech] = useState(null);
     const [fullTechData, setFullTechData] = useState(null);
-    const user = JSON.parse(localStorage.getItem('user'));
 
-    const fetchTechStats = async () => {
+    const fetchUserData = async () => {
         try {
+            // SYNC ID (Support UUID transition)
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            if (authUser && authUser.id !== user.id) {
+                const correctedUser = { ...user, id: authUser.id };
+                localStorage.setItem('user', JSON.stringify(correctedUser));
+                setUser(correctedUser);
+                await supabase.rpc('fix_my_id', { new_id: authUser.id, user_phone: user.phone });
+            }
+
+            const currentId = authUser?.id || user.id;
+
             // Get user data
             const { data: userData, error: userError } = await supabase
                 .from('users')
                 .select('*')
-                .eq('id', user.id)
+                .eq('id', currentId)
                 .single();
 
             if (userError) throw userError;
 
-            // Get reviews to calculate stats accurately
-            const { data: reviews, error: reviewsError } = await supabase
-                .from('reviews')
-                .select('rating')
-                .eq('technicianId', user.id);
-
-            if (reviewsError) throw reviewsError;
-
+            // Stats pour techniciens (optionnel si client)
             let rating = 0;
             let count = 0;
+            
+            try {
+                const { data: reviews } = await supabase
+                    .from('reviews')
+                    .select('rating')
+                    .eq('technicianId', user.id);
 
-            if (reviews && reviews.length > 0) {
-                count = reviews.length;
-                const total = reviews.reduce((acc, curr) => acc + (curr.rating || 0), 0);
-                rating = (total / count).toFixed(1);
+                if (reviews && reviews.length > 0) {
+                    count = reviews.length;
+                    const total = reviews.reduce((acc, curr) => acc + (curr.rating || 0), 0);
+                    rating = (total / count).toFixed(1);
+                }
+            } catch (revErr) { 
+                console.log("No reviews yet or not a technician.");
             }
 
             if (userData) {
                 const mappedUser = {
                     ...userData,
                     fullName: userData.fullname || userData.fullName,
-                    specialty: userData.specialty, // typically lowercase in db too if text, but key is correct
+                    specialty: userData.specialty,
                     city: userData.city,
                     isBlocked: userData.isblocked !== undefined ? userData.isblocked : userData.isBlocked,
                     commentsEnabled: userData.commentsenabled !== undefined ? userData.commentsenabled : userData.commentsEnabled
@@ -73,9 +88,12 @@ const Dashboard = () => {
                     rating: rating,
                     reviews_count: count
                 });
+                // Mettre à jour l'utilisateur local pour les compteurs
+                setUser(mappedUser);
+                localStorage.setItem('user', JSON.stringify(mappedUser));
             }
         } catch (error) {
-            console.error("Error fetching tech stats:", error.message);
+            console.error("Error fetching user data:", error.message);
         }
     };
 
@@ -137,6 +155,82 @@ const Dashboard = () => {
         }
     };
 
+    const fetchMyProducts = async () => {
+        if (!user?.id) return;
+        setLoadingProducts(true);
+        try {
+            const { data, error } = await supabase
+                .from('products')
+                .select('*')
+                .eq('technicianid', user.id)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            if (data) setMyProducts(data);
+        } catch (error) {
+            console.error("Error fetching products:", error.message);
+        }
+        setLoadingProducts(false);
+    };
+
+    const handleLogout = async () => {
+        if (window.confirm("Voulez-vous vraiment vous déconnecter ?")) {
+            try {
+                // On tente de déconnecter proprement via Supabase
+                await supabase.auth.signOut();
+            } catch (error) {
+                console.error("Erreur signOut:", error);
+            } finally {
+                // Quoi qu'il arrive, on nettoie le local et on redirige
+                localStorage.clear();
+                window.location.href = '/login';
+            }
+        }
+    };
+
+    const handleDeleteAccount = async () => {
+        const confirm = window.confirm(
+            "⚠️ ATTENTION : Cette action est IRREVERSIBLE.\n\n" +
+            "Toutes vos annonces, messages et informations de profil seront supprimés définitivement.\n\n" +
+            "Voulez-vous vraiment supprimer votre compte ?"
+        );
+        
+        if (confirm) {
+            try {
+                // Delete user from our database table
+                const { error: dbError } = await supabase
+                    .from('users')
+                    .delete()
+                    .eq('id', user.id);
+                
+                if (dbError) throw dbError;
+
+                // Sign out
+                await supabase.auth.signOut();
+                localStorage.clear();
+                alert("Votre compte a été supprimé avec succès.");
+                window.location.href = '/register';
+            } catch (error) {
+                console.error("Erreur suppression compte:", error);
+                alert("Erreur lors de la suppression : " + error.message);
+            }
+        }
+    };
+
+    const handleDeleteProduct = async (productId) => {
+        if (!window.confirm("Supprimer cet article définitivement ?")) return;
+        try {
+            const { error } = await supabase
+                .from('products')
+                .delete()
+                .eq('id', productId);
+            if (error) throw error;
+            setMyProducts(prev => prev.filter(p => p.id !== productId));
+        } catch (error) {
+            alert("Erreur: " + error.message);
+        }
+    };
+
     const handleDeleteFeedback = async (id) => {
         try {
             const { error } = await supabase
@@ -159,7 +253,10 @@ const Dashboard = () => {
             fetchClients();
             fetchFeedback();
         } else if (activeTab === 'tech' && user?.id) {
-            fetchTechStats();
+            fetchUserData();
+        } else if (activeTab === 'sales' && user?.id) {
+            fetchUserData(); 
+            fetchMyProducts();
         }
     }, [activeTab, user?.id]);
 
@@ -184,7 +281,46 @@ const Dashboard = () => {
 
         } catch (error) {
             console.error(error);
-            alert('Erreur technique : ' + error.message);
+            alert('⚠️ Échec de la mise à jour : ' + error.message);
+        }
+    };
+
+    const handleKycValidation = async (techId, action) => {
+        if (!window.confirm(action === 'verify' ? "Voulez-vous valider le Contrat de Confiance pour ce technicien ?" : "Voulez-vous rejeter la demande de ce technicien ?")) return;
+
+        try {
+            const { data, error } = await supabase
+                .from('users')
+                .update({ 
+                    verification_status: action === 'verify' ? 'verified' : 'rejected',
+                    contrat_confiance: action === 'verify' ? true : false
+                })
+                .eq('id', techId)
+                .select();
+
+            if (error) throw error;
+            
+            if (!data || data.length === 0) {
+                alert("❌ ERREUR SÉCURITÉ : Vous n'avez pas les droits (RLS Supabase) pour modifier ce technicien. La mise à jour a été bloquée par la base de données.");
+                return;
+            }
+
+            // Notification pour le technicien
+            await supabase.from('notifications').insert([{
+                user_id: techId,
+                title: action === 'verify' ? '🏆 Contrat de Confiance Validé' : '❌ Contrat de Confiance Rejeté',
+                content: action === 'verify' 
+                    ? 'Félicitations ! Votre profil bénéficie désormais du badge officiel.'
+                    : 'Votre demande n\'a pas pu être validée. Veuillez vérifier vos documents.',
+                type: 'system',
+                link: '/expert-dashboard'
+            }]);
+
+            alert(action === 'verify' ? '✅ Contrat de Confiance validé !' : 'Demande rejetée.');
+            fetchTechnicians();
+        } catch (error) {
+            console.error("Erreur KYC:", error);
+            alert("Erreur: " + error.message);
         }
     };
 
@@ -257,7 +393,7 @@ const Dashboard = () => {
 
             } catch (error) {
                 console.error(error);
-                alert('Erreur technique : ' + error.message);
+                alert('⚠️ Échec de la mise à jour : ' + error.message);
             }
         }
     };
@@ -268,9 +404,11 @@ const Dashboard = () => {
         const isStandard = standardSpecialties.includes(tech.specialty);
         setCurrentTech({
             ...tech,
+            fullName: tech.fullName || tech.fullname, // Sync names
             specialtyType: isStandard ? tech.specialty : 'Autre',
             otherSpecialty: isStandard ? '' : tech.specialty || '',
-            commentsEnabled: !!tech.commentsEnabled
+            commentsEnabled: !!tech.commentsEnabled,
+            district: tech.district || ''
         });
         setIsEditing(true);
     };
@@ -282,39 +420,63 @@ const Dashboard = () => {
 
     const handleSave = async (e) => {
         e.preventDefault();
+        const saveBtn = e.target.querySelector('button[type="submit"]');
+        if (saveBtn) saveBtn.disabled = true;
+
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const currentId = session?.user?.id || user.id || currentTech.id;
+            
+            console.log("🛠️ Sauvegarde ID:", currentId);
+
             const payload = {
-                fullname: currentTech.fullName, // Lowercase for DB Update
-                email: currentTech.email,
-                description: currentTech.description,
-                image: currentTech.image,
-                city: currentTech.city,
-                phone: currentTech.phone,
-                commentsenabled: currentTech.commentsEnabled ? 1 : 0, // Lowercase for DB Update
+                fullname: currentTech.fullName || user.fullName, 
+                email: currentTech.email || user.email,
+                description: currentTech.description || '',
+                image: currentTech.image || '',
+                city: currentTech.city || '',
+                district: currentTech.district || '',
+                phone: currentTech.phone || '',
+                commentsenabled: currentTech.commentsEnabled ? 1 : 0, 
                 specialty: currentTech.specialtyType === 'Autre' ? currentTech.otherSpecialty : currentTech.specialtyType
             };
 
-            const { error } = await supabase
+            const { data, error } = await supabase
                 .from('users')
                 .update(payload)
-                .eq('id', currentTech.id);
+                .eq('id', currentId)
+                .select();
 
             if (error) throw error;
 
-            alert('Informations mises à jour avec succès');
-            setIsEditing(false);
-
-            if (currentTech.id === user.id) {
-                const updatedUser = { ...user, ...payload };
-                localStorage.setItem('user', JSON.stringify(updatedUser));
-                fetchTechStats();
+            if (!data || data.length === 0) {
+                alert("⚠️ Attention : La modification n'a pas pu être enregistrée en base. Vérifiez vos permissions.");
+            } else {
+                alert('Informations mises à jour avec succès');
             }
 
+            setIsEditing(false);
+
+            const updatedUser = { 
+                ...user, 
+                ...payload,
+                fullName: payload.fullname 
+            };
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+            setUser(updatedUser); 
+            fetchUserData();
+            
             if (activeTab === 'admin') fetchTechnicians();
+
+            setTimeout(() => {
+               window.location.reload(); 
+            }, 1000);
 
         } catch (error) {
             console.error(error);
-            alert('Erreur technique : ' + error.message);
+            alert('⚠️ Échec de la mise à jour : ' + error.message);
+        } finally {
+            if (saveBtn) saveBtn.disabled = false;
         }
     };
 
@@ -324,20 +486,28 @@ const Dashboard = () => {
 
     return (
         <div className="container" style={{ padding: '1rem 1rem' }}>
-            <WelcomeOverlay userName={user?.fullName} duration={2000} />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Dashboard</h2>
-                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Tableau de bord</h2>
+                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                     <button
-                        className={`btn ${activeTab === 'tech' ? 'btn-primary' : 'btn-outline'}`}
-                        onClick={() => setActiveTab('tech')}
+                        className={`btn ${activeTab === 'sales' ? 'btn-primary' : 'btn-outline'}`}
+                        onClick={() => setActiveTab('sales')}
                         style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
-                    >Expert</button>
-                    <button
-                        className={`btn ${activeTab === 'admin' ? 'btn-primary' : 'btn-outline'}`}
-                        onClick={() => setActiveTab('admin')}
-                        style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
-                    >Admin</button>
+                    >Mes Ventes</button>
+                    {user?.role === 'technician' && (
+                        <button
+                            className={`btn ${activeTab === 'tech' ? 'btn-primary' : 'btn-outline'}`}
+                            onClick={() => setActiveTab('tech')}
+                            style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
+                        >Expert</button>
+                    )}
+                    {isAdmin && (
+                        <button
+                            className={`btn ${activeTab === 'admin' ? 'btn-primary' : 'btn-outline'}`}
+                            onClick={() => setActiveTab('admin')}
+                            style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
+                        >Admin</button>
+                    )}
                 </div>
             </div>
 
@@ -345,16 +515,16 @@ const Dashboard = () => {
                 {activeTab === 'admin' ? (
                     <>
                         <StatCard title="Total Clients" value={clients.length} color="#3498DB" icon={<Users />} />
-                        <StatCard title="Techniciens" value={technicians.length} color="#2ECC71" icon={<Wrench />} />
-                        <StatCard title="Ventes" value="23" color="#9B59B6" icon={<ShoppingBag />} />
-                        <StatCard title="Revenus" value="450k" color="#F1C40F" icon={<BarChart2 />} />
+                        <StatCard title="Techniciens" value={technicians.length} color="#007bff" icon={<Wrench />} />
+                        <StatCard title="Total Annonces" value="23" color="#9B59B6" icon={<ShoppingBag />} />
+                        <StatCard title="Signalements" value={feedback.length} color="#e53e3e" icon={<MessageCircle />} />
                     </>
                 ) : (
                     <>
-                        <StatCard title="Clients" value="12" color="#3498DB" icon={<Users />} />
-                        <StatCard title="Ma Note" value={`${techStats.rating} (${techStats.reviews_count})`} color="#F1C40F" icon={<Wrench />} />
-                        <StatCard title="Ventes" value="4" color="#9B59B6" icon={<ShoppingBag />} />
-                        <StatCard title="Gains" value="85k" color="#2ECC71" icon={<BarChart2 />} />
+                        <StatCard title="Articles" value={myProducts.length} color="#9B59B6" icon={<ShoppingBag />} />
+                        <StatCard title="Vues" value={myProducts.reduce((acc, p) => acc + (Number(p.views) || 0), 0) + (Number(fullTechData?.profile_views) || Number(user?.profile_views) || 0)} color="#3498DB" icon={<Eye />} />
+                        <StatCard title="Likes" value={myProducts.reduce((acc, p) => acc + (Number(p.likes) || 0), 0)} color="#e91e63" icon={<Heart />} />
+                        <StatCard title="Vendus" value={myProducts.filter(p => p.status === 'sold').length} color="#007bff" icon={<BarChart2 />} />
                     </>
                 )}
             </div>
@@ -363,7 +533,7 @@ const Dashboard = () => {
                 <div className="card" style={{ padding: '1rem', marginBottom: '1.5rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
                         <img
-                            src={fullTechData.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullTechData.fullName)}&background=random&color=fff&size=100`}
+                            src={fullTechData.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullTechData.fullName)}&background=007bff&color=fff&size=100`}
                             alt={fullTechData.fullName}
                             style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover' }}
                         />
@@ -385,6 +555,151 @@ const Dashboard = () => {
                 </div>
             )}
 
+            {activeTab === 'sales' && (
+                <div className="card" style={{ padding: '1.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <h3 style={{ fontSize: '1.1rem', margin: 0, fontWeight: '800' }}>Mes Articles en Vente</h3>
+                        <Link to="/marketplace" className="btn btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px', textDecoration: 'none' }}>
+                            <PlusCircle size={16} /> Ajouter un article
+                        </Link>
+                    </div>
+
+                    {loadingProducts ? (
+                        <p style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>Chargement de vos articles...</p>
+                    ) : myProducts.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '3rem', border: '2px dashed #eee', borderRadius: '15px' }}>
+                            <ShoppingBag size={40} color="#ccc" style={{ marginBottom: '1rem' }} />
+                            <p style={{ color: '#666', marginBottom: '1rem' }}>Vous n'avez aucun article en vente pour le moment.</p>
+                            <Link to="/marketplace" style={{ color: 'var(--primary-color)', fontWeight: 'bold', textDecoration: 'none' }}>Publier ma première annonce →</Link>
+                        </div>
+                    ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+                            {myProducts.map(product => (
+                                <div key={product.id} className="card-premium-list" style={{ 
+                                    padding: '1rem', 
+                                    position: 'relative', 
+                                    display: 'flex', 
+                                    alignItems: 'center',
+                                    gap: '1rem', 
+                                    backgroundColor: 'white',
+                                    borderRadius: '24px',
+                                    marginBottom: '0.8rem',
+                                    boxShadow: '0 4px 15px rgba(0,0,0,0.03)',
+                                    border: '1px solid #f8fafc'
+                                }}>
+                                    <div style={{ 
+                                        width: '64px', 
+                                        height: '64px', 
+                                        flexShrink: 0, 
+                                        position: 'relative',
+                                        backgroundColor: '#f1f5f9', 
+                                        borderRadius: '50%', // Circle like the stats cards
+                                        overflow: 'hidden',
+                                        border: '2px solid white',
+                                        boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
+                                    }}>
+                                        {product.image ? (
+                                            <img 
+                                                src={product.image} 
+                                                alt={product.title} 
+                                                onError={(e) => {
+                                                    e.target.onerror = null;
+                                                    e.target.style.display = 'none'; // Hide if failed
+                                                    e.target.parentElement.classList.add('broken-img-container');
+                                                }}
+                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                            />
+                                        ) : null}
+                                        {/* Beautiful Icon Fallback */}
+                                        <div className="img-fallback" style={{ 
+                                            position: 'absolute', inset: 0, 
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                            backgroundColor: '#e0f2fe', color: '#0ea5e9' 
+                                        }}>
+                                            <ShoppingBag size={24} />
+                                        </div>
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <h4 style={{ margin: '0 0 2px 0', fontSize: '1rem', fontWeight: '850', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.title}</h4>
+                                        <div style={{ color: '#007bff', fontWeight: '900', fontSize: '1.2rem', letterSpacing: '-0.02em' }}>
+                                            {Number(product.price).toLocaleString()} F
+                                        </div>
+                                                                                <div style={{ display: 'flex', gap: '8px', marginTop: '12px', justifyContent: 'center' }}>
+                                            <button 
+                                                onClick={() => handleDeleteProduct(product.id)}
+                                                style={{ border: 'none', background: '#fff1f2', color: '#e11d48', padding: '6px 10px', borderRadius: '10px', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 'bold' }}
+                                            >
+                                                <Trash2 size={14} /> Supprimer
+                                            </button>
+                                            <Link 
+                                                to={`/marketplace?edit=${product.id}`}
+                                                style={{ textDecoration: 'none', background: '#ecfdf5', color: '#007bff', padding: '6px 10px', borderRadius: '10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 'bold' }}
+                                            >
+                                                <Edit size={14} /> Modifier
+                                            </Link>
+                                            <Link 
+                                                to={`/marketplace?id=${product.id}`}
+                                                style={{ textDecoration: 'none', background: '#f1f5f9', color: '#475569', padding: '6px 10px', borderRadius: '10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 'bold' }}
+                                            >
+                                                <ArrowRight size={14} /> Voir
+                                            </Link>
+                                        </div>
+                                    </div>
+                                    {product.status === 'sold' && (
+                                        <div style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: '#ef4444', color: 'white', padding: '2px 8px', borderRadius: '6px', fontSize: '0.6rem', fontWeight: 'bold' }}>
+                                            VENDU
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Section Paramètres Compte - V147 */}
+                    <div style={{ marginTop: '2rem', borderTop: '1px solid #eee', paddingTop: '1.5rem' }}>
+                        <h4 style={{ fontSize: '0.9rem', marginBottom: '1rem', color: '#64748b', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Settings size={16} /> Paramètres
+                        </h4>
+                        
+                        <button
+                            onClick={() => handleEdit(fullTechData || user)}
+                            style={{
+                                width: '100%', padding: '0.9rem', borderRadius: '12px', border: 'none',
+                                background: '#007bff', color: 'white', fontSize: '0.9rem', fontWeight: '700',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                                marginBottom: '1rem', cursor: 'pointer', boxShadow: '0 4px 6px rgba(0, 123, 255, 0.2)'
+                            }}
+                        >
+                            <Settings size={18} /> Modifier mon profil
+                        </button>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                            <button
+                                onClick={handleLogout}
+                                style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                                    padding: '0.75rem', borderRadius: '12px', border: '1px solid #e2e8f0',
+                                    background: 'white', color: '#1e293b', fontSize: '0.85rem', fontWeight: '700',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <LogOut size={16} /> Déconnexion
+                            </button>
+                            <button
+                                onClick={handleDeleteAccount}
+                                style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                                    padding: '0.75rem', borderRadius: '12px', border: 'none',
+                                    background: '#fff1f2', color: '#e11d48', fontSize: '0.85rem', fontWeight: '700',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <UserX size={16} /> Supprimer mon compte
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             {activeTab === 'admin' && (
                 <div className="card" style={{ padding: '1rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #eee', paddingBottom: '0.75rem' }}>
@@ -412,6 +727,19 @@ const Dashboard = () => {
                                     boxShadow: adminSubTab === 'feedback' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none'
                                 }}
                             >Revendications ({feedback.length})</button>
+                            <button
+                                onClick={() => setAdminSubTab('kyc')}
+                                style={{
+                                    padding: '6px 16px', fontSize: '0.85rem', border: 'none', borderRadius: '6px', cursor: 'pointer',
+                                    backgroundColor: adminSubTab === 'kyc' ? 'white' : 'transparent',
+                                    fontWeight: adminSubTab === 'kyc' ? 'bold' : 'normal',
+                                    color: adminSubTab === 'kyc' ? 'var(--primary-color)' : '#666',
+                                    transition: 'all 0.2s',
+                                    boxShadow: adminSubTab === 'kyc' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none'
+                                }}
+                            >
+                                Contrats KYC ({technicians.filter(t => t.verification_status === 'pending').length})
+                            </button>
                         </div>
                     </div>
 
@@ -435,8 +763,11 @@ const Dashboard = () => {
                                                 backgroundColor: tech.isBlocked ? '#fff5f5' : 'transparent'
                                             }}>
                                                 <td style={{ padding: '0.75rem' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                        {tech.fullName}
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <span style={{ fontWeight: '600' }}>{tech.fullName}</span>
+                                                        {tech.contrat_confiance && (
+                                                            <span title="Contrat de Confiance Validé" style={{ fontSize: '0.9rem' }}>🛡️</span>
+                                                        )}
                                                         {tech.isBlocked === 1 && <span style={{ fontSize: '0.65rem', backgroundColor: '#feb2b2', color: '#9b2c2c', padding: '1px 6px', borderRadius: '4px' }}>Bloqué</span>}
                                                     </div>
                                                 </td>
@@ -559,6 +890,35 @@ const Dashboard = () => {
                                     </tbody>
                                 </table>
                             </div>
+                        ) : adminSubTab === 'kyc' ? (
+                            <div>
+                                <h4 style={{ fontSize: '0.9rem', marginBottom: '1rem', color: '#666' }}>Demandes de Contrat de Confiance (KYC)</h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+                                    {technicians.filter(t => t.verification_status === 'pending').length === 0 ? (
+                                        <div style={{ textAlign: 'center', padding: '2rem', color: '#999', gridColumn: '1 / -1' }}>Aucune demande en attente.</div>
+                                    ) : (
+                                        technicians.filter(t => t.verification_status === 'pending').map((tech) => (
+                                            <div key={tech.id} className="card" style={{ padding: '1rem', borderTop: '4px solid #0ea5e9', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                    <img src={tech.image || `https://ui-avatars.com/api/?name=${tech.fullName}`} alt="" style={{ width: 40, height: 40, borderRadius: '50%' }} />
+                                                    <div>
+                                                        <h4 style={{ margin: 0 }}>{tech.fullName}</h4>
+                                                        <p style={{ margin: 0, fontSize: '0.75rem', color: '#666' }}>ID: {tech.id} • {tech.specialty}</p>
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                                                    <a href={tech.id_card_recto} target="_blank" rel="noreferrer" style={{ flex: 1, padding: '0.5rem', background: '#f1f5f9', textAlign: 'center', borderRadius: '8px', textDecoration: 'none', color: '#0ea5e9', fontSize: '0.8rem', fontWeight: 'bold' }}>Voir Recto</a>
+                                                    <a href={tech.id_card_verso} target="_blank" rel="noreferrer" style={{ flex: 1, padding: '0.5rem', background: '#f1f5f9', textAlign: 'center', borderRadius: '8px', textDecoration: 'none', color: '#0ea5e9', fontSize: '0.8rem', fontWeight: 'bold' }}>Voir Verso</a>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                                                    <button onClick={() => handleKycValidation(tech.id, 'verify')} style={{ flex: 1, padding: '0.5rem', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Valider KYC</button>
+                                                    <button onClick={() => handleKycValidation(tech.id, 'reject')} style={{ flex: 1, padding: '0.5rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Rejeter</button>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
                         ) : (
                             <div>
                                 <h4 style={{ fontSize: '0.9rem', marginBottom: '1rem', color: '#666' }}>Signalisations et Messages</h4>
@@ -655,16 +1015,18 @@ const Dashboard = () => {
                                 />
                             </div>
 
-                            <div style={{ marginBottom: '0.75rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.2rem', fontWeight: '500' }}>Email</label>
-                                <input
-                                    type="email"
-                                    name="email"
-                                    value={currentTech.email}
-                                    onChange={handleInputChange}
-                                    style={{ width: '100%', padding: '0.4rem', borderRadius: '4px', border: '1px solid #ddd', fontSize: '0.85rem' }}
-                                />
-                            </div>
+                            {user?.role !== 'client' && (
+                                <div style={{ marginBottom: '0.75rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.2rem', fontWeight: '500' }}>Email</label>
+                                    <input
+                                        type="email"
+                                        name="email"
+                                        value={currentTech.email}
+                                        onChange={handleInputChange}
+                                        style={{ width: '100%', padding: '0.4rem', borderRadius: '4px', border: '1px solid #ddd', fontSize: '0.85rem' }}
+                                    />
+                                </div>
+                            )}
 
                             <div style={{ marginBottom: '0.75rem' }}>
                                 <label style={{ display: 'block', marginBottom: '0.2rem', fontWeight: '500' }}>Photo de profil (Upload)</label>
@@ -715,29 +1077,31 @@ const Dashboard = () => {
                                 />
                             </div>
 
-                            <div style={{ marginBottom: '0.75rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.2rem', fontWeight: '500' }}>Spécialité</label>
-                                <select
-                                    name="specialtyType"
-                                    value={currentTech.specialtyType}
-                                    onChange={handleInputChange}
-                                    style={{ width: '100%', padding: '0.4rem', borderRadius: '4px', border: '1px solid #ddd', fontSize: '0.85rem', backgroundColor: 'white' }}
-                                >
-                                    <option value="Informatique">Informatique</option>
-                                    <option value="Reparateur telephone">Reparateur telephone</option>
-                                    <option value="Reparateur imprimante">Reparateur imprimante</option>
-                                    <option value="Réseaux">Réseaux</option>
-                                    <option value="Maintenancier">Maintenancier</option>
-                                    <option value="Mécanicien">Mécanicien</option>
-                                    <option value="Maçon">Maçon</option>
-                                    <option value="Plombier">Plombier</option>
-                                    <option value="Menuisier">Menuisier</option>
-                                    <option value="Sérigraphie">Sérigraphie</option>
-                                    <option value="Autre">Autre</option>
-                                </select>
-                            </div>
+                            {user?.role !== 'client' && (
+                                <div style={{ marginBottom: '0.75rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.2rem', fontWeight: '500' }}>Spécialité</label>
+                                    <select
+                                        name="specialtyType"
+                                        value={currentTech.specialtyType}
+                                        onChange={handleInputChange}
+                                        style={{ width: '100%', padding: '0.4rem', borderRadius: '4px', border: '1px solid #ddd', fontSize: '0.85rem', backgroundColor: 'white' }}
+                                    >
+                                        <option value="Informatique">Informatique</option>
+                                        <option value="Reparateur telephone">Reparateur telephone</option>
+                                        <option value="Reparateur imprimante">Reparateur imprimante</option>
+                                        <option value="Réseaux">Réseaux</option>
+                                        <option value="Maintenancier">Maintenancier</option>
+                                        <option value="Mécanicien">Mécanicien</option>
+                                        <option value="Maçon">Maçon</option>
+                                        <option value="Plombier">Plombier</option>
+                                        <option value="Menuisier">Menuisier</option>
+                                        <option value="Sérigraphie">Sérigraphie</option>
+                                        <option value="Autre">Autre</option>
+                                    </select>
+                                </div>
+                            )}
 
-                            {currentTech.specialtyType === 'Autre' && (
+                            {user?.role !== 'client' && currentTech.specialtyType === 'Autre' && (
                                 <div style={{ marginBottom: '0.75rem' }}>
                                     <label style={{ display: 'block', marginBottom: '0.2rem', fontWeight: '500' }}>Précisez le métier</label>
                                     <input

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { User, Lock, Phone, Eye, EyeOff, MapPin, CheckCircle2, Hammer, Search } from 'lucide-react';
+import { User, Lock, Phone, Eye, EyeOff, MapPin, CheckCircle2, Hammer, Search, Navigation } from 'lucide-react';
+import { Geolocation } from '@capacitor/geolocation';
 
 const Register = () => {
     const navigate = useNavigate();
@@ -10,6 +11,8 @@ const Register = () => {
     const [phoneError, setPhoneError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [otpCode, setOtpCode] = useState('');
+    const [gettingLocation, setGettingLocation] = useState(false);
+    const [locationStatus, setLocationStatus] = useState('');
 
     const isMobile = window.innerWidth <= 768;
 
@@ -36,6 +39,8 @@ const Register = () => {
         city: '',
         district: '',
         username: '',
+        latitude: null,
+        longitude: null,
         image: null,
         acceptedTerms: false
     });
@@ -68,7 +73,7 @@ const Register = () => {
         formData.acceptedTerms &&
         (formData.role === 'client' || (
             formData.role === 'technician' && 
-            formData.district.trim().length >= 2 &&
+            (formData.latitude && formData.longitude) &&
             (formData.specialty !== 'Autre' ? formData.specialty : formData.otherSpecialty.trim().length >= 2)
         ))
     );
@@ -105,6 +110,8 @@ const Register = () => {
                         phone: phoneClean,
                         city: formData.city,
                         district: formData.district,
+                        latitude: formData.latitude,
+                        longitude: formData.longitude,
                         specialty: formData.role === 'technician' ? (formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty) : null,
                         image: null,
                         email: finalEmail
@@ -125,6 +132,8 @@ const Register = () => {
                     role: formData.role,
                     city: formData.city,
                     district: formData.district,
+                    latitude: formData.latitude,
+                    longitude: formData.longitude,
                     password: formData.password,
                     email: finalEmail,
                     specialty: formData.role === 'technician' ? (formData.specialty === 'Autre' ? formData.otherSpecialty : formData.specialty) : null,
@@ -235,8 +244,8 @@ const Register = () => {
         }}>
             {/* Steps Progress */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '2rem', marginTop: '1rem' }}>
-                <div style={{ width: '40px', height: '6px', borderRadius: '10px', background: step >= 1 ? '#10b981' : 'rgba(255,255,255,0.3)' }} />
-                <div style={{ width: '40px', height: '6px', borderRadius: '10px', background: step >= 2 ? '#10b981' : 'rgba(255,255,255,0.3)' }} />
+                <div style={{ width: '40px', height: '6px', borderRadius: '10px', background: step >= 1 ? '#007bff' : 'rgba(255,255,255,0.3)' }} />
+                <div style={{ width: '40px', height: '6px', borderRadius: '10px', background: step >= 2 ? '#007bff' : 'rgba(255,255,255,0.3)' }} />
             </div>
 
             <div style={{ width: '100%', maxWidth: '440px' }}>
@@ -253,8 +262,8 @@ const Register = () => {
                                 onClick={() => setFormData({ ...formData, role: 'client' })}
                                 style={{ 
                                     flex: 1, height: '140px', borderRadius: '25px', 
-                                    border: `2px solid ${formData.role === 'client' ? '#10b981' : 'rgba(255,255,255,0.2)'}`,
-                                    background: formData.role === 'client' ? '#10b981' : 'rgba(255,255,255,0.1)',
+                                    border: `2px solid ${formData.role === 'client' ? '#007bff' : 'rgba(255,255,255,0.2)'}`,
+                                    background: formData.role === 'client' ? '#007bff' : 'rgba(255,255,255,0.1)',
                                     backdropFilter: 'blur(10px)', color: '#fff', cursor: 'pointer',
                                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px',
                                     transition: 'all 0.3s ease'
@@ -269,32 +278,26 @@ const Register = () => {
                                 onClick={() => setFormData({ ...formData, role: 'technician' })}
                                 style={{ 
                                     flex: 1, height: '140px', borderRadius: '25px', 
-                                    border: `2px solid ${formData.role === 'technician' ? '#10b981' : 'rgba(255,255,255,0.8)'}`,
-                                    background: formData.role === 'technician' ? '#10b981' : 'rgba(255,255,255,0.7)',
+                                    border: `2px solid ${formData.role === 'technician' ? '#007bff' : 'rgba(255,255,255,0.8)'}`,
+                                    background: formData.role === 'technician' ? '#007bff' : 'rgba(255,255,255,0.7)',
                                     backdropFilter: 'blur(10px)', color: formData.role === 'technician' ? '#fff' : '#1e293b', cursor: 'pointer',
                                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px',
                                     transition: 'all 0.3s ease',
                                     boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
                                 }}
                             >
-                                <Hammer size={32} color={formData.role === 'technician' ? '#fff' : '#10b981'} />
+                                <Hammer size={32} color={formData.role === 'technician' ? '#fff' : '#007bff'} />
                                 <span style={{ fontWeight: '700', fontSize: '1rem', color: formData.role === 'technician' ? '#fff' : '#1e293b' }}>Technicien</span>
                             </button>
                         </div>
 
                         <div style={{ marginBottom: '2rem' }}>
-                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#10b981', background: '#fff', width: 'fit-content', padding: '2px 8px', borderRadius: '6px', transform: 'translateY(10px) translateX(15px)', zIndex: 1, position: 'relative', border: '1px solid #f1f5f9' }}>Téléphone</label>
+                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#007bff', background: '#fff', width: 'fit-content', padding: '2px 8px', borderRadius: '6px', transform: 'translateY(10px) translateX(15px)', zIndex: 1, position: 'relative', border: '1px solid #f1f5f9' }}>Téléphone</label>
                             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                                <Phone size={20} style={{ position: 'absolute', left: '1.2rem', color: '#10b981', zIndex: 2 }} />
-                                <span style={{ 
-                                    position: 'absolute', 
-                                    left: '3.2rem', 
-                                    color: '#1e293b', 
-                                    fontWeight: '900', 
-                                    fontSize: '1.1rem',
-                                    zIndex: 2,
-                                    pointerEvents: 'none'
-                                }}>+221</span>
+                                <div style={{ position: 'absolute', left: '1rem', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', zIndex: 2 }}>
+                                    <span style={{ fontSize: '1.2rem', lineHeight: '1' }}>🇸🇳</span>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: '2px' }}><path d="m6 9 6 6 6-6"/></svg>
+                                </div>
                                 <input 
                                     type="tel" 
                                     name="phone" 
@@ -302,19 +305,20 @@ const Register = () => {
                                     onChange={handleChange}
                                     style={{ 
                                         width: '100%', 
-                                        padding: '1.2rem 1.2rem 1.2rem 6.8rem', 
+                                        padding: '1.2rem 1.2rem 1.2rem 4.5rem', 
                                         borderRadius: '20px', 
-                                        border: '2px solid #10b981', 
+                                        border: '2px solid #007bff', 
                                         background: 'rgba(255,255,255,0.8)', 
                                         color: '#1e293b', 
                                         fontSize: '1.1rem', 
                                         outline: 'none', 
                                         backdropFilter: 'blur(10px)',
-                                        fontWeight: '700'
+                                        fontWeight: '500',
+                                        letterSpacing: '1px'
                                     }}
-                                    placeholder="77 000 00 00"
+                                    placeholder="770000000"
                                 />
-                                <div style={{ position: 'absolute', right: '1rem', background: phoneError ? '#fee2e2' : '#10b98120', color: phoneError ? '#dc2626' : '#10b981', padding: '4px 10px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: '800' }}>
+                                <div style={{ position: 'absolute', right: '1rem', background: phoneError ? '#fee2e2' : '#007bff20', color: phoneError ? '#dc2626' : '#007bff', padding: '4px 10px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: '800' }}>
                                     {phoneError ? '!' : 'Valide ✓'}
                                 </div>
                             </div>
@@ -370,10 +374,10 @@ const Register = () => {
                             }}
                             style={{ 
                                 width: '100%', padding: '1.2rem', borderRadius: '22px', border: 'none', 
-                                background: isStep1Valid ? '#10b981' : '#cbd5e1', 
+                                background: isStep1Valid ? '#007bff' : '#cbd5e1', 
                                 color: '#fff', fontWeight: '900', fontSize: '1.2rem', 
                                 cursor: isStep1Valid ? 'pointer' : 'not-allowed',
-                                boxShadow: isStep1Valid ? '0 10px 20px rgba(16, 185, 129, 0.3)' : 'none',
+                                boxShadow: isStep1Valid ? '0 10px 20px rgba(0, 123, 255, 0.3)' : 'none',
                                 transition: '0.3s'
                             }}
                         >
@@ -386,21 +390,125 @@ const Register = () => {
                         <div style={{ marginBottom: '1.2rem' }}>
                              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b' }}>Nom Complet</label>
                              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                                <User size={18} style={{ position: 'absolute', left: '1rem', color: '#10b981' }} />
+                                <User size={18} style={{ position: 'absolute', left: '1rem', color: '#007bff' }} />
                                 <input type="text" name="fullName" required value={formData.fullName} onChange={handleChange} style={{ width: '100%', padding: '1rem 1rem 1rem 2.8rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', color: '#1e293b', outline: 'none' }} placeholder="Moussa Diop" />
                              </div>
                         </div>
 
-                        {/* Ville et Quartier */}
-                        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.2rem' }}>
-                            <div style={{ flex: 1 }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b' }}>Ville</label>
-                                <input type="text" name="city" required value={formData.city} onChange={handleChange} style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: 'rgba(255,255,255,0.8)', color: '#1e293b', outline: 'none' }} placeholder="Dakar" />
-                            </div>
-                            {formData.role === 'technician' && (
-                                <div style={{ flex: 1 }}>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b' }}>Quartier</label>
-                                    <input type="text" name="district" required value={formData.district} onChange={handleChange} style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: 'rgba(255,255,255,0.8)', color: '#1e293b', outline: 'none' }} placeholder="Parcelles" />
+                        {/* Ville / Localisation */}
+                        <div style={{ marginBottom: '1.2rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#1e293b' }}>
+                                {formData.role === 'technician' ? 'Localisation Expert' : 'Ma Ville'}
+                            </label>
+
+                            {formData.role === 'client' ? (
+                                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                    <MapPin size={18} style={{ position: 'absolute', left: '1rem', color: '#007bff' }} />
+                                    <input 
+                                        type="text" name="city" required value={formData.city} onChange={handleChange} 
+                                        style={{ width: '100%', padding: '1rem 1rem 1rem 2.8rem', borderRadius: '20px', border: '2px solid #f1f5f9', background: 'rgba(255,255,255,0.8)', color: '#1e293b', outline: 'none' }} 
+                                        placeholder="Dakar" 
+                                    />
+                                </div>
+                            ) : (
+                                <div style={{ 
+                                    background: 'rgba(255,255,255,0.8)', 
+                                    border: `2px solid ${formData.latitude ? '#007bff' : '#f1f5f9'}`, 
+                                    borderRadius: '24px', 
+                                    padding: '1rem',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '12px',
+                                    backdropFilter: 'blur(10px)'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <div style={{ 
+                                            width: '40px', height: '40px', borderRadius: '12px',
+                                            background: formData.latitude ? '#007bff15' : '#f1f5f9',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            color: formData.latitude ? '#007bff' : '#64748b'
+                                        }}>
+                                            <MapPin size={22} />
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontSize: '0.85rem', fontWeight: '800', color: formData.latitude ? '#007bff' : '#1e293b' }}>
+                                                {locationStatus || (formData.latitude ? 'Position enregistrée ✓' : 'Position non définie')}
+                                            </div>
+                                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                                {formData.city && formData.district ? `${formData.district}, ${formData.city}` : 'Indiquez où vous travaillez'}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        disabled={gettingLocation}
+                                        onClick={async () => {
+                                            setGettingLocation(true);
+                                            setLocationStatus('Recherche satellite...');
+                                            try {
+                                                const coordinates = await Geolocation.getCurrentPosition({
+                                                    enableHighAccuracy: true
+                                                });
+                                                
+                                                const lat = coordinates.coords.latitude;
+                                                const lon = coordinates.coords.longitude;
+                                                
+                                                setFormData({ ...formData, latitude: lat, longitude: lon });
+                                                setLocationStatus('Position trouvée !');
+
+                                                // Tentative de reverse geocoding pour la ville/quartier
+                                                try {
+                                                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+                                                    const addr = await res.json();
+                                                    const city = addr.address.city || addr.address.town || addr.address.village || 'Dakar';
+                                                    const district = addr.address.suburb || addr.address.neighbourhood || addr.address.road || 'Quartier';
+                                                    
+                                                    setFormData({
+                                                        ...formData,
+                                                        latitude: lat,
+                                                        longitude: lon,
+                                                        city: city,
+                                                        district: district
+                                                    });
+                                                    setLocationStatus(`Situé à ${district}`);
+                                                } catch (e) {
+                                                    console.warn("Reverse geocoding failed", e);
+                                                }
+                                            } catch (err) {
+                                                console.error(err);
+                                                alert("Impossible de récupérer la position. Assurez-vous d'avoir activé le GPS.");
+                                                setLocationStatus('Erreur GPS');
+                                            } finally {
+                                                setGettingLocation(false);
+                                            }
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.8rem',
+                                            borderRadius: '15px',
+                                            border: 'none',
+                                            background: gettingLocation ? '#f1f5f9' : (formData.latitude ? '#007bff15' : '#007bff'),
+                                            color: gettingLocation ? '#64748b' : (formData.latitude ? '#007bff' : '#fff'),
+                                            fontWeight: '800',
+                                            fontSize: '0.9rem',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '8px',
+                                            transition: 'all 0.3s'
+                                        }}
+                                    >
+                                        {gettingLocation ? (
+                                            <>Sync en cours...</>
+                                        ) : (
+                                            <>
+                                                <Navigation size={18} />
+                                                {formData.latitude ? 'Actualiser ma position' : 'Géolocaliser mon atelier'}
+                                            </>
+                                        )}
+                                    </button>
                                 </div>
                             )}
                         </div>
@@ -431,13 +539,13 @@ const Register = () => {
                                                         flexShrink: 0,
                                                         padding: '12px 20px',
                                                         borderRadius: '18px',
-                                                        background: isSelected ? '#10b981' : '#fff',
+                                                        background: isSelected ? '#007bff' : '#fff',
                                                         color: isSelected ? '#fff' : '#1e293b',
-                                                        border: `2px solid ${isSelected ? '#10b981' : '#f1f5f9'}`,
+                                                        border: `2px solid ${isSelected ? '#007bff' : '#f1f5f9'}`,
                                                         fontWeight: '700',
                                                         fontSize: '0.85rem',
                                                         cursor: 'pointer',
-                                                        boxShadow: isSelected ? '0 8px 15px rgba(16, 185, 129, 0.2)' : '0 2px 4px rgba(0,0,0,0.02)',
+                                                        boxShadow: isSelected ? '0 8px 15px rgba(0, 123, 255, 0.2)' : '0 2px 4px rgba(0,0,0,0.02)',
                                                         transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                                                         display: 'flex',
                                                         alignItems: 'center',
@@ -454,10 +562,10 @@ const Register = () => {
 
                                 {formData.specialty === 'Autre' && (
                                     <div style={{ marginBottom: '1.2rem', animation: 'fadeIn 0.3s ease' }}>
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.85rem', color: '#10b981' }}>Précisez votre métier</label>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.85rem', color: '#007bff' }}>Précisez votre métier</label>
                                         <input 
                                             type="text" name="otherSpecialty" value={formData.otherSpecialty} onChange={handleChange} 
-                                            style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid #10b981', background: '#fff', color: '#1e293b', outline: 'none' }} 
+                                            style={{ width: '100%', padding: '1rem', borderRadius: '20px', border: '2px solid #007bff', background: '#fff', color: '#1e293b', outline: 'none' }} 
                                             placeholder="Ex: Menuisier, Électricien..." 
                                         />
                                     </div>
@@ -466,9 +574,9 @@ const Register = () => {
                         )}
 
                         <div style={{ marginBottom: '1.2rem' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#10b981' }}>Code secret (4 chiffres)</label>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.9rem', color: '#007bff' }}>Code secret (4 chiffres)</label>
                             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                                <Lock size={18} style={{ position: 'absolute', left: '1rem', color: '#10b981' }} />
+                                <Lock size={18} style={{ position: 'absolute', left: '1rem', color: '#007bff' }} />
                                 <input 
                                     type={showPassword ? "text" : "password"} 
                                     name="password" 
@@ -481,7 +589,7 @@ const Register = () => {
                                         const val = e.target.value.replace(/\D/g, ''); // Uniquement des chiffres
                                         setFormData({ ...formData, password: val });
                                     }} 
-                                    style={{ width: '100%', padding: '1.2rem 1rem 1.2rem 2.8rem', borderRadius: '20px', border: '2px solid #10b981', background: 'rgba(255,255,255,0.8)', color: '#1e293b', outline: 'none', letterSpacing: formData.password ? '4px' : 'normal', fontWeight: '700' }} 
+                                    style={{ width: '100%', padding: '1.2rem 1rem 1.2rem 2.8rem', borderRadius: '20px', border: '2px solid #007bff', background: 'rgba(255,255,255,0.8)', color: '#1e293b', outline: 'none', letterSpacing: formData.password ? '4px' : 'normal', fontWeight: '700' }} 
                                     placeholder="Ex: 1234" 
                                 />
                                 <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '1rem', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
@@ -495,19 +603,19 @@ const Register = () => {
                                 onClick={() => setFormData({ ...formData, acceptedTerms: !formData.acceptedTerms })}
                                 style={{ 
                                     width: '30px', height: '30px', borderRadius: '10px', 
-                                    border: `2.5px solid ${formData.acceptedTerms ? '#10b981' : '#cbd5e1'}`,
+                                    border: `2.5px solid ${formData.acceptedTerms ? '#007bff' : '#cbd5e1'}`,
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    background: formData.acceptedTerms ? '#10b981' : 'rgba(255,255,255,0.5)',
+                                    background: formData.acceptedTerms ? '#007bff' : 'rgba(255,255,255,0.5)',
                                     transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                                     cursor: 'pointer',
                                     flexShrink: 0,
-                                    boxShadow: formData.acceptedTerms ? '0 4px 10px rgba(16, 185, 129, 0.2)' : 'none'
+                                    boxShadow: formData.acceptedTerms ? '0 4px 10px rgba(0, 123, 255, 0.2)' : 'none'
                                 }}
                             >
                                 {formData.acceptedTerms && <CheckCircle2 size={20} color="#fff" strokeWidth={3} />}
                             </div>
                             <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500', lineHeight: '1.4' }}>
-                                J'accepte les <Link to="/terms#cgu" style={{ color: '#10b981', fontWeight: '700', textDecoration: 'none' }}>Conditions Générales</Link> et la <Link to="/terms#privacy" style={{ color: '#10b981', fontWeight: '700', textDecoration: 'none' }}>Politique de Confidentialité</Link>
+                                J'accepte les <Link to="/terms#cgu" style={{ color: '#007bff', fontWeight: '700', textDecoration: 'none' }}>Conditions Générales</Link> et la <Link to="/terms#privacy" style={{ color: '#007bff', fontWeight: '700', textDecoration: 'none' }}>Politique de Confidentialité</Link>
                             </span>
                         </div>
 
@@ -523,10 +631,10 @@ const Register = () => {
                                 onClick={handleSubmit}
                                 style={{ 
                                     flex: 2, padding: '1.2rem', borderRadius: '22px', border: 'none', 
-                                    background: isStep2Valid ? '#10b981' : '#cbd5e1', 
+                                    background: isStep2Valid ? '#007bff' : '#cbd5e1', 
                                     color: '#fff', fontWeight: '900', fontSize: '1.2rem', 
                                     cursor: isStep2Valid ? 'pointer' : 'not-allowed', 
-                                    boxShadow: isStep2Valid ? '0 10px 20px rgba(16, 185, 129, 0.3)' : 'none',
+                                    boxShadow: isStep2Valid ? '0 10px 20px rgba(0, 123, 255, 0.3)' : 'none',
                                     transition: '0.3s'
                                 }}
                             >
@@ -537,11 +645,11 @@ const Register = () => {
                 ) : null}
 
                 <p style={{ textAlign: 'center', marginTop: '2.5rem', fontSize: '0.85rem', color: '#64748b', lineHeight: '1.5' }}>
-                    En vous inscrivant, vous acceptez nos <span style={{ color: '#10b981', textDecoration: 'underline' }}>Conditions Générales</span> et la <span style={{ color: '#10b981', textDecoration: 'underline' }}>Politique de Confidentialité</span>.
+                    En vous inscrivant, vous acceptez nos <Link to="/terms" style={{ color: '#007bff', textDecoration: 'underline' }}>Conditions Générales</Link> et la <Link to="/terms" style={{ color: '#007bff', textDecoration: 'underline' }}>Politique de Confidentialité</Link>.
                 </p>
 
                 <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '1.05rem', color: '#1e293b', fontWeight: '700' }}>
-                    Déjà un compte ? <Link to="/login" style={{ color: '#10b981', textDecoration: 'none', borderBottom: '2px solid #10b981', paddingBottom: '2px', marginLeft: '8px' }}>Connexion</Link>
+                    Déjà un compte ? <Link to="/login" style={{ color: '#007bff', textDecoration: 'none', borderBottom: '2px solid #007bff', paddingBottom: '2px', marginLeft: '8px' }}>Connexion</Link>
                 </p>
             </div>
 

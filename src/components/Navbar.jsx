@@ -86,10 +86,16 @@ const Navbar = () => {
                                 Trouver un technicien
                             </Link>
                         )}
-                        <Link to="/marketplace" className={`nav-link ${isActive('/marketplace')}`}>Boutique des techniciens</Link>
+                        <Link to="/marketplace" className={`nav-link ${isActive('/marketplace')}`}>Sama Boutique</Link>
+                        <Link to="/forum" className={`nav-link ${isActive('/forum')}`}>Communauté</Link>
+                        {isLoggedIn && user?.role !== 'technician' && (
+                            <Link to="/dashboard" className={`nav-link ${isActive('/dashboard')}`} style={{ color: 'var(--primary-color)', fontWeight: '700' }}>
+                                Mes Ventes
+                            </Link>
+                        )}
                         {user?.role === 'technician' && (
-                            <Link to="/expert-dashboard" className={`nav-link ${isActive('/expert-dashboard')}`} style={{ color: '#10b981', fontWeight: '700', border: '1px solid #10b981', borderRadius: '15px', padding: '0.2rem 0.6rem' }}>
-                                Mon Espace Expert
+                            <Link to="/expert-dashboard" className={`nav-link ${isActive('/expert-dashboard')}`} style={{ color: '#007bff', fontWeight: '700', border: '1px solid #007bff', borderRadius: '15px', padding: '0.2rem 0.6rem' }}>
+                                Mon Profil Expert
                             </Link>
                         )}
                     </div>
@@ -97,31 +103,22 @@ const Navbar = () => {
                     {/* Right Side Buttons */}
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <div className="desktop-menu" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            <Link to="/cart" style={{ color: 'var(--text-primary)', position: 'relative', display: 'flex', alignItems: 'center' }}>
-                                <ShoppingBag size={18} />
-                                {cartCount > 0 && (
-                                    <span style={{
-                                        position: 'absolute', top: -4, right: -4,
-                                        background: 'var(--error-color)', color: 'white',
-                                        borderRadius: '50%', width: '14px', height: '14px',
-                                        fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                    }}>{cartCount}</span>
-                                )}
-                            </Link>
 
                             {isLoggedIn && (
-                                <button
+                                <button 
                                     onClick={() => setShowLogoutModal(true)}
+                                    className="btn btn-outline" 
                                     style={{ 
-                                        width: '38px', height: '38px', backgroundColor: '#e11d48', 
-                                        color: 'white', border: 'none', borderRadius: '50%',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        cursor: 'pointer', boxShadow: '0 4px 10px rgba(225, 29, 72, 0.3)',
-                                        marginLeft: '5px'
+                                        padding: '0.3rem 0.6rem', 
+                                        fontSize: '0.75rem', 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        gap: '5px',
+                                        color: '#e11d48',
+                                        borderColor: '#e11d48'
                                     }}
-                                    title="Se déconnecter"
                                 >
-                                    <Power size={20} strokeWidth={2.5} />
+                                    <LogOut size={14} /> Déconnexion
                                 </button>
                             )}
 
@@ -142,31 +139,37 @@ const Navbar = () => {
                 {/* Mobile Navigation Drawer */}
                 <div className={`mobile-nav ${isOpen ? 'open' : ''}`} style={{ display: 'flex' }}>
                     <Link to={user?.role === 'technician' ? "/expert-dashboard" : "/"} onClick={toggleMenu} className={`nav-link ${isActive('/')}`}>Accueil</Link>
-                    <Link to="/marketplace" onClick={toggleMenu} className={`nav-link ${isActive('/marketplace')}`}>Boutique</Link>
-                    
-                    <hr style={{ border: 'none', borderTop: '1px solid #eee', width: '100%' }} />
+                    <Link to="/marketplace" onClick={toggleMenu} className={`nav-link ${isActive('/marketplace')}`}>Sama Boutique</Link>
+                    <Link to="/forum" onClick={toggleMenu} className={`nav-link ${isActive('/forum')}`}>Communauté</Link>
+                    {isLoggedIn && user?.role !== 'technician' && (
+                        <Link to="/dashboard" onClick={toggleMenu} className={`nav-link ${isActive('/dashboard')}`} style={{ color: 'var(--primary-color)', fontWeight: '700' }}>
+                            Mes Ventes
+                        </Link>
+                    )}
                     
                     {isLoggedIn && (
-                        <>
-                            <Link to="/profile" onClick={toggleMenu} style={{ textDecoration: 'none', color: 'var(--text-primary)', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <Settings size={20} /> Paramètres
-                            </Link>
-                            <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                                <button
-                                    onClick={() => { setShowLogoutModal(true); toggleMenu(); }}
-                                    style={{ 
-                                        width: '64px', height: '64px', backgroundColor: '#e11d48', 
-                                        color: 'white', border: 'none', borderRadius: '50%',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        cursor: 'pointer', boxShadow: '0 6px 12px rgba(225, 29, 72, 0.4)'
-                                    }}
-                                >
-                                    <Power size={28} strokeWidth={2.5} />
-                                </button>
-                                <span style={{ fontSize: '0.9rem', color: '#e11d48', fontWeight: 'bold' }}>Déconnexion</span>
-                            </div>
-                        </>
+                        <button 
+                            onClick={() => {
+                                toggleMenu();
+                                setShowLogoutModal(true);
+                            }} 
+                            className="nav-link" 
+                            style={{ 
+                                color: '#e11d48', 
+                                fontWeight: '700', 
+                                textAlign: 'left', 
+                                background: 'none', 
+                                border: 'none', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '10px' 
+                            }}
+                        >
+                            <LogOut size={20} /> Déconnexion
+                        </button>
                     )}
+                    
+                    <hr style={{ border: 'none', borderTop: '1px solid #eee', width: '100%' }} />
                 </div>
             </nav>
 
@@ -186,7 +189,7 @@ const Navbar = () => {
                     }}>
                         <div style={{
                             width: '60px', height: '60px', borderRadius: '18px',
-                            background: '#ecfdf5', color: '#10b981', display: 'flex',
+                            background: '#ecfdf5', color: '#007bff', display: 'flex',
                             alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px'
                         }}>
                             <LogOut size={30} strokeWidth={2.5} />
@@ -209,8 +212,8 @@ const Navbar = () => {
                                 onClick={handleLogout}
                                 style={{ 
                                     flex: 1, padding: '12px', borderRadius: '15px', border: 'none',
-                                    background: '#10b981', color: 'white', fontWeight: '700', cursor: 'pointer',
-                                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                                    background: '#007bff', color: 'white', fontWeight: '700', cursor: 'pointer',
+                                    boxShadow: '0 4px 12px rgba(0, 123, 255, 0.3)'
                                 }}
                             >
                                 Oui, sortir

@@ -20,14 +20,14 @@ const MobileNav = () => {
     const isActive = (path) => location.pathname === path;
 
     const navItems = [
-        { path: isTechnician ? '/expert-dashboard' : '/', icon: Home, label: 'Accueil' },
+        { path: '/', icon: Home, label: 'Accueil' },
         ...(isTechnician ? [] : [{ path: '/technicians', icon: Users, label: 'Pros' }]),
-        ...(isTechnician ? [{ path: '/forum', icon: MessageCircle, label: 'Communauté' }] : []),
-        { path: '/marketplace', icon: ShoppingBag, label: 'Boutique' },
+        { path: '/forum', icon: MessageCircle, label: 'Communauté' },
+        { path: '/marketplace', icon: ShoppingBag, label: 'Sama Boutique' },
         { 
-            path: isLoggedIn ? '/profile' : '/register', 
+            path: isLoggedIn ? (isTechnician ? '/expert-dashboard' : '/dashboard') : '/register', 
             icon: User, 
-            label: isLoggedIn ? (isTechnician ? 'Profil' : 'Compte') : 'Compte',
+            label: isLoggedIn ? 'Profil' : 'Compte',
             highlight: true 
         },
     ];
@@ -69,14 +69,46 @@ const MobileNav = () => {
                     <>
                         <div style={{
                             padding: item.highlight ? '8px' : '0',
-                            backgroundColor: item.highlight ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
+                            backgroundColor: item.highlight ? 'rgba(0, 123, 255, 0.1)' : 'transparent',
                             borderRadius: '12px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             opacity: isLocked ? 0.3 : 1
                         }}>
-                            <ActiveIcon size={20} strokeWidth={active ? 2.5 : 2} />
+                            {isLoggedIn && item.label === 'Profil' ? (
+                                user.image ? (
+                                    <img 
+                                        src={user.image} 
+                                        alt="Profile" 
+                                        style={{ 
+                                            width: '24px', 
+                                            height: '24px', 
+                                            borderRadius: '50%', 
+                                            objectFit: 'cover',
+                                            border: active ? '2px solid var(--primary-color)' : '1px solid #ddd'
+                                        }} 
+                                    />
+                                ) : (
+                                    <div style={{ 
+                                        width: '24px', 
+                                        height: '24px', 
+                                        borderRadius: '50%', 
+                                        background: active ? 'var(--primary-color)' : '#e2e8f0', 
+                                        color: active ? 'white' : '#64748b', 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        justifyContent: 'center', 
+                                        fontSize: '11px', 
+                                        fontWeight: '800',
+                                        border: active ? 'none' : '1px solid #cbd5e1'
+                                    }}>
+                                        {(user.fullname || user.fullName || "U").charAt(0).toUpperCase()}
+                                    </div>
+                                )
+                            ) : (
+                                <ActiveIcon size={20} strokeWidth={active ? 2.5 : 2} />
+                            )}
                         </div>
                         <span style={{ 
                             fontSize: '9px', 
