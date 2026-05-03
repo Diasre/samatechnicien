@@ -1569,77 +1569,138 @@ const ProductImageCarousel = ({ product }) => {
     const [isZoomed, setIsZoomed] = React.useState(false);
 
     return (
-        <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+        <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
             <img 
                 src={images[idx]} 
                 onClick={() => setIsZoomed(true)}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'zoom-in' }} 
+                alt={product.title}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'zoom-in', transition: 'transform 0.3s ease' }} 
+                className="main-carousel-img"
             />
 
+            {/* Overlay de Zoom Premium */}
             {isZoomed && (
                 <div 
                     onClick={() => setIsZoomed(false)}
                     style={{
                         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
-                        backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 99999,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        backgroundColor: 'rgba(0,0,0,0.98)', zIndex: 99999,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        animation: 'fadeIn 0.3s ease-out',
+                        backdropFilter: 'blur(10px)'
                     }}
                 >
-                    <img 
-                        src={images[idx]} 
-                        style={{ maxWidth: '95vw', maxHeight: '90vh', objectFit: 'contain' }} 
-                    />
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); setIsZoomed(false); }}
-                        style={{ 
-                            position: 'absolute', top: '20px', right: '20px', 
-                            background: 'rgba(255,255,255,0.2)', color: 'white', 
-                            borderRadius: '50%', width: '40px', height: '40px', 
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                            border: '1px solid rgba(255,255,255,0.5)', cursor: 'pointer',
-                            fontSize: '1.2rem', fontWeight: 'bold'
-                        }}
-                    >
-                        ✕
-                    </button>
-                    {images.length > 1 && (
-                        <div style={{ position: 'absolute', bottom: '40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '8px' }}>
-                            {images.map((_, i) => (
-                                <div key={i} onClick={(e) => { e.stopPropagation(); setIdx(i); }} style={{ width: '12px', height: '12px', borderRadius: '50%', background: i === idx ? 'var(--primary-color)' : 'rgba(255,255,255,0.5)', cursor: 'pointer' }} />
-                            ))}
-                        </div>
-                    )}
+                    <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={e => e.stopPropagation()}>
+                        <img 
+                            src={images[idx]} 
+                            alt="Zoom"
+                            style={{ 
+                                maxWidth: '100vw', 
+                                maxHeight: '100vh', 
+                                objectFit: 'contain',
+                                animation: 'zoomIn 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                                boxShadow: '0 0 50px rgba(0,0,0,0.5)'
+                            }} 
+                        />
+
+                        {/* Bouton Fermer */}
+                        <button 
+                            onClick={() => setIsZoomed(false)}
+                            style={{ 
+                                position: 'absolute', top: '30px', right: '30px', 
+                                background: 'rgba(255,255,255,0.15)', color: 'white', 
+                                borderRadius: '50%', width: '50px', height: '50px', 
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                border: '1px solid rgba(255,255,255,0.3)', cursor: 'pointer',
+                                fontSize: '1.5rem', fontWeight: 'bold', zIndex: 100001,
+                                backdropFilter: 'blur(5px)'
+                            }}
+                        >
+                            ✕
+                        </button>
+
+                        {/* Navigation interne au zoom */}
+                        {images.length > 1 && (
+                            <>
+                                <button
+                                    onClick={() => setIdx((idx - 1 + images.length) % images.length)}
+                                    style={{ position: 'absolute', left: '20px', top: '50%', transform: 'translateY(-50%)', backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(5px)' }}
+                                >
+                                    <ArrowLeft size={30} />
+                                </button>
+                                <button
+                                    onClick={() => setIdx((idx + 1) % images.length)}
+                                    style={{ position: 'absolute', right: '20px', top: '50%', transform: 'translateY(-50%)', backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(5px)' }}
+                                >
+                                    <ArrowRight size={30} />
+                                </button>
+
+                                <div style={{ position: 'absolute', bottom: '40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '12px' }}>
+                                    {images.map((_, i) => (
+                                        <div 
+                                            key={i} 
+                                            onClick={() => setIdx(i)} 
+                                            style={{ 
+                                                width: '12px', height: '12px', borderRadius: '50%', 
+                                                background: i === idx ? 'var(--primary-color)' : 'rgba(255,255,255,0.3)', 
+                                                cursor: 'pointer',
+                                                border: '1px solid rgba(255,255,255,0.5)',
+                                                transition: 'all 0.3s ease'
+                                            }} 
+                                        />
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                    </div>
                 </div>
             )}
 
+            {/* Contrôles du Carousel Principal */}
             {images.length > 1 && (
                 <>
                     <button
                         onClick={() => setIdx((idx - 1 + images.length) % images.length)}
-                        style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', backgroundColor: 'rgba(0,0,0,0.3)', border: 'none', color: 'white', padding: '10px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', backgroundColor: 'rgba(255,255,255,0.7)', border: 'none', color: '#1e293b', width: '38px', height: '38px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', zIndex: 10 }}
                     ><ArrowLeft size={20} /></button>
                     <button
                         onClick={() => setIdx((idx + 1) % images.length)}
-                        style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', backgroundColor: 'rgba(0,0,0,0.3)', border: 'none', color: 'white', padding: '10px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', backgroundColor: 'rgba(255,255,255,0.7)', border: 'none', color: '#1e293b', width: '38px', height: '38px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', zIndex: 10 }}
                     ><ArrowRight size={20} /></button>
 
-                    <div style={{ position: 'absolute', bottom: '15px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px' }}>
-                        {images.map((img, i) => (
+                    <div style={{ position: 'absolute', bottom: '15px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px', zIndex: 10 }}>
+                        {images.map((_, i) => (
                             <div key={i} onClick={() => setIdx(i)} style={{
                                 width: '10px', height: '10px', borderRadius: '50%',
                                 backgroundColor: i === idx ? 'var(--primary-color)' : 'white',
-                                border: '1px solid rgba(0,0,0,0.2)',
-                                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                                border: '1px solid rgba(0,0,0,0.1)',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                cursor: 'pointer'
                             }} />
                         ))}
                     </div>
 
-                    {/* Thumbnails small indicator */}
-                    <div style={{ position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.5)', color: 'white', padding: '2px 10px', borderRadius: '12px', fontSize: '0.7rem' }}>
+                    <div style={{ position: 'absolute', top: '20px', right: '20px', background: 'rgba(0,0,0,0.6)', color: 'white', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 'bold', backdropFilter: 'blur(4px)', zIndex: 10 }}>
                         {idx + 1} / {images.length}
                     </div>
                 </>
             )}
+
+            <style>
+                {`
+                    @keyframes zoomIn {
+                        from { transform: scale(0.8); opacity: 0; }
+                        to { transform: scale(1); opacity: 1; }
+                    }
+                    @keyframes fadeIn {
+                        from { opacity: 0; }
+                        to { opacity: 1; }
+                    }
+                    .main-carousel-img:hover {
+                        transform: scale(1.02);
+                    }
+                `}
+            </style>
         </div>
     );
 };
