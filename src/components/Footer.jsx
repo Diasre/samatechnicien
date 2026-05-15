@@ -1,20 +1,133 @@
-import React from 'react';
-import { Mail, Phone, MapPin, Facebook, Instagram, Twitter, ShieldCheck } from 'lucide-react';
+import React, { useState } from 'react';
+import { Mail, Phone, MapPin, Facebook, Instagram, Twitter, ShieldCheck, CheckCircle } from 'lucide-react';
 import { isWeb } from '../utils/platform';
 import logo from '../assets/logo.png';
 
 const Footer = () => {
+    const [email, setEmail] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [subscribed, setSubscribed] = useState(false);
+
+    const handleSubscribe = (e) => {
+        e.preventDefault();
+        if (!email) return;
+        
+        setIsSubmitting(true);
+        
+        // Simulation d'un appel API (ex: Supabase, Mailchimp)
+        setTimeout(() => {
+            setIsSubmitting(false);
+            setSubscribed(true);
+            setEmail('');
+            
+            // Masquer le message de succès après 5 secondes
+            setTimeout(() => setSubscribed(false), 5000);
+        }, 1200);
+    };
+
     // On n'affiche le footer que sur le Web pour garder l'app mobile épurée
     if (!isWeb) return null;
 
     return (
-        <footer style={{ 
-            background: '#1e293b', 
-            color: '#f8fafc', 
-            padding: '4rem 2rem 2rem', 
-            fontFamily: "'Outfit', sans-serif",
-            marginTop: '4rem'
-        }}>
+        <>
+            {/* Section Newsletter dans la zone blanche */}
+            <div style={{ background: '#ffffff', padding: '4rem 2rem', borderTop: '1px solid #e2e8f0' }}>
+                <div style={{
+                    maxWidth: '800px',
+                    margin: '0 auto',
+                    padding: '2.5rem',
+                    background: '#273444',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '1.5rem',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '15px' }}>
+                        <input 
+                            type="checkbox" 
+                            id="newsletter-policy" 
+                            style={{ 
+                                marginTop: '4px', 
+                                width: '24px', 
+                                height: '24px', 
+                                cursor: 'pointer',
+                                accentColor: '#007bff'
+                            }} 
+                            required
+                        />
+                        <label htmlFor="newsletter-policy" style={{ color: '#cbd5e1', fontSize: '0.95rem', lineHeight: '1.5', cursor: 'pointer' }}>
+                            J'accepte la Politique de confidentialité et des cookies de SamaTechnicien et je comprends que je peux me désabonner des newsletters à tout moment.
+                        </label>
+                    </div>
+                    <form onSubmit={handleSubscribe} style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+                        <div style={{ 
+                            flex: '1', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            background: '#ffffff', 
+                            borderRadius: '4px', 
+                            padding: '0.5rem 1rem', 
+                            minWidth: '280px' 
+                        }}>
+                            <Mail size={22} color="#94a3b8" style={{ marginRight: '12px' }} />
+                            <input 
+                                type="email" 
+                                placeholder="Entrez votre adresse e-mail" 
+                                style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1.05rem', color: '#1e293b' }}
+                                required
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                disabled={isSubmitting}
+                            />
+                        </div>
+                        <button 
+                            type="submit" 
+                            disabled={isSubmitting}
+                            style={{ 
+                                background: isSubmitting ? '#4a4a4a' : '#333333', 
+                                color: '#ffffff', 
+                                border: '1px solid #ffffff', 
+                                borderRadius: '4px', 
+                                padding: '0 2.5rem', 
+                                fontWeight: '700', 
+                                fontSize: '1.05rem',
+                                cursor: isSubmitting ? 'wait' : 'pointer',
+                                transition: 'background 0.3s',
+                                minHeight: '50px',
+                                opacity: isSubmitting ? 0.8 : 1
+                            }}
+                            onMouseOver={(e) => { if(!isSubmitting) e.currentTarget.style.background = '#4a4a4a'; }}
+                            onMouseOut={(e) => { if(!isSubmitting) e.currentTarget.style.background = '#333333'; }}
+                        >
+                            {isSubmitting ? 'En cours...' : "S'abonner"}
+                        </button>
+                    </form>
+                    
+                    {subscribed && (
+                        <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '10px', 
+                            color: '#10b981', 
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)', 
+                            padding: '10px 15px', 
+                            borderRadius: '4px',
+                            marginTop: '5px'
+                        }}>
+                            <CheckCircle size={20} />
+                            <span style={{ fontWeight: '600' }}>Vous êtes bien abonné à SamaTechnicien. À bientôt !</span>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <footer style={{ 
+                background: '#1e293b', 
+                color: '#f8fafc', 
+                padding: '4rem 2rem 2rem', 
+                fontFamily: "'Outfit', sans-serif"
+            }}>
             <div style={{ 
                 maxWidth: '1200px', 
                 margin: '0 auto', 
@@ -95,6 +208,7 @@ const Footer = () => {
                 © {new Date().getFullYear()} SamaTechnicien. Tous droits réservés. Design by Dias.
             </div>
         </footer>
+        </>
     );
 };
 

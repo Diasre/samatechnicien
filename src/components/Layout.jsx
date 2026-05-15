@@ -3,6 +3,7 @@ import Navbar from './Navbar';
 import MobileNav from './MobileNav';
 import Footer from './Footer';
 import { Outlet, useLocation } from 'react-router-dom';
+import { isWeb } from '../utils/platform';
 
 const Layout = ({ children }) => {
     const location = useLocation();
@@ -19,7 +20,7 @@ const Layout = ({ children }) => {
             {!shouldHide && <Navbar />}
             <main style={{ 
                 minHeight: 'calc(100vh - 64px)', 
-                paddingBottom: isDiscussionThread ? '0px' : '90px' // Pas d'espace vide en bas pour le chat
+                paddingBottom: (isDiscussionThread || isWeb) ? '0px' : '90px' // Pas d'espace vide sur le web ou dans le chat
             }}>
                 {children ? children : <Outlet />}
             </main>
