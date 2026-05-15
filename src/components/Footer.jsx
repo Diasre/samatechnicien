@@ -2,27 +2,42 @@ import React, { useState } from 'react';
 import { Mail, Phone, MapPin, Facebook, Instagram, Twitter, ShieldCheck, CheckCircle } from 'lucide-react';
 import { isWeb } from '../utils/platform';
 import logo from '../assets/logo.png';
+import { supabase } from '../supabaseClient';
 
 const Footer = () => {
     const [email, setEmail] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [subscribed, setSubscribed] = useState(false);
 
-    const handleSubscribe = (e) => {
+    const handleSubscribe = async (e) => {
         e.preventDefault();
         if (!email) return;
         
         setIsSubmitting(true);
         
-        // Simulation d'un appel API (ex: Supabase, Mailchimp)
-        setTimeout(() => {
+        try {
+            // Enregistrer l'e-mail dans la base de données Supabase
+            const { error } = await supabase
+                .from('newsletter_subscribers')
+                .insert([{ email: email }]);
+
+            if (error) {
+                // Si l'e-mail existe déjà, on ne veut pas bloquer l'utilisateur (on peut juste lui dire merci)
+                if (error.code !== '23505') { // 23505 = unique_violation
+                    console.error("Erreur d'abonnement:", error.message);
+                }
+            }
+
             setIsSubmitting(false);
             setSubscribed(true);
             setEmail('');
             
             // Masquer le message de succès après 5 secondes
             setTimeout(() => setSubscribed(false), 5000);
-        }, 1200);
+        } catch (err) {
+            console.error("Erreur:", err);
+            setIsSubmitting(false);
+        }
     };
 
     // On n'affiche le footer que sur le Web pour garder l'app mobile épurée
